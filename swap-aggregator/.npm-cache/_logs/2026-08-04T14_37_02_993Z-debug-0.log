@@ -1,0 +1,1342 @@
+0 verbose cli /usr/bin/node /usr/bin/npm
+1 info using npm@12.0.2
+2 info using node@v22.23.2
+3 silly config load:file:/usr/lib/node_modules/npm/npmrc
+4 silly config load:file:/home/pierre/Downloads/swap-aggregator/swap-aggregator/.npmrc
+5 silly config load:file:/home/pierre/.npmrc
+6 silly config load:file:/etc/npmrc
+7 verbose title npm install @lifi/sdk@^4.3.0
+8 verbose argv "install" "@lifi/sdk@^4.3.0" "--save"
+9 verbose logfile logs-max:10 dir:/home/pierre/Downloads/swap-aggregator/swap-aggregator/.npm-cache/_logs/2026-08-04T14_37_02_993Z-
+10 verbose logfile /home/pierre/Downloads/swap-aggregator/swap-aggregator/.npm-cache/_logs/2026-08-04T14_37_02_993Z-debug-0.log
+11 silly logfile done cleaning log files
+12 silly packumentCache heap:4345298944 maxSize:1086324736 maxEntrySize:543162368
+13 silly idealTree buildDeps
+14 silly fetch manifest @lifi/sdk@^4.3.0
+15 silly packumentCache full:https://registry.npmjs.org/@lifi%2fsdk cache-miss
+16 http fetch GET 200 https://registry.npmjs.org/npm 427ms
+17 http fetch GET 200 https://registry.npmjs.org/@lifi%2fsdk 391ms (cache miss)
+18 silly packumentCache full:https://registry.npmjs.org/@lifi%2fsdk set size:undefined disposed:false
+19 silly placeDep ROOT @lifi/sdk@4.3.0 REPLACE for: hermes@0.1.0 want: ^4.3.0
+20 silly fetch manifest @lifi/types@17.86.0
+21 silly packumentCache full:https://registry.npmjs.org/@lifi%2ftypes cache-miss
+22 http fetch GET 200 https://registry.npmjs.org/@lifi%2ftypes 538ms (cache miss)
+23 silly packumentCache full:https://registry.npmjs.org/@lifi%2ftypes set size:undefined disposed:false
+24 silly placeDep ROOT @lifi/types@17.86.0 OK for: @lifi/sdk@4.3.0 want: 17.86.0
+25 silly reify mark retired [
+25 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@0no-co/graphql.web'
+25 silly reify ]
+26 silly reify mark retired [
+26 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@0no-co/graphqlsp'
+26 silly reify ]
+27 silly reify mark retired [
+27 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@bigmi/core'
+27 silly reify ]
+28 silly reify mark retired [
+28 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@bitcoinerlab/secp256k1'
+28 silly reify ]
+29 silly reify mark retired [
+29 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@gql.tada/cli-utils'
+29 silly reify ]
+30 silly reify mark retired [
+30 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@gql.tada/internal'
+30 silly reify ]
+31 silly reify mark retired [
+31 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@graphql-typed-document-node/core'
+31 silly reify ]
+32 silly reify mark retired [
+32 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@lifi/sdk'
+32 silly reify ]
+33 silly reify mark retired [
+33 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@lifi/types'
+33 silly reify ]
+34 silly reify mark retired [
+34 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@mysten/bcs'
+34 silly reify ]
+35 silly reify mark retired [
+35 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@mysten/sui'
+35 silly reify ]
+36 silly reify mark retired [
+36 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@mysten/utils'
+36 silly reify ]
+37 silly reify mark retired [
+37 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@mysten/wallet-standard'
+37 silly reify ]
+38 silly reify mark retired [
+38 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@protobuf-ts/grpcweb-transport'
+38 silly reify ]
+39 silly reify mark retired [
+39 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@protobuf-ts/runtime'
+39 silly reify ]
+40 silly reify mark retired [
+40 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@protobuf-ts/runtime-rpc'
+40 silly reify ]
+41 silly reify mark retired [
+41 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@solana/buffer-layout'
+41 silly reify ]
+42 silly reify mark retired [
+42 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@solana/codecs-core'
+42 silly reify ]
+43 silly reify mark retired [
+43 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@solana/codecs-numbers'
+43 silly reify ]
+44 silly reify mark retired [
+44 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@solana/errors',
+44 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/.bin/errors'
+44 silly reify ]
+45 silly reify mark retired [
+45 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@solana/wallet-adapter-base'
+45 silly reify ]
+46 silly reify mark retired [
+46 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@solana/wallet-standard-features'
+46 silly reify ]
+47 silly reify mark retired [
+47 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@solana/web3.js'
+47 silly reify ]
+48 silly reify mark retired [
+48 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@types/connect'
+48 silly reify ]
+49 silly reify mark retired [
+49 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@types/uuid'
+49 silly reify ]
+50 silly reify mark retired [
+50 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@types/ws'
+50 silly reify ]
+51 silly reify mark retired [
+51 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@wallet-standard/app'
+51 silly reify ]
+52 silly reify mark retired [
+52 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@wallet-standard/base'
+52 silly reify ]
+53 silly reify mark retired [
+53 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@wallet-standard/core'
+53 silly reify ]
+54 silly reify mark retired [
+54 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@wallet-standard/errors',
+54 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/.bin/errors'
+54 silly reify ]
+55 silly reify mark retired [
+55 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@wallet-standard/features'
+55 silly reify ]
+56 silly reify mark retired [
+56 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@wallet-standard/wallet'
+56 silly reify ]
+57 silly reify mark retired [
+57 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/agentkeepalive'
+57 silly reify ]
+58 silly reify mark retired [
+58 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/bech32'
+58 silly reify ]
+59 silly reify mark retired [
+59 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/bip174'
+59 silly reify ]
+60 silly reify mark retired [
+60 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/bitcoinjs-lib'
+60 silly reify ]
+61 silly reify mark retired [
+61 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/borsh'
+61 silly reify ]
+62 silly reify mark retired [
+62 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/bs58check'
+62 silly reify ]
+63 silly reify mark retired [
+63 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/commander'
+63 silly reify ]
+64 silly reify mark retired [
+64 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/delay'
+64 silly reify ]
+65 silly reify mark retired [
+65 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/es6-promise'
+65 silly reify ]
+66 silly reify mark retired [
+66 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/es6-promisify'
+66 silly reify ]
+67 silly reify mark retired [
+67 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/eyes'
+67 silly reify ]
+68 silly reify mark retired [
+68 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/fast-stable-stringify'
+68 silly reify ]
+69 silly reify mark retired [
+69 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/gql.tada',
+69 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/.bin/gql-tada',
+69 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/.bin/gql.tada'
+69 silly reify ]
+70 silly reify mark retired [
+70 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/graphql'
+70 silly reify ]
+71 silly reify mark retired [
+71 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/humanize-ms'
+71 silly reify ]
+72 silly reify mark retired [
+72 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/isomorphic-ws'
+72 silly reify ]
+73 silly reify mark retired [
+73 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/jayson',
+73 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/.bin/jayson'
+73 silly reify ]
+74 silly reify mark retired [
+74 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/json-stringify-safe'
+74 silly reify ]
+75 silly reify mark retired [
+75 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/poseidon-lite'
+75 silly reify ]
+76 silly reify mark retired [
+76 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/rpc-websockets'
+76 silly reify ]
+77 silly reify mark retired [
+77 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/stream-chain'
+77 silly reify ]
+78 silly reify mark retired [
+78 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/stream-json'
+78 silly reify ]
+79 silly reify mark retired [
+79 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/superstruct'
+79 silly reify ]
+80 silly reify mark retired [
+80 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/text-encoding-utf-8'
+80 silly reify ]
+81 silly reify mark retired [
+81 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/uint8array-tools'
+81 silly reify ]
+82 silly reify mark retired [
+82 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/valibot'
+82 silly reify ]
+83 silly reify mark retired [
+83 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/varuint-bitcoin'
+83 silly reify ]
+84 silly reify moves {
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@0no-co/graphql.web': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@0no-co/.graphql.web-bOTwxgIR',
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@0no-co/graphqlsp': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@0no-co/.graphqlsp-toNl1OrF',
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@bigmi/core': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@bigmi/.core-0U3XgQac',
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@bitcoinerlab/secp256k1': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@bitcoinerlab/.secp256k1-71gOt0DV',
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@gql.tada/cli-utils': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@gql.tada/.cli-utils-WnEC3vEc',
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@gql.tada/internal': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@gql.tada/.internal-fiLh07CP',
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@graphql-typed-document-node/core': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@graphql-typed-document-node/.core-bgnwHuej',
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@lifi/sdk': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@lifi/.sdk-TuSbGHhm',
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@lifi/types': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@lifi/.types-e7CczqIO',
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@mysten/bcs': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@mysten/.bcs-bI0BNXOW',
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@mysten/sui': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@mysten/.sui-u8mRvvRK',
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@mysten/utils': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@mysten/.utils-xer9rMOx',
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@mysten/wallet-standard': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@mysten/.wallet-standard-7TQy8Pyi',
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@protobuf-ts/grpcweb-transport': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@protobuf-ts/.grpcweb-transport-OWmVh2aZ',
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@protobuf-ts/runtime': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@protobuf-ts/.runtime-e49j9d74',
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@protobuf-ts/runtime-rpc': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@protobuf-ts/.runtime-rpc-Se5OkY6P',
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@solana/buffer-layout': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@solana/.buffer-layout-nrXDPCPx',
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@solana/codecs-core': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@solana/.codecs-core-M6dWSoO7',
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@solana/codecs-numbers': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@solana/.codecs-numbers-RE2YD8uS',
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@solana/errors': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@solana/.errors-5zEuJfOP',
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/.bin/errors': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/.bin/.errors-8ZDGGr2P',
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@solana/wallet-adapter-base': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@solana/.wallet-adapter-base-gUu0XBYM',
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@solana/wallet-standard-features': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@solana/.wallet-standard-features-RAR2WjiJ',
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@solana/web3.js': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@solana/.web3.js-JnTtKJcq',
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@types/connect': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@types/.connect-9e4Nan3Y',
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@types/uuid': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@types/.uuid-BO8FfzSX',
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@types/ws': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@types/.ws-guN49kAs',
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@wallet-standard/app': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@wallet-standard/.app-QiMzBcts',
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@wallet-standard/base': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@wallet-standard/.base-DZGfHg1m',
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@wallet-standard/core': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@wallet-standard/.core-ph6PbOfh',
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@wallet-standard/errors': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@wallet-standard/.errors-BikwgxKN',
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@wallet-standard/features': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@wallet-standard/.features-rn3jEB3b',
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@wallet-standard/wallet': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/@wallet-standard/.wallet-3nFdAzpX',
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/agentkeepalive': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/.agentkeepalive-cpdlrFAo',
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/bech32': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/.bech32-WHC9nj7j',
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/bip174': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/.bip174-pAzCiUpc',
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/bitcoinjs-lib': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/.bitcoinjs-lib-xQaZkOkM',
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/borsh': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/.borsh-7POZ0ffG',
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/bs58check': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/.bs58check-MvPt1RTL',
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/commander': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/.commander-u0VUYuEM',
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/delay': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/.delay-S8fpFqYS',
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/es6-promise': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/.es6-promise-zDy0CBlN',
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/es6-promisify': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/.es6-promisify-uezh8gpG',
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/eyes': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/.eyes-vzCsIb1k',
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/fast-stable-stringify': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/.fast-stable-stringify-KgL0bmG4',
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/gql.tada': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/.gql.tada-FsjNFCpa',
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/.bin/gql-tada': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/.bin/.gql-tada-gsrMYcpq',
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/.bin/gql.tada': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/.bin/.gql.tada-sUsX8e8D',
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/graphql': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/.graphql-uw88Fwgq',
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/humanize-ms': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/.humanize-ms-3GojZ6T3',
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/isomorphic-ws': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/.isomorphic-ws-QKhQgjj4',
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/jayson': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/.jayson-DUDaUCDY',
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/.bin/jayson': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/.bin/.jayson-gE0TzVM1',
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/json-stringify-safe': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/.json-stringify-safe-dbHrqa9g',
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/poseidon-lite': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/.poseidon-lite-VPRTb34a',
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/rpc-websockets': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/.rpc-websockets-Ho3UrKvM',
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/stream-chain': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/.stream-chain-cEKggeCt',
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/stream-json': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/.stream-json-DxCM0RSw',
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/superstruct': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/.superstruct-Z4d20pOn',
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/text-encoding-utf-8': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/.text-encoding-utf-8-zw2Nthng',
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/uint8array-tools': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/.uint8array-tools-wAMvzwuu',
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/valibot': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/.valibot-yolzWHAi',
+84 silly reify   '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/varuint-bitcoin': '/home/pierre/Downloads/swap-aggregator/swap-aggregator/node_modules/.varuint-bitcoin-h3qqd10Y'
+84 silly reify }
+85 silly audit bulk request {
+85 silly audit   '@adraffy/ens-normalize': [ '1.11.1' ],
+85 silly audit   '@babel/runtime': [ '7.29.7' ],
+85 silly audit   '@base-org/account': [ '2.4.0' ],
+85 silly audit   '@noble/hashes': [ '1.4.0', '1.8.0', '1.7.1', '1.7.0' ],
+85 silly audit   clsx: [ '1.2.1', '2.1.1' ],
+85 silly audit   eventemitter3: [ '5.0.1', '5.0.4' ],
+85 silly audit   ox: [ '0.6.9', '0.6.7', '0.9.17', '0.14.33' ],
+85 silly audit   zustand: [ '5.0.3', '5.0.0', '5.0.14' ],
+85 silly audit   '@coinbase/cdp-sdk': [ '1.54.0' ],
+85 silly audit   abitype: [ '1.0.6', '1.0.8', '1.2.3' ],
+85 silly audit   '@coinbase/wallet-sdk': [ '4.3.6', '3.9.3' ],
+85 silly audit   '@ecies/ciphers': [ '0.2.6' ],
+85 silly audit   '@emotion/hash': [ '0.9.2' ],
+85 silly audit   '@ethereumjs/common': [ '3.2.0' ],
+85 silly audit   '@ethereumjs/rlp': [ '4.0.1' ],
+85 silly audit   '@ethereumjs/tx': [ '4.2.0' ],
+85 silly audit   '@ethereumjs/util': [ '8.1.0' ],
+85 silly audit   '@gemini-wallet/core': [ '0.3.2' ],
+85 silly audit   '@lit-labs/ssr-dom-shim': [ '1.6.0' ],
+85 silly audit   '@lit/reactive-element': [ '2.1.2' ],
+85 silly audit   '@metamask/eth-json-rpc-provider': [ '1.0.1' ],
+85 silly audit   '@metamask/json-rpc-engine': [ '7.3.3', '8.0.2' ],
+85 silly audit   '@metamask/utils': [ '8.5.0', '9.3.0', '5.0.2', '11.11.0' ],
+85 silly audit   '@metamask/rpc-errors': [ '6.4.0', '7.0.2' ],
+85 silly audit   superstruct: [ '1.0.4' ],
+85 silly audit   uuid: [ '9.0.1', '8.3.2' ],
+85 silly audit   '@metamask/json-rpc-middleware-stream': [ '7.0.2' ],
+85 silly audit   '@metamask/object-multiplex': [ '2.1.0' ],
+85 silly audit   '@metamask/onboarding': [ '1.0.1' ],
+85 silly audit   '@metamask/providers': [ '16.1.0' ],
+85 silly audit   '@metamask/safe-event-emitter': [ '3.1.2', '2.0.0' ],
+85 silly audit   '@metamask/sdk': [ '0.33.1' ],
+85 silly audit   '@metamask/sdk-analytics': [ '0.0.5' ],
+85 silly audit   '@metamask/sdk-communication-layer': [ '0.33.1' ],
+85 silly audit   '@metamask/sdk-install-modal-web': [ '0.32.1' ],
+85 silly audit   '@metamask/superstruct': [ '3.4.1' ],
+85 silly audit   '@noble/curves': [ '1.9.7', '1.8.1', '1.9.1', '1.8.0', '1.4.2' ],
+85 silly audit   '@next/env': [ '14.2.0' ],
+85 silly audit   '@next/swc-darwin-arm64': [ '14.2.0' ],
+85 silly audit   '@next/swc-darwin-x64': [ '14.2.0' ],
+85 silly audit   '@next/swc-linux-arm64-gnu': [ '14.2.0' ],
+85 silly audit   '@next/swc-linux-arm64-musl': [ '14.2.0' ],
+85 silly audit   '@next/swc-linux-x64-gnu': [ '14.2.0' ],
+85 silly audit   '@next/swc-linux-x64-musl': [ '14.2.0' ],
+85 silly audit   '@next/swc-win32-arm64-msvc': [ '14.2.0' ],
+85 silly audit   '@next/swc-win32-ia32-msvc': [ '14.2.0' ],
+85 silly audit   '@next/swc-win32-x64-msvc': [ '14.2.0' ],
+85 silly audit   '@noble/ciphers': [ '1.3.0', '1.2.1' ],
+85 silly audit   '@paulmillr/qr': [ '0.2.1' ],
+85 silly audit   '@rainbow-me/rainbowkit': [ '2.2.11' ],
+85 silly audit   '@reown/appkit': [ '1.7.8' ],
+85 silly audit   '@reown/appkit-common': [ '1.7.8' ],
+85 silly audit   '@reown/appkit-controllers': [ '1.7.8' ],
+85 silly audit   '@scure/bip32': [ '1.6.2', '1.7.0', '1.4.0' ],
+85 silly audit   '@scure/bip39': [ '1.5.4', '1.6.0', '1.3.0' ],
+85 silly audit   '@walletconnect/core': [ '2.21.0', '2.21.1' ],
+85 silly audit   '@walletconnect/keyvaluestorage': [ '1.1.1' ],
+85 silly audit   '@walletconnect/sign-client': [ '2.21.0', '2.21.1' ],
+85 silly audit   '@walletconnect/types': [ '2.21.0', '2.21.1' ],
+85 silly audit   '@walletconnect/universal-provider': [ '2.21.0', '2.21.1' ],
+85 silly audit   '@walletconnect/utils': [ '2.21.0', '2.21.1' ],
+85 silly audit   viem: [ '2.23.2', '2.55.10' ],
+85 silly audit   isows: [ '1.0.6', '1.0.7' ],
+85 silly audit   'lru-cache': [ '11.5.2', '10.4.3' ],
+85 silly audit   unstorage: [ '1.17.5' ],
+85 silly audit   ws: [ '8.18.0', '8.21.1', '8.21.0', '7.5.13' ],
+85 silly audit   '@reown/appkit-pay': [ '1.7.8' ],
+85 silly audit   '@reown/appkit-polyfills': [ '1.7.8' ],
+85 silly audit   '@reown/appkit-scaffold-ui': [ '1.7.8' ],
+85 silly audit   '@reown/appkit-ui': [ '1.7.8' ],
+85 silly audit   '@reown/appkit-utils': [ '1.7.8' ],
+85 silly audit   '@reown/appkit-wallet': [ '1.7.8' ],
+85 silly audit   zod: [ '3.22.4', '4.4.3', '3.25.76' ],
+85 silly audit   '@safe-global/safe-apps-provider': [ '0.18.6' ],
+85 silly audit   '@safe-global/safe-apps-sdk': [ '9.1.0' ],
+85 silly audit   '@safe-global/safe-gateway-typescript-sdk': [ '3.23.1' ],
+85 silly audit   '@scure/base': [ '1.2.6', '1.1.9' ],
+85 silly audit   '@socket.io/component-emitter': [ '3.1.2' ],
+85 silly audit   '@solana-program/compute-budget': [ '0.11.0' ],
+85 silly audit   '@solana-program/system': [ '0.10.0' ],
+85 silly audit   '@solana-program/token': [ '0.9.0' ],
+85 silly audit   '@solana-program/token-2022': [ '0.6.1' ],
+85 silly audit   '@solana/accounts': [ '5.5.1' ],
+85 silly audit   '@solana/codecs-core': [ '5.5.1' ],
+85 silly audit   '@solana/errors': [ '5.5.1' ],
+85 silly audit   commander: [ '14.0.2' ],
+85 silly audit   '@solana/addresses': [ '5.5.1' ],
+85 silly audit   '@solana/assertions': [ '5.5.1' ],
+85 silly audit   '@solana/codecs': [ '5.5.1' ],
+85 silly audit   '@solana/codecs-data-structures': [ '5.5.1' ],
+85 silly audit   '@solana/codecs-numbers': [ '5.5.1' ],
+85 silly audit   '@solana/codecs-strings': [ '5.5.1' ],
+85 silly audit   '@solana/fast-stable-stringify': [ '5.5.1' ],
+85 silly audit   '@solana/functional': [ '5.5.1' ],
+85 silly audit   '@solana/instruction-plans': [ '5.5.1' ],
+85 silly audit   '@solana/instructions': [ '5.5.1' ],
+85 silly audit   '@solana/keys': [ '5.5.1' ],
+85 silly audit   '@solana/kit': [ '5.5.1' ],
+85 silly audit   '@solana/nominal-types': [ '5.5.1' ],
+85 silly audit   '@solana/offchain-messages': [ '5.5.1' ],
+85 silly audit   '@solana/options': [ '5.5.1' ],
+85 silly audit   '@solana/plugin-core': [ '5.5.1' ],
+85 silly audit   '@solana/programs': [ '5.5.1' ],
+85 silly audit   '@solana/promises': [ '5.5.1' ],
+85 silly audit   '@solana/rpc': [ '5.5.1' ],
+85 silly audit   '@solana/rpc-api': [ '5.5.1' ],
+85 silly audit   '@solana/rpc-parsed-types': [ '5.5.1' ],
+85 silly audit   '@solana/rpc-spec': [ '5.5.1' ],
+85 silly audit   '@solana/rpc-spec-types': [ '5.5.1' ],
+85 silly audit   '@solana/rpc-subscriptions': [ '5.5.1' ],
+85 silly audit   '@solana/rpc-subscriptions-api': [ '5.5.1' ],
+85 silly audit   '@solana/rpc-subscriptions-channel-websocket': [ '5.5.1' ],
+85 silly audit   '@solana/rpc-subscriptions-spec': [ '5.5.1' ],
+85 silly audit   '@solana/rpc-transformers': [ '5.5.1' ],
+85 silly audit   '@solana/rpc-transport-http': [ '5.5.1' ],
+85 silly audit   'undici-types': [ '7.29.0', '6.21.0' ],
+85 silly audit   '@solana/rpc-types': [ '5.5.1' ],
+85 silly audit   '@solana/signers': [ '5.5.1' ],
+85 silly audit   '@solana/subscribable': [ '5.5.1' ],
+85 silly audit   '@solana/sysvars': [ '5.5.1' ],
+85 silly audit   '@solana/transaction-confirmation': [ '5.5.1' ],
+85 silly audit   '@solana/transaction-messages': [ '5.5.1' ],
+85 silly audit   '@solana/transactions': [ '5.5.1' ],
+85 silly audit   'base-x': [ '5.0.1' ],
+85 silly audit   bs58: [ '6.0.0' ],
+85 silly audit   '@swc/counter': [ '0.1.3' ],
+85 silly audit   '@swc/helpers': [ '0.5.5' ],
+85 silly audit   '@tanstack/query-core': [ '5.101.4' ],
+85 silly audit   '@tanstack/react-query': [ '5.101.4' ],
+85 silly audit   '@types/debug': [ '4.1.13' ],
+85 silly audit   '@types/lodash': [ '4.17.25' ],
+85 silly audit   '@types/ms': [ '2.1.0' ],
+85 silly audit   '@types/node': [ '20.19.43' ],
+85 silly audit   '@types/prop-types': [ '15.7.15' ],
+85 silly audit   '@types/react': [ '18.3.31' ],
+85 silly audit   '@types/react-dom': [ '18.3.7' ],
+85 silly audit   '@types/trusted-types': [ '2.0.7' ],
+85 silly audit   '@vanilla-extract/css': [ '1.20.1' ],
+85 silly audit   '@vanilla-extract/dynamic': [ '2.1.5' ],
+85 silly audit   '@vanilla-extract/private': [ '1.0.9' ],
+85 silly audit   '@vanilla-extract/sprinkles': [ '1.6.5' ],
+85 silly audit   '@wagmi/connectors': [ '6.2.0' ],
+85 silly audit   porto: [ '0.2.35' ],
+85 silly audit   '@wagmi/core': [ '2.22.1' ],
+85 silly audit   '@walletconnect/environment': [ '1.0.1' ],
+85 silly audit   tslib: [ '1.14.1', '2.8.1' ],
+85 silly audit   '@walletconnect/ethereum-provider': [ '2.21.1' ],
+85 silly audit   '@walletconnect/events': [ '1.0.1' ],
+85 silly audit   '@walletconnect/heartbeat': [ '1.2.2' ],
+85 silly audit   '@walletconnect/jsonrpc-http-connection': [ '1.0.8' ],
+85 silly audit   'cross-fetch': [ '3.2.0', '4.1.0' ],
+85 silly audit   '@walletconnect/jsonrpc-provider': [ '1.0.14' ],
+85 silly audit   '@walletconnect/jsonrpc-types': [ '1.0.4' ],
+85 silly audit   '@walletconnect/jsonrpc-utils': [ '1.0.8' ],
+85 silly audit   '@walletconnect/jsonrpc-ws-connection': [ '1.0.16' ],
+85 silly audit   '@walletconnect/logger': [ '2.1.2' ],
+85 silly audit   '@walletconnect/relay-api': [ '1.0.11' ],
+85 silly audit   '@walletconnect/relay-auth': [ '1.1.0' ],
+85 silly audit   '@walletconnect/safe-json': [ '1.0.2' ],
+85 silly audit   '@walletconnect/time': [ '1.0.2' ],
+85 silly audit   '@walletconnect/window-getters': [ '1.0.1' ],
+85 silly audit   '@walletconnect/window-metadata': [ '1.0.1' ],
+85 silly audit   '@x402/core': [ '2.20.0' ],
+85 silly audit   '@x402/evm': [ '2.20.0' ],
+85 silly audit   '@x402/svm': [ '2.20.0' ],
+85 silly audit   'ansi-regex': [ '5.0.1' ],
+85 silly audit   'ansi-styles': [ '4.3.0' ],
+85 silly audit   anymatch: [ '3.1.3' ],
+85 silly audit   'async-mutex': [ '0.2.6' ],
+85 silly audit   asynckit: [ '0.4.0' ],
+85 silly audit   'atomic-sleep': [ '1.0.0' ],
+85 silly audit   'available-typed-arrays': [ '1.0.7' ],
+85 silly audit   axios: [ '1.16.0' ],
+85 silly audit   'axios-retry': [ '4.5.0' ],
+85 silly audit   'base64-js': [ '1.5.1' ],
+85 silly audit   'big.js': [ '6.2.2' ],
+85 silly audit   'bn.js': [ '5.2.5' ],
+85 silly audit   bowser: [ '2.14.1' ],
+85 silly audit   buffer: [ '6.0.3' ],
+85 silly audit   bufferutil: [ '4.1.0' ],
+85 silly audit   busboy: [ '1.6.0' ],
+85 silly audit   'call-bind': [ '1.0.9' ],
+85 silly audit   'call-bind-apply-helpers': [ '1.0.2' ],
+85 silly audit   'call-bound': [ '1.0.4' ],
+85 silly audit   camelcase: [ '5.3.1' ],
+85 silly audit   'caniuse-lite': [ '1.0.30001806' ],
+85 silly audit   chalk: [ '5.6.2' ],
+85 silly audit   charenc: [ '0.0.2' ],
+85 silly audit   chokidar: [ '5.0.0' ],
+85 silly audit   'client-only': [ '0.0.1' ],
+85 silly audit   cliui: [ '6.0.0' ],
+85 silly audit   'color-convert': [ '2.0.1' ],
+85 silly audit   'color-name': [ '1.1.4' ],
+85 silly audit   'combined-stream': [ '1.0.8' ],
+85 silly audit   'cookie-es': [ '1.2.3' ],
+85 silly audit   'core-util-is': [ '1.0.3' ],
+85 silly audit   'crc-32': [ '1.2.2' ],
+85 silly audit   crossws: [ '0.3.5' ],
+85 silly audit   crypt: [ '0.0.2' ],
+85 silly audit   'css-what': [ '6.2.2' ],
+85 silly audit   csstype: [ '3.2.3' ],
+85 silly audit   cuer: [ '0.0.3' ],
+85 silly audit   'date-fns': [ '2.30.0' ],
+85 silly audit   dayjs: [ '1.11.13' ],
+85 silly audit   debug: [ '4.3.4', '4.4.3' ],
+85 silly audit   ms: [ '2.1.2', '2.1.3' ],
+85 silly audit   decamelize: [ '1.2.0' ],
+85 silly audit   'decode-uri-component': [ '0.2.2' ],
+85 silly audit   dedent: [ '1.7.2' ],
+85 silly audit   'deep-object-diff': [ '1.1.9' ],
+85 silly audit   deepmerge: [ '4.3.1' ],
+85 silly audit   'define-data-property': [ '1.1.4' ],
+85 silly audit   defu: [ '6.1.7' ],
+85 silly audit   'delayed-stream': [ '1.0.0' ],
+85 silly audit   'derive-valtio': [ '0.1.0' ],
+85 silly audit   destr: [ '2.0.5' ],
+85 silly audit   'detect-browser': [ '5.3.0' ],
+85 silly audit   'detect-europe-js': [ '0.1.2' ],
+85 silly audit   'detect-node-es': [ '1.1.0' ],
+85 silly audit   dijkstrajs: [ '1.0.3' ],
+85 silly audit   'dunder-proto': [ '1.0.1' ],
+85 silly audit   duplexify: [ '4.1.3' ],
+85 silly audit   eciesjs: [ '0.4.18' ],
+85 silly audit   'emoji-regex': [ '8.0.0' ],
+85 silly audit   'encode-utf8': [ '1.0.3' ],
+85 silly audit   'end-of-stream': [ '1.4.5' ],
+85 silly audit   'engine.io-client': [ '6.6.6' ],
+85 silly audit   'engine.io-parser': [ '5.2.3' ],
+85 silly audit   'es-define-property': [ '1.0.1' ],
+85 silly audit   'es-errors': [ '1.3.0' ],
+85 silly audit   'es-object-atoms': [ '1.1.2' ],
+85 silly audit   'es-set-tostringtag': [ '2.1.0' ],
+85 silly audit   'es-toolkit': [ '1.33.0' ],
+85 silly audit   'eth-block-tracker': [ '7.1.0' ],
+85 silly audit   'eth-json-rpc-filters': [ '6.0.1' ],
+85 silly audit   pify: [ '5.0.0', '3.0.0' ],
+85 silly audit   'eth-query': [ '2.1.2' ],
+85 silly audit   'eth-rpc-errors': [ '4.0.3' ],
+85 silly audit   'ethereum-cryptography': [ '2.2.1' ],
+85 silly audit   eventemitter2: [ '6.4.9' ],
+85 silly audit   events: [ '3.3.0' ],
+85 silly audit   'extension-port-stream': [ '3.0.0' ],
+85 silly audit   'fast-deep-equal': [ '3.1.3' ],
+85 silly audit   'fast-redact': [ '3.5.0' ],
+85 silly audit   'fast-safe-stringify': [ '2.1.1' ],
+85 silly audit   'filter-obj': [ '1.1.0' ],
+85 silly audit   'find-up': [ '4.1.0' ],
+85 silly audit   'follow-redirects': [ '1.16.0' ],
+85 silly audit   'for-each': [ '0.3.5' ],
+85 silly audit   'form-data': [ '4.0.6' ],
+85 silly audit   'function-bind': [ '1.1.2' ],
+85 silly audit   'generator-function': [ '2.0.1' ],
+85 silly audit   'get-caller-file': [ '2.0.5' ],
+85 silly audit   'get-intrinsic': [ '1.3.0' ],
+85 silly audit   'get-nonce': [ '1.0.1' ],
+85 silly audit   'get-proto': [ '1.0.1' ],
+85 silly audit   gopd: [ '1.2.0' ],
+85 silly audit   'graceful-fs': [ '4.2.11' ],
+85 silly audit   h3: [ '1.15.11' ],
+85 silly audit   'has-property-descriptors': [ '1.0.2' ],
+85 silly audit   'has-symbols': [ '1.1.0' ],
+85 silly audit   'has-tostringtag': [ '1.0.2' ],
+85 silly audit   hasown: [ '2.0.4' ],
+85 silly audit   hono: [ '4.12.33' ],
+85 silly audit   'idb-keyval': [ '6.2.1' ],
+85 silly audit   ieee754: [ '1.2.1' ],
+85 silly audit   inherits: [ '2.0.4' ],
+85 silly audit   'iron-webcrypto': [ '1.2.1' ],
+85 silly audit   'is-arguments': [ '1.2.0' ],
+85 silly audit   'is-buffer': [ '1.1.6' ],
+85 silly audit   'is-callable': [ '1.2.7' ],
+85 silly audit   'is-fullwidth-code-point': [ '3.0.0' ],
+85 silly audit   'is-generator-function': [ '1.1.2' ],
+85 silly audit   'is-regex': [ '1.2.1' ],
+85 silly audit   'is-retry-allowed': [ '2.2.0' ],
+85 silly audit   'is-standalone-pwa': [ '0.1.1' ],
+85 silly audit   'is-stream': [ '2.0.1' ],
+85 silly audit   'is-typed-array': [ '1.1.15' ],
+85 silly audit   isarray: [ '2.0.5', '1.0.0' ],
+85 silly audit   jose: [ '6.2.7' ],
+85 silly audit   'js-tokens': [ '4.0.0' ],
+85 silly audit   'json-rpc-engine': [ '6.1.0' ],
+85 silly audit   'json-rpc-random-id': [ '1.0.1' ],
+85 silly audit   keccak: [ '3.0.4' ],
+85 silly audit   'keyvaluestorage-interface': [ '1.0.0' ],
+85 silly audit   lit: [ '3.3.0' ],
+85 silly audit   'lit-element': [ '4.2.2' ],
+85 silly audit   'lit-html': [ '3.3.3' ],
+85 silly audit   'locate-path': [ '5.0.0' ],
+85 silly audit   lodash: [ '4.18.1' ],
+85 silly audit   'loose-envify': [ '1.4.0' ],
+85 silly audit   'math-intrinsics': [ '1.1.0' ],
+85 silly audit   md5: [ '2.3.0' ],
+85 silly audit   'media-query-parser': [ '2.0.2' ],
+85 silly audit   'micro-ftch': [ '0.3.1' ],
+85 silly audit   'mime-db': [ '1.52.0' ],
+85 silly audit   'mime-types': [ '2.1.35' ],
+85 silly audit   mipd: [ '0.0.7' ],
+85 silly audit   'modern-ahocorasick': [ '1.1.0' ],
+85 silly audit   multiformats: [ '9.9.0' ],
+85 silly audit   nanoid: [ '3.3.16' ],
+85 silly audit   next: [ '14.2.0' ],
+85 silly audit   'node-addon-api': [ '2.0.2' ],
+85 silly audit   'node-fetch': [ '2.7.0' ],
+85 silly audit   'node-fetch-native': [ '1.6.7' ],
+85 silly audit   'node-gyp-build': [ '4.8.4' ],
+85 silly audit   'node-mock-http': [ '1.0.5' ],
+85 silly audit   'normalize-path': [ '3.0.0' ],
+85 silly audit   'obj-multiplex': [ '1.0.0' ],
+85 silly audit   'readable-stream': [ '2.3.8', '3.6.2' ],
+85 silly audit   'safe-buffer': [ '5.1.2', '5.2.1' ],
+85 silly audit   string_decoder: [ '1.1.1', '1.3.0' ],
+85 silly audit   ofetch: [ '1.5.1' ],
+85 silly audit   'on-exit-leak-free': [ '0.2.0' ],
+85 silly audit   once: [ '1.4.0' ],
+85 silly audit   'openapi-fetch': [ '0.13.8' ],
+85 silly audit   'openapi-typescript-helpers': [ '0.0.15' ],
+85 silly audit   'p-limit': [ '2.3.0' ],
+85 silly audit   'p-locate': [ '4.1.0' ],
+85 silly audit   'p-try': [ '2.2.0' ],
+85 silly audit   'path-exists': [ '4.0.0' ],
+85 silly audit   picocolors: [ '1.1.1' ],
+85 silly audit   picomatch: [ '2.3.2' ],
+85 silly audit   pino: [ '7.11.0' ],
+85 silly audit   'pino-abstract-transport': [ '0.5.0' ],
+85 silly audit   'pino-std-serializers': [ '4.0.0' ],
+85 silly audit   pngjs: [ '5.0.0' ],
+85 silly audit   'pony-cause': [ '2.1.11' ],
+85 silly audit   'possible-typed-array-names': [ '1.1.0' ],
+85 silly audit   postcss: [ '8.4.31' ],
+85 silly audit   preact: [ '10.24.2' ],
+85 silly audit   'process-nextick-args': [ '2.0.1' ],
+85 silly audit   'process-warning': [ '1.0.0' ],
+85 silly audit   'proxy-compare': [ '2.6.0' ],
+85 silly audit   'proxy-from-env': [ '2.1.0' ],
+85 silly audit   pump: [ '3.0.4' ],
+85 silly audit   qr: [ '0.6.0' ],
+85 silly audit   qrcode: [ '1.5.3' ],
+85 silly audit   'query-string': [ '7.1.3' ],
+85 silly audit   'quick-format-unescaped': [ '4.0.4' ],
+85 silly audit   radix3: [ '1.1.2' ],
+85 silly audit   react: [ '18.3.1' ],
+85 silly audit   'react-dom': [ '18.3.1' ],
+85 silly audit   'react-remove-scroll': [ '2.7.2' ],
+85 silly audit   'react-remove-scroll-bar': [ '2.3.8' ],
+85 silly audit   'react-style-singleton': [ '2.2.3' ],
+85 silly audit   readdirp: [ '5.0.0' ],
+85 silly audit   'real-require': [ '0.1.0' ],
+85 silly audit   'require-directory': [ '2.1.1' ],
+85 silly audit   'require-main-filename': [ '2.0.0' ],
+85 silly audit   'utf-8-validate': [ '5.0.10' ],
+85 silly audit   'safe-regex-test': [ '1.1.0' ],
+85 silly audit   'safe-stable-stringify': [ '2.5.0' ],
+85 silly audit   scheduler: [ '0.23.2' ],
+85 silly audit   semver: [ '7.8.5' ],
+85 silly audit   'set-blocking': [ '2.0.0' ],
+85 silly audit   'set-function-length': [ '1.2.2' ],
+85 silly audit   'sha.js': [ '2.4.12' ],
+85 silly audit   'socket.io-client': [ '4.8.3' ],
+85 silly audit   'socket.io-parser': [ '4.2.7' ],
+85 silly audit   'sonic-boom': [ '2.8.0' ],
+85 silly audit   'source-map-js': [ '1.2.1' ],
+85 silly audit   'split-on-first': [ '1.1.0' ],
+85 silly audit   split2: [ '4.2.0' ],
+85 silly audit   'stream-shift': [ '1.0.3' ],
+85 silly audit   streamsearch: [ '1.1.0' ],
+85 silly audit   'strict-uri-encode': [ '2.0.0' ],
+85 silly audit   'string-width': [ '4.2.3' ],
+85 silly audit   'strip-ansi': [ '6.0.1' ],
+85 silly audit   'styled-jsx': [ '5.1.1' ],
+85 silly audit   'thread-stream': [ '0.15.2' ],
+85 silly audit   'to-buffer': [ '1.2.2' ],
+85 silly audit   tr46: [ '0.0.3' ],
+85 silly audit   'typed-array-buffer': [ '1.0.3' ],
+85 silly audit   typescript: [ '5.9.3' ],
+85 silly audit   'ua-is-frozen': [ '0.1.2' ],
+85 silly audit   'ua-parser-js': [ '2.0.10' ],
+85 silly audit   ufo: [ '1.6.4' ],
+85 silly audit   uint8arrays: [ '3.1.0' ],
+85 silly audit   uncrypto: [ '0.1.3' ],
+85 silly audit   'use-callback-ref': [ '1.3.3' ],
+85 silly audit   'use-sidecar': [ '1.1.3' ],
+85 silly audit   'use-sync-external-store': [ '1.4.0', '1.2.0' ],
+85 silly audit   util: [ '0.12.5' ],
+85 silly audit   'util-deprecate': [ '1.0.2' ],
+85 silly audit   valtio: [ '1.13.2' ],
+85 silly audit   wagmi: [ '2.19.5' ],
+85 silly audit   'webextension-polyfill': [ '0.10.0' ],
+85 silly audit   'webidl-conversions': [ '3.0.1' ],
+85 silly audit   'whatwg-url': [ '5.0.0' ],
+85 silly audit   'which-module': [ '2.0.1' ],
+85 silly audit   'which-typed-array': [ '1.1.22' ],
+85 silly audit   'wrap-ansi': [ '6.2.0' ],
+85 silly audit   wrappy: [ '1.0.2' ],
+85 silly audit   'xmlhttprequest-ssl': [ '2.1.2' ],
+85 silly audit   xtend: [ '4.0.2' ],
+85 silly audit   y18n: [ '4.0.3' ],
+85 silly audit   yargs: [ '15.4.1' ],
+85 silly audit   'yargs-parser': [ '18.1.3' ],
+85 silly audit   '@lifi/sdk': [ '4.3.0' ],
+85 silly audit   '@lifi/types': [ '17.86.0' ]
+85 silly audit }
+86 http cache @lifi/types@https://registry.npmjs.org/@lifi/types/-/types-17.86.0.tgz 0ms (cache hit)
+87 http cache @lifi/sdk@https://registry.npmjs.org/@lifi/sdk/-/sdk-4.3.0.tgz 0ms (cache hit)
+88 silly tarball no local data for @lifi/types@https://registry.npmjs.org/@lifi/types/-/types-17.86.0.tgz. Extracting by manifest.
+89 silly tarball no local data for @lifi/sdk@https://registry.npmjs.org/@lifi/sdk/-/sdk-4.3.0.tgz. Extracting by manifest.
+90 http fetch POST 200 https://registry.npmjs.org/-/npm/v1/security/advisories/bulk 251ms
+91 silly audit report {
+91 silly audit report   uuid: [
+91 silly audit report     {
+91 silly audit report       id: 1119441,
+91 silly audit report       url: 'https://github.com/advisories/GHSA-w5hq-g745-h8pq',
+91 silly audit report       title: 'uuid: Missing buffer bounds check in v3/v5/v6 when buf is provided',
+91 silly audit report       severity: 'moderate',
+91 silly audit report       vulnerable_versions: '<11.1.1',
+91 silly audit report       cwe: [Array],
+91 silly audit report       cvss: [Object]
+91 silly audit report     }
+91 silly audit report   ],
+91 silly audit report   ws: [
+91 silly audit report     {
+91 silly audit report       id: 1119108,
+91 silly audit report       url: 'https://github.com/advisories/GHSA-58qx-3vcg-4xpx',
+91 silly audit report       title: 'ws: Uninitialized memory disclosure',
+91 silly audit report       severity: 'moderate',
+91 silly audit report       vulnerable_versions: '>=8.0.0 <8.20.1',
+91 silly audit report       cwe: [Array],
+91 silly audit report       cvss: [Object]
+91 silly audit report     },
+91 silly audit report     {
+91 silly audit report       id: 1123259,
+91 silly audit report       url: 'https://github.com/advisories/GHSA-96hv-2xvq-fx4p',
+91 silly audit report       title: 'ws: Memory exhaustion DoS from tiny fragments and data chunks',
+91 silly audit report       severity: 'high',
+91 silly audit report       vulnerable_versions: '>=8.0.0 <8.21.0',
+91 silly audit report       cwe: [Array],
+91 silly audit report       cvss: [Object]
+91 silly audit report     }
+91 silly audit report   ],
+91 silly audit report   axios: [
+91 silly audit report     {
+91 silly audit report       id: 1123882,
+91 silly audit report       url: 'https://github.com/advisories/GHSA-42h9-826w-cgv3',
+91 silly audit report       title: 'Axios: Excessive recursion in formDataToJSON can cause denial of service',
+91 silly audit report       severity: 'moderate',
+91 silly audit report       vulnerable_versions: '>=1.0.0 <1.18.0',
+91 silly audit report       cwe: [Array],
+91 silly audit report       cvss: [Object]
+91 silly audit report     },
+91 silly audit report     {
+91 silly audit report       id: 1123884,
+91 silly audit report       url: 'https://github.com/advisories/GHSA-xj6q-8x83-jv6g',
+91 silly audit report       title: 'Axios: Prototype pollution auth subfields can inject Basic auth',
+91 silly audit report       severity: 'moderate',
+91 silly audit report       vulnerable_versions: '>=1.15.2 <1.18.0',
+91 silly audit report       cwe: [Array],
+91 silly audit report       cvss: [Object]
+91 silly audit report     },
+91 silly audit report     {
+91 silly audit report       id: 1123885,
+91 silly audit report       url: 'https://github.com/advisories/GHSA-pmv8-rq9r-6j72',
+91 silly audit report       title: 'Axios: Deep formToJSON Key Recursion Can Cause Denial of Service',
+91 silly audit report       severity: 'moderate',
+91 silly audit report       vulnerable_versions: '>=1.0.0 <1.18.0',
+91 silly audit report       cwe: [Array],
+91 silly audit report       cvss: [Object]
+91 silly audit report     },
+91 silly audit report     {
+91 silly audit report       id: 1123967,
+91 silly audit report       url: 'https://github.com/advisories/GHSA-gcfj-64vw-6mp9',
+91 silly audit report       title: 'Axios Node HTTP adapter can use an inherited proxy after interceptor config cloning',
+91 silly audit report       severity: 'high',
+91 silly audit report       vulnerable_versions: '>=1.15.2 <1.18.0',
+91 silly audit report       cwe: [Array],
+91 silly audit report       cvss: [Object]
+91 silly audit report     },
+91 silly audit report     {
+91 silly audit report       id: 1123969,
+91 silly audit report       url: 'https://github.com/advisories/GHSA-hcpx-6fm6-wx23',
+91 silly audit report       title: 'Axios form serializer maxDepth bypass via {} metatoken',
+91 silly audit report       severity: 'moderate',
+91 silly audit report       vulnerable_versions: '>=1.15.1 <1.18.0',
+91 silly audit report       cwe: [Array],
+91 silly audit report       cvss: [Object]
+91 silly audit report     },
+91 silly audit report     {
+91 silly audit report       id: 1123957,
+91 silly audit report       url: 'https://github.com/advisories/GHSA-jqh4-m9w3-8hp9',
+91 silly audit report       title: 'Axios: Fetch adapter `ReadableStream` uploads bypass `maxBodyLength`',
+91 silly audit report       severity: 'moderate',
+91 silly audit report       vulnerable_versions: '>=1.7.0 <1.18.0',
+91 silly audit report       cwe: [Array],
+91 silly audit report       cvss: [Object]
+91 silly audit report     },
+91 silly audit report     {
+91 silly audit report       id: 1123959,
+91 silly audit report       url: 'https://github.com/advisories/GHSA-mmx7-hfxf-jppx',
+91 silly audit report       title: 'Axios: Prototype pollution gadgets can alter axios request construction',
+91 silly audit report       severity: 'moderate',
+91 silly audit report       vulnerable_versions: '>=1.0.0 <1.18.0',
+91 silly audit report       cwe: [Array],
+91 silly audit report       cvss: [Object]
+91 silly audit report     },
+91 silly audit report     {
+91 silly audit report       id: 1123961,
+91 silly audit report       url: 'https://github.com/advisories/GHSA-f4gw-2p7v-4548',
+91 silly audit report       title: 'Axios: NO_PROXY bypass for 0.0.0.0 local addresses in axios',
+91 silly audit report       severity: 'moderate',
+91 silly audit report       vulnerable_versions: '>=1.15.0 <1.18.0',
+91 silly audit report       cwe: [Array],
+91 silly audit report       cvss: [Object]
+91 silly audit report     },
+91 silly audit report     {
+91 silly audit report       id: 1123971,
+91 silly audit report       url: 'https://github.com/advisories/GHSA-7q8q-rj6j-mhjq',
+91 silly audit report       title: 'Axios: Nested axios option objects can consume polluted prototype values',
+91 silly audit report       severity: 'moderate',
+91 silly audit report       vulnerable_versions: '>=1.0.0 <1.18.0',
+91 silly audit report       cwe: [Array],
+91 silly audit report       cvss: [Object]
+91 silly audit report     },
+91 silly audit report     {
+91 silly audit report       id: 1123973,
+91 silly audit report       url: 'https://github.com/advisories/GHSA-mwf2-3pr3-8698',
+91 silly audit report       title: 'Axios: HTTP/2 streamed uploads bypass `maxBodyLength`',
+91 silly audit report       severity: 'moderate',
+91 silly audit report       vulnerable_versions: '>=1.13.0 <1.18.0',
+91 silly audit report       cwe: [Array],
+91 silly audit report       cvss: [Object]
+91 silly audit report     }
+91 silly audit report   ],
+91 silly audit report   hono: [
+91 silly audit report     {
+91 silly audit report       id: 1130733,
+91 silly audit report       url: 'https://github.com/advisories/GHSA-8j4g-w8fx-2239',
+91 silly audit report       title: 'Hono: ReDoS in CORS middleware via Access-Control-Request-Headers',
+91 silly audit report       severity: 'moderate',
+91 silly audit report       vulnerable_versions: '<4.12.34',
+91 silly audit report       cwe: [Array],
+91 silly audit report       cvss: [Object]
+91 silly audit report     }
+91 silly audit report   ],
+91 silly audit report   next: [
+91 silly audit report     {
+91 silly audit report       id: 1099638,
+91 silly audit report       url: 'https://github.com/advisories/GHSA-gp8f-8m3g-qvj9',
+91 silly audit report       title: 'Next.js Cache Poisoning',
+91 silly audit report       severity: 'high',
+91 silly audit report       vulnerable_versions: '>=14.0.0 <14.2.10',
+91 silly audit report       cwe: [Array],
+91 silly audit report       cvss: [Object]
+91 silly audit report     },
+91 silly audit report     {
+91 silly audit report       id: 1100421,
+91 silly audit report       url: 'https://github.com/advisories/GHSA-g77x-44xx-532m',
+91 silly audit report       title: 'Denial of Service condition in Next.js image optimization',
+91 silly audit report       severity: 'moderate',
+91 silly audit report       vulnerable_versions: '>=10.0.0 <14.2.7',
+91 silly audit report       cwe: [Array],
+91 silly audit report       cvss: [Object]
+91 silly audit report     },
+91 silly audit report     {
+91 silly audit report       id: 1117931,
+91 silly audit report       url: 'https://github.com/advisories/GHSA-8h8q-6873-q5fj',
+91 silly audit report       title: 'Next.js Vulnerable to Denial of Service with Server Components',
+91 silly audit report       severity: 'high',
+91 silly audit report       vulnerable_versions: '>=13.0.0 <15.5.16',
+91 silly audit report       cwe: [Array],
+91 silly audit report       cvss: [Object]
+91 silly audit report     },
+91 silly audit report     {
+91 silly audit report       id: 1101438,
+91 silly audit report       url: 'https://github.com/advisories/GHSA-7m27-7ghc-44w9',
+91 silly audit report       title: 'Next.js Allows a Denial of Service (DoS) with Server Actions',
+91 silly audit report       severity: 'moderate',
+91 silly audit report       vulnerable_versions: '>=14.0.0 <14.2.21',
+91 silly audit report       cwe: [Array],
+91 silly audit report       cvss: [Object]
+91 silly audit report     },
+91 silly audit report     {
+91 silly audit report       id: 1105461,
+91 silly audit report       url: 'https://github.com/advisories/GHSA-3h52-269p-cp9r',
+91 silly audit report       title: 'Information exposure in Next.js dev server due to lack of origin verification',
+91 silly audit report       severity: 'low',
+91 silly audit report       vulnerable_versions: '>=13.0 <14.2.30',
+91 silly audit report       cwe: [Array],
+91 silly audit report       cvss: [Object]
+91 silly audit report     },
+91 silly audit report     {
+91 silly audit report       id: 1111391,
+91 silly audit report       url: 'https://github.com/advisories/GHSA-mwv6-3258-q52c',
+91 silly audit report       title: 'Next Vulnerable to Denial of Service with Server Components',
+91 silly audit report       severity: 'high',
+91 silly audit report       vulnerable_versions: '>=13.3.0 <14.2.34',
+91 silly audit report       cwe: [Array],
+91 silly audit report       cvss: [Object]
+91 silly audit report     },
+91 silly audit report     {
+91 silly audit report       id: 1107226,
+91 silly audit report       url: 'https://github.com/advisories/GHSA-g5qg-72qw-gw5v',
+91 silly audit report       title: 'Next.js Affected by Cache Key Confusion for Image Optimization API Routes',
+91 silly audit report       severity: 'moderate',
+91 silly audit report       vulnerable_versions: '>=0.9.9 <14.2.31',
+91 silly audit report       cwe: [Array],
+91 silly audit report       cvss: [Object]
+91 silly audit report     },
+91 silly audit report     {
+91 silly audit report       id: 1107420,
+91 silly audit report       url: 'https://github.com/advisories/GHSA-7gfc-8cq8-jh5f',
+91 silly audit report       title: 'Next.js authorization bypass vulnerability',
+91 silly audit report       severity: 'high',
+91 silly audit report       vulnerable_versions: '>=9.5.5 <14.2.15',
+91 silly audit report       cwe: [Array],
+91 silly audit report       cvss: [Object]
+91 silly audit report     },
+91 silly audit report     {
+91 silly audit report       id: 1107512,
+91 silly audit report       url: 'https://github.com/advisories/GHSA-4342-x723-ch2f',
+91 silly audit report       title: 'Next.js Improper Middleware Redirect Handling Leads to SSRF',
+91 silly audit report       severity: 'moderate',
+91 silly audit report       vulnerable_versions: '>=0.9.9 <14.2.32',
+91 silly audit report       cwe: [Array],
+91 silly audit report       cvss: [Object]
+91 silly audit report     },
+91 silly audit report     {
+91 silly audit report       id: 1107513,
+91 silly audit report       url: 'https://github.com/advisories/GHSA-xv57-4mr9-wg8v',
+91 silly audit report       title: 'Next.js Content Injection Vulnerability for Image Optimization',
+91 silly audit report       severity: 'moderate',
+91 silly audit report       vulnerable_versions: '>=0.9.9 <14.2.31',
+91 silly audit report       cwe: [Array],
+91 silly audit report       cvss: [Object]
+91 silly audit report     },
+91 silly audit report     {
+91 silly audit report       id: 1112182,
+91 silly audit report       url: 'https://github.com/advisories/GHSA-5j59-xgg2-r9c4',
+91 silly audit report       title: 'Next has a Denial of Service with Server Components - Incomplete Fix Follow-Up',
+91 silly audit report       severity: 'high',
+91 silly audit report       vulnerable_versions: '>=13.3.1-canary.0 <14.2.35',
+91 silly audit report       cwe: [Array],
+91 silly audit report       cvss: [Object]
+91 silly audit report     },
+91 silly audit report     {
+91 silly audit report       id: 1108291,
+91 silly audit report       url: 'https://github.com/advisories/GHSA-qpjv-v59x-3qc4',
+91 silly audit report       title: 'Next.js Race Condition to Cache Poisoning',
+91 silly audit report       severity: 'low',
+91 silly audit report       vulnerable_versions: '>=0.9.9 <14.2.24',
+91 silly audit report       cwe: [Array],
+91 silly audit report       cvss: [Object]
+91 silly audit report     },
+91 silly audit report     {
+91 silly audit report       id: 1118942,
+91 silly audit report       url: 'https://github.com/advisories/GHSA-3g8h-86w9-wvmq',
+91 silly audit report       title: "Next.js's Middleware / Proxy redirects can be cache-poisoned",
+91 silly audit report       severity: 'low',
+91 silly audit report       vulnerable_versions: '>=12.2.0 <15.5.16',
+91 silly audit report       cwe: [Array],
+91 silly audit report       cvss: [Object]
+91 silly audit report     },
+91 silly audit report     {
+91 silly audit report       id: 1118944,
+91 silly audit report       url: 'https://github.com/advisories/GHSA-ffhc-5mcf-pf4q',
+91 silly audit report       title: 'Next.js vulnerable to cross-site scripting in App Router applications using CSP nonces',
+91 silly audit report       severity: 'moderate',
+91 silly audit report       vulnerable_versions: '>=13.4.0 <15.5.16',
+91 silly audit report       cwe: [Array],
+91 silly audit report       cvss: [Object]
+91 silly audit report     },
+91 silly audit report     {
+91 silly audit report       id: 1118946,
+91 silly audit report       url: 'https://github.com/advisories/GHSA-vfv6-92ff-j949',
+91 silly audit report       title: 'Next.js vulnerable to cache poisoning via collisions in React Server Component cache-busting',
+91 silly audit report       severity: 'low',
+91 silly audit report       vulnerable_versions: '>=13.4.6 <15.5.16',
+91 silly audit report       cwe: [Array],
+91 silly audit report       cvss: [Object]
+91 silly audit report     },
+91 silly audit report     {
+91 silly audit report       id: 1118948,
+91 silly audit report       url: 'https://github.com/advisories/GHSA-gx5p-jg67-6x7h',
+91 silly audit report       title: 'Next.js has cross-site scripting in beforeInteractive scripts with untrusted input',
+91 silly audit report       severity: 'moderate',
+91 silly audit report       vulnerable_versions: '>=13.0.0 <15.5.16',
+91 silly audit report       cwe: [Array],
+91 silly audit report       cvss: [Object]
+91 silly audit report     },
+91 silly audit report     {
+91 silly audit report       id: 1118952,
+91 silly audit report       url: 'https://github.com/advisories/GHSA-h64f-5h5j-jqjh',
+91 silly audit report       title: 'Next.js has a Denial of Service in the Image Optimization API',
+91 silly audit report       severity: 'moderate',
+91 silly audit report       vulnerable_versions: '>=10.0.0 <15.5.16',
+91 silly audit report       cwe: [Array],
+91 silly audit report       cvss: [Object]
+91 silly audit report     },
+91 silly audit report     {
+91 silly audit report       id: 1118954,
+91 silly audit report       url: 'https://github.com/advisories/GHSA-c4j6-fc7j-m34r',
+91 silly audit report       title: 'Next.js vulnerable to server-side request forgery in applications using WebSocket upgrades',
+91 silly audit report       severity: 'high',
+91 silly audit report       vulnerable_versions: '>=13.4.13 <15.5.16',
+91 silly audit report       cwe: [Array],
+91 silly audit report       cvss: [Object]
+91 silly audit report     },
+91 silly audit report     {
+91 silly audit report       id: 1118958,
+91 silly audit report       url: 'https://github.com/advisories/GHSA-wfc6-r584-vfw7',
+91 silly audit report       title: 'Next.js vulnerable to cache poisoning in React Server Component responses',
+91 silly audit report       severity: 'moderate',
+91 silly audit report       vulnerable_versions: '>=14.2.0 <15.5.16',
+91 silly audit report       cwe: [Array],
+91 silly audit report       cvss: [Object]
+91 silly audit report     },
+91 silly audit report     {
+91 silly audit report       id: 1118962,
+91 silly audit report       url: 'https://github.com/advisories/GHSA-36qx-fr4f-26g5',
+91 silly audit report       title: 'Next.js has a Middleware / Proxy bypass in Pages Router applications using i18n',
+91 silly audit report       severity: 'high',
+91 silly audit report       vulnerable_versions: '>=12.2.0 <15.5.16',
+91 silly audit report       cwe: [Array],
+91 silly audit report       cvss: [Object]
+91 silly audit report     },
+91 silly audit report     {
+91 silly audit report       id: 1112593,
+91 silly audit report       url: 'https://github.com/advisories/GHSA-9g9p-9gw9-jx7f',
+91 silly audit report       title: 'Next.js self-hosted applications vulnerable to DoS via Image Optimizer remotePatterns configuration',
+91 silly audit report       severity: 'moderate',
+91 silly audit report       vulnerable_versions: '>=10.0.0 <15.5.10',
+91 silly audit report       cwe: [Array],
+91 silly audit report       cvss: [Object]
+91 silly audit report     },
+91 silly audit report     {
+91 silly audit report       id: 1112653,
+91 silly audit report       url: 'https://github.com/advisories/GHSA-h25m-26qc-wcjf',
+91 silly audit report       title: 'Next.js HTTP request deserialization can lead to DoS when using insecure React Server Components',
+91 silly audit report       severity: 'high',
+91 silly audit report       vulnerable_versions: '>=13.0.0 <15.0.8',
+91 silly audit report       cwe: [Array],
+91 silly audit report       cvss: [Object]
+91 silly audit report     },
+91 silly audit report     {
+91 silly audit report       id: 1113689,
+91 silly audit report       url: 'https://github.com/advisories/GHSA-f82v-jwr5-mffw',
+91 silly audit report       title: 'Authorization Bypass in Next.js Middleware',
+91 silly audit report       severity: 'critical',
+91 silly audit report       vulnerable_versions: '>=14.0.0 <14.2.25',
+91 silly audit report       cwe: [Array],
+91 silly audit report       cvss: [Object]
+91 silly audit report     },
+91 silly audit report     {
+91 silly audit report       id: 1114897,
+91 silly audit report       url: 'https://github.com/advisories/GHSA-ggv3-7p47-pfv8',
+91 silly audit report       title: 'Next.js: HTTP request smuggling in rewrites',
+91 silly audit report       severity: 'moderate',
+91 silly audit report       vulnerable_versions: '>=9.5.0 <15.5.13',
+91 silly audit report       cwe: [Array],
+91 silly audit report       cvss: [Object]
+91 silly audit report     },
+91 silly audit report     {
+91 silly audit report       id: 1114940,
+91 silly audit report       url: 'https://github.com/advisories/GHSA-3x4c-7xq6-9pq8',
+91 silly audit report       title: 'Next.js: Unbounded next/image disk cache growth can exhaust storage',
+91 silly audit report       severity: 'moderate',
+91 silly audit report       vulnerable_versions: '>=10.0.0 <15.5.14',
+91 silly audit report       cwe: [Array],
+91 silly audit report       cvss: [Object]
+91 silly audit report     },
+91 silly audit report     {
+91 silly audit report       id: 1116376,
+91 silly audit report       url: 'https://github.com/advisories/GHSA-q4gf-8mx6-v5v3',
+91 silly audit report       title: 'Next.js has a Denial of Service with Server Components',
+91 silly audit report       severity: 'high',
+91 silly audit report       vulnerable_versions: '>=13.0.0 <15.5.15',
+91 silly audit report       cwe: [Array],
+91 silly audit report       cvss: [Object]
+91 silly audit report     },
+91 silly audit report     {
+91 silly audit report       id: 1124185,
+91 silly audit report       url: 'https://github.com/advisories/GHSA-89xv-2m56-2m9x',
+91 silly audit report       title: 'Next.js: Server-Side Request Forgery in Server Actions on custom servers',
+91 silly audit report       severity: 'high',
+91 silly audit report       vulnerable_versions: '>=14.1.1 <15.5.21',
+91 silly audit report       cwe: [Array],
+91 silly audit report       cvss: [Object]
+91 silly audit report     },
+91 silly audit report     {
+91 silly audit report       id: 1124172,
+91 silly audit report       url: 'https://github.com/advisories/GHSA-m99w-x7hq-7vfj',
+91 silly audit report       title: 'Next.js: Denial of Service in App Router using Server Actions',
+91 silly audit report       severity: 'high',
+91 silly audit report       vulnerable_versions: '>=13.0.0 <15.5.21',
+91 silly audit report       cwe: [Array],
+91 silly audit report       cvss: [Object]
+91 silly audit report     },
+91 silly audit report     {
+91 silly audit report       id: 1124187,
+91 silly audit report       url: 'https://github.com/advisories/GHSA-68g3-v927-f742',
+91 silly audit report       title: 'Next.js: Cache confusion of response bodies for requests with bodies',
+91 silly audit report       severity: 'moderate',
+91 silly audit report       vulnerable_versions: '>=13.0.0 <15.5.21',
+91 silly audit report       cwe: [Array],
+91 silly audit report       cvss: [Object]
+91 silly audit report     },
+91 silly audit report     {
+91 silly audit report       id: 1124189,
+91 silly audit report       url: 'https://github.com/advisories/GHSA-4633-3j49-mh5q',
+91 silly audit report       title: 'Next.js: Cache confusion of response bodies for requests with bodies containing invalid UTF-8 byte sequences',
+91 silly audit report       severity: 'moderate',
+91 silly audit report       vulnerable_versions: '>=13.0.0 <15.5.21',
+91 silly audit report       cwe: [Array],
+91 silly audit report       cvss: [Object]
+91 silly audit report     },
+91 silly audit report     {
+91 silly audit report       id: 1124191,
+91 silly audit report       url: 'https://github.com/advisories/GHSA-4c39-4ccg-62r3',
+91 silly audit report       title: 'Next.js: Unbounded Server Action payload in Edge runtime',
+91 silly audit report       severity: 'moderate',
+91 silly audit report       vulnerable_versions: '>=13.0.0 <15.5.21',
+91 silly audit report       cwe: [Array],
+91 silly audit report       cvss: [Object]
+91 silly audit report     },
+91 silly audit report     {
+91 silly audit report       id: 1124193,
+91 silly audit report       url: 'https://github.com/advisories/GHSA-p9j2-gv94-2wf4',
+91 silly audit report       title: 'Next.js: Server-Side Request Forgery in rewrites via attacker-controlled destination hostname',
+91 silly audit report       severity: 'high',
+91 silly audit report       vulnerable_versions: '>=12.0.0 <15.5.21',
+91 silly audit report       cwe: [Array],
+91 silly audit report       cvss: [Object]
+91 silly audit report     },
+91 silly audit report     {
+91 silly audit report       id: 1124197,
+91 silly audit report       url: 'https://github.com/advisories/GHSA-955p-x3mx-jcvp',
+91 silly audit report       title: 'Next.js: Unauthenticated disclosure of internal Server Function endpoints',
+91 silly audit report       severity: 'moderate',
+91 silly audit report       vulnerable_versions: '>=13.0.0 <15.5.21',
+91 silly audit report       cwe: [Array],
+91 silly audit report       cvss: [Object]
+91 silly audit report     }
+91 silly audit report   ],
+91 silly audit report   postcss: [
+91 silly audit report     {
+91 silly audit report       id: 1130709,
+91 silly audit report       url: 'https://github.com/advisories/GHSA-fxqj-rqcc-2cmp',
+91 silly audit report       title: 'PostCSS: incomplete fix of GHSA-6g55-p6wh-862q — attacker-controlled sourceMappingURL reads arbitrary .map files when `from` is unset',
+91 silly audit report       severity: 'moderate',
+91 silly audit report       vulnerable_versions: '<=8.5.22',
+91 silly audit report       cwe: [Array],
+91 silly audit report       cvss: [Object]
+91 silly audit report     },
+91 silly audit report     {
+91 silly audit report       id: 1117015,
+91 silly audit report       url: 'https://github.com/advisories/GHSA-qx2v-qp2m-jg93',
+91 silly audit report       title: 'PostCSS has XSS via Unescaped </style> in its CSS Stringify Output',
+91 silly audit report       severity: 'moderate',
+91 silly audit report       vulnerable_versions: '<8.5.10',
+91 silly audit report       cwe: [Array],
+91 silly audit report       cvss: [Object]
+91 silly audit report     },
+91 silly audit report     {
+91 silly audit report       id: 1124252,
+91 silly audit report       url: 'https://github.com/advisories/GHSA-6g55-p6wh-862q',
+91 silly audit report       title: 'PostCSS: Arbitrary file read and information disclosure via attacker-controlled sourceMappingURL in CSS comments',
+91 silly audit report       severity: 'high',
+91 silly audit report       vulnerable_versions: '<=8.5.11',
+91 silly audit report       cwe: [Array],
+91 silly audit report       cvss: [Object]
+91 silly audit report     },
+91 silly audit report     {
+91 silly audit report       id: 1124288,
+91 silly audit report       url: 'https://github.com/advisories/GHSA-r28c-9q8g-f849',
+91 silly audit report       title: 'PostCSS: Path Traversal in Previous Source Map Auto-Loading (sourceMappingURL) leads to Arbitrary .map File Disclosure',
+91 silly audit report       severity: 'high',
+91 silly audit report       vulnerable_versions: '<=8.5.17',
+91 silly audit report       cwe: [Array],
+91 silly audit report       cvss: [Object]
+91 silly audit report     }
+91 silly audit report   ]
+91 silly audit report }
+92 silly packumentCache corgi:https://registry.npmjs.org/uuid cache-miss
+93 silly packumentCache corgi:https://registry.npmjs.org/ws cache-miss
+94 silly packumentCache corgi:https://registry.npmjs.org/axios cache-miss
+95 silly packumentCache corgi:https://registry.npmjs.org/hono cache-miss
+96 silly packumentCache corgi:https://registry.npmjs.org/next cache-miss
+97 silly packumentCache corgi:https://registry.npmjs.org/postcss cache-miss
+98 http fetch GET 200 https://registry.npmjs.org/@lifi/types/-/types-17.86.0.tgz 287ms (cache miss)
+99 http fetch GET 200 https://registry.npmjs.org/ws 80ms (cache miss)
+100 silly packumentCache corgi:https://registry.npmjs.org/ws set size:undefined disposed:false
+101 http fetch GET 200 https://registry.npmjs.org/uuid 88ms (cache miss)
+102 silly packumentCache corgi:https://registry.npmjs.org/uuid set size:undefined disposed:false
+103 http fetch GET 200 https://registry.npmjs.org/axios 225ms (cache miss)
+104 silly packumentCache corgi:https://registry.npmjs.org/axios set size:undefined disposed:false
+105 http fetch GET 200 https://registry.npmjs.org/postcss 284ms (cache miss)
+106 silly packumentCache corgi:https://registry.npmjs.org/postcss set size:undefined disposed:false
+107 http fetch GET 200 https://registry.npmjs.org/hono 294ms (cache miss)
+108 silly packumentCache corgi:https://registry.npmjs.org/hono set size:undefined disposed:false
+109 http fetch GET 200 https://registry.npmjs.org/@lifi/sdk/-/sdk-4.3.0.tgz 584ms (cache miss)
+110 http fetch GET 200 https://registry.npmjs.org/next 737ms (cache miss)
+111 silly packumentCache corgi:https://registry.npmjs.org/next set size:undefined disposed:false
+112 silly packumentCache corgi:https://registry.npmjs.org/@metamask%2futils cache-miss
+113 silly packumentCache corgi:https://registry.npmjs.org/@metamask%2fsdk cache-miss
+114 silly packumentCache corgi:https://registry.npmjs.org/@metamask%2fsdk-communication-layer cache-miss
+115 http fetch GET 200 https://registry.npmjs.org/@metamask%2fsdk 472ms (cache miss)
+116 silly packumentCache corgi:https://registry.npmjs.org/@metamask%2fsdk set size:undefined disposed:false
+117 http fetch GET 200 https://registry.npmjs.org/@metamask%2fsdk-communication-layer 479ms (cache miss)
+118 silly packumentCache corgi:https://registry.npmjs.org/@metamask%2fsdk-communication-layer set size:undefined disposed:false
+119 http fetch GET 200 https://registry.npmjs.org/@metamask%2futils 491ms (cache miss)
+120 silly packumentCache corgi:https://registry.npmjs.org/@metamask%2futils set size:undefined disposed:false
+121 silly packumentCache corgi:https://registry.npmjs.org/viem cache-miss
+122 silly packumentCache corgi:https://registry.npmjs.org/isows cache-miss
+123 http fetch GET 200 https://registry.npmjs.org/isows 230ms (cache miss)
+124 silly packumentCache corgi:https://registry.npmjs.org/isows set size:undefined disposed:false
+125 http fetch GET 200 https://registry.npmjs.org/viem 376ms (cache miss)
+126 silly packumentCache corgi:https://registry.npmjs.org/viem set size:undefined disposed:false
+127 silly packumentCache corgi:https://registry.npmjs.org/@coinbase%2fcdp-sdk cache-miss
+128 silly packumentCache corgi:https://registry.npmjs.org/axios-retry cache-miss
+129 http fetch GET 200 https://registry.npmjs.org/axios-retry 58ms (cache miss)
+130 silly packumentCache corgi:https://registry.npmjs.org/axios-retry set size:undefined disposed:false
+131 http fetch GET 200 https://registry.npmjs.org/@coinbase%2fcdp-sdk 492ms (cache miss)
+132 silly packumentCache corgi:https://registry.npmjs.org/@coinbase%2fcdp-sdk set size:undefined disposed:false
+133 silly packumentCache corgi:https://registry.npmjs.org/porto cache-miss
+134 http fetch GET 200 https://registry.npmjs.org/porto 233ms (cache miss)
+135 silly packumentCache corgi:https://registry.npmjs.org/porto set size:undefined disposed:false
+136 silly packumentCache corgi:https://registry.npmjs.org/@wagmi%2fconnectors cache-miss
+137 http fetch GET 200 https://registry.npmjs.org/@wagmi%2fconnectors 545ms (cache miss)
+138 silly packumentCache corgi:https://registry.npmjs.org/@wagmi%2fconnectors set size:undefined disposed:false
+139 silly packumentCache corgi:https://registry.npmjs.org/@metamask%2fjson-rpc-engine cache-miss
+140 silly packumentCache corgi:https://registry.npmjs.org/@metamask%2frpc-errors cache-miss
+141 silly packumentCache corgi:https://registry.npmjs.org/@metamask%2fjson-rpc-middleware-stream cache-miss
+142 silly packumentCache corgi:https://registry.npmjs.org/@metamask%2fproviders cache-miss
+143 http fetch GET 200 https://registry.npmjs.org/@metamask%2fjson-rpc-middleware-stream 452ms (cache miss)
+144 silly packumentCache corgi:https://registry.npmjs.org/@metamask%2fjson-rpc-middleware-stream set size:undefined disposed:false
+145 http fetch GET 200 https://registry.npmjs.org/@metamask%2fproviders 466ms (cache miss)
+146 silly packumentCache corgi:https://registry.npmjs.org/@metamask%2fproviders set size:undefined disposed:false
+147 http fetch GET 200 https://registry.npmjs.org/@metamask%2frpc-errors 473ms (cache miss)
+148 silly packumentCache corgi:https://registry.npmjs.org/@metamask%2frpc-errors set size:undefined disposed:false
+149 http fetch GET 200 https://registry.npmjs.org/@metamask%2fjson-rpc-engine 483ms (cache miss)
+150 silly packumentCache corgi:https://registry.npmjs.org/@metamask%2fjson-rpc-engine set size:undefined disposed:false
+151 silly packumentCache corgi:https://registry.npmjs.org/@walletconnect%2futils cache-miss
+152 http fetch GET 200 https://registry.npmjs.org/@walletconnect%2futils 533ms (cache miss)
+153 silly packumentCache corgi:https://registry.npmjs.org/@walletconnect%2futils set size:undefined disposed:false
+154 silly packumentCache corgi:https://registry.npmjs.org/@base-org%2faccount cache-miss
+155 http fetch GET 200 https://registry.npmjs.org/@base-org%2faccount 470ms (cache miss)
+156 silly packumentCache corgi:https://registry.npmjs.org/@base-org%2faccount set size:undefined disposed:false
+157 silly packumentCache corgi:https://registry.npmjs.org/wagmi cache-miss
+158 http fetch GET 200 https://registry.npmjs.org/wagmi 307ms (cache miss)
+159 silly packumentCache corgi:https://registry.npmjs.org/wagmi set size:undefined disposed:false
+160 silly packumentCache corgi:https://registry.npmjs.org/@gemini-wallet%2fcore cache-miss
+161 http fetch GET 200 https://registry.npmjs.org/@gemini-wallet%2fcore 451ms (cache miss)
+162 silly packumentCache corgi:https://registry.npmjs.org/@gemini-wallet%2fcore set size:undefined disposed:false
+163 silly packumentCache corgi:https://registry.npmjs.org/@walletconnect%2fcore cache-miss
+164 silly packumentCache corgi:https://registry.npmjs.org/@walletconnect%2fsign-client cache-miss
+165 silly packumentCache corgi:https://registry.npmjs.org/@walletconnect%2funiversal-provider cache-miss
+166 silly packumentCache corgi:https://registry.npmjs.org/@walletconnect%2fethereum-provider cache-miss
+167 http fetch GET 200 https://registry.npmjs.org/@walletconnect%2funiversal-provider 482ms (cache miss)
+168 silly packumentCache corgi:https://registry.npmjs.org/@walletconnect%2funiversal-provider set size:undefined disposed:false
+169 http fetch GET 200 https://registry.npmjs.org/@walletconnect%2fsign-client 808ms (cache miss)
+170 silly packumentCache corgi:https://registry.npmjs.org/@walletconnect%2fsign-client set size:undefined disposed:false
+171 http fetch GET 200 https://registry.npmjs.org/@walletconnect%2fethereum-provider 826ms (cache miss)
+172 silly packumentCache corgi:https://registry.npmjs.org/@walletconnect%2fethereum-provider set size:undefined disposed:false
+173 http fetch GET 200 https://registry.npmjs.org/@walletconnect%2fcore 869ms (cache miss)
+174 silly packumentCache corgi:https://registry.npmjs.org/@walletconnect%2fcore set size:undefined disposed:false
+175 silly packumentCache corgi:https://registry.npmjs.org/@rainbow-me%2frainbowkit cache-miss
+176 http fetch GET 200 https://registry.npmjs.org/@rainbow-me%2frainbowkit 522ms (cache miss)
+177 silly packumentCache corgi:https://registry.npmjs.org/@rainbow-me%2frainbowkit set size:undefined disposed:false
+178 silly packumentCache corgi:https://registry.npmjs.org/@reown%2fappkit-controllers cache-miss
+179 silly packumentCache corgi:https://registry.npmjs.org/@reown%2fappkit-utils cache-miss
+180 silly packumentCache corgi:https://registry.npmjs.org/@reown%2fappkit cache-miss
+181 http fetch GET 200 https://registry.npmjs.org/@reown%2fappkit-controllers 642ms (cache miss)
+182 silly packumentCache corgi:https://registry.npmjs.org/@reown%2fappkit-controllers set size:undefined disposed:false
+183 http fetch GET 200 https://registry.npmjs.org/@reown%2fappkit-utils 667ms (cache miss)
+184 silly packumentCache corgi:https://registry.npmjs.org/@reown%2fappkit-utils set size:undefined disposed:false
+185 http fetch GET 200 https://registry.npmjs.org/@reown%2fappkit 696ms (cache miss)
+186 silly packumentCache corgi:https://registry.npmjs.org/@reown%2fappkit set size:undefined disposed:false
+187 silly packumentCache corgi:https://registry.npmjs.org/@reown%2fappkit-pay cache-miss
+188 silly packumentCache corgi:https://registry.npmjs.org/@reown%2fappkit-scaffold-ui cache-miss
+189 silly packumentCache corgi:https://registry.npmjs.org/@reown%2fappkit-ui cache-miss
+190 http fetch GET 200 https://registry.npmjs.org/@reown%2fappkit-scaffold-ui 842ms (cache miss)
+191 silly packumentCache corgi:https://registry.npmjs.org/@reown%2fappkit-scaffold-ui set size:undefined disposed:false
+192 http fetch GET 200 https://registry.npmjs.org/@reown%2fappkit-ui 867ms (cache miss)
+193 silly packumentCache corgi:https://registry.npmjs.org/@reown%2fappkit-ui set size:undefined disposed:false
+194 http fetch GET 200 https://registry.npmjs.org/@reown%2fappkit-pay 932ms (cache miss)
+195 silly packumentCache corgi:https://registry.npmjs.org/@reown%2fappkit-pay set size:undefined disposed:false
+196 silly REMOVE node_modules/varuint-bitcoin
+197 silly REMOVE node_modules/varuint-bitcoin/node_modules/uint8array-tools
+198 silly REMOVE node_modules/valibot
+199 silly REMOVE node_modules/uint8array-tools
+200 silly REMOVE node_modules/text-encoding-utf-8
+201 silly REMOVE node_modules/superstruct
+202 silly REMOVE node_modules/stream-json
+203 silly REMOVE node_modules/stream-chain
+204 silly REMOVE node_modules/rpc-websockets
+205 silly REMOVE node_modules/rpc-websockets/node_modules/ws
+206 silly REMOVE node_modules/rpc-websockets/node_modules/uuid
+207 silly REMOVE node_modules/rpc-websockets/node_modules/utf-8-validate
+208 silly REMOVE node_modules/rpc-websockets/node_modules/@types/ws
+209 silly REMOVE node_modules/rpc-websockets/node_modules/@swc/helpers
+210 silly REMOVE node_modules/poseidon-lite
+211 silly REMOVE node_modules/json-stringify-safe
+212 silly REMOVE node_modules/jayson
+213 silly REMOVE node_modules/jayson/node_modules/commander
+214 silly REMOVE node_modules/jayson/node_modules/@types/node
+215 silly REMOVE node_modules/isomorphic-ws
+216 silly REMOVE node_modules/humanize-ms
+217 silly REMOVE node_modules/graphql
+218 silly REMOVE node_modules/gql.tada
+219 silly REMOVE node_modules/fast-stable-stringify
+220 silly REMOVE node_modules/eyes
+221 silly REMOVE node_modules/es6-promisify
+222 silly REMOVE node_modules/es6-promise
+223 silly REMOVE node_modules/delay
+224 silly REMOVE node_modules/commander
+225 silly REMOVE node_modules/bs58check
+226 silly REMOVE node_modules/borsh
+227 silly REMOVE node_modules/borsh/node_modules/bs58
+228 silly REMOVE node_modules/borsh/node_modules/base-x
+229 silly REMOVE node_modules/bitcoinjs-lib
+230 silly REMOVE node_modules/bip174
+231 silly REMOVE node_modules/bech32
+232 silly REMOVE node_modules/agentkeepalive
+233 silly REMOVE node_modules/@wallet-standard/wallet
+234 silly REMOVE node_modules/@wallet-standard/features
+235 silly REMOVE node_modules/@wallet-standard/errors
+236 silly REMOVE node_modules/@wallet-standard/errors/node_modules/commander
+237 silly REMOVE node_modules/@wallet-standard/core
+238 silly REMOVE node_modules/@wallet-standard/base
+239 silly REMOVE node_modules/@wallet-standard/app
+240 silly REMOVE node_modules/@types/ws
+241 silly REMOVE node_modules/@types/uuid
+242 silly REMOVE node_modules/@types/connect
+243 silly REMOVE node_modules/@solana/web3.js
+244 silly REMOVE node_modules/@solana/web3.js/node_modules/bs58
+245 silly REMOVE node_modules/@solana/web3.js/node_modules/base-x
+246 silly REMOVE node_modules/@solana/wallet-standard-features
+247 silly REMOVE node_modules/@solana/wallet-adapter-base
+248 silly REMOVE node_modules/@solana/errors
+249 silly REMOVE node_modules/@solana/codecs-numbers
+250 silly REMOVE node_modules/@solana/codecs-core
+251 silly REMOVE node_modules/@solana/buffer-layout
+252 silly REMOVE node_modules/@protobuf-ts/runtime-rpc
+253 silly REMOVE node_modules/@protobuf-ts/runtime
+254 silly REMOVE node_modules/@protobuf-ts/grpcweb-transport
+255 silly REMOVE node_modules/@mysten/wallet-standard
+256 silly REMOVE node_modules/@mysten/utils
+257 silly REMOVE node_modules/@mysten/sui
+258 silly REMOVE node_modules/@mysten/sui/node_modules/@noble/curves
+259 silly REMOVE node_modules/@mysten/bcs
+260 silly CHANGE node_modules/@lifi/types
+261 silly CHANGE node_modules/@lifi/sdk
+262 silly REMOVE node_modules/@graphql-typed-document-node/core
+263 silly REMOVE node_modules/@gql.tada/internal
+264 silly REMOVE node_modules/@gql.tada/cli-utils
+265 silly REMOVE node_modules/@bitcoinerlab/secp256k1
+266 silly REMOVE node_modules/@bigmi/core
+267 silly REMOVE node_modules/@0no-co/graphqlsp
+268 silly REMOVE node_modules/@0no-co/graphql.web
+269 warn install-scripts 3 packages had install scripts blocked because they are not covered by allowScripts:
+269 warn install-scripts   bufferutil@4.1.0 (install: node-gyp rebuild)
+269 warn install-scripts   keccak@3.0.4 (install: node-gyp rebuild)
+269 warn install-scripts   utf-8-validate@5.0.10 (install: node-gyp rebuild)
+269 warn install-scripts
+269 warn install-scripts Run `npm install-scripts ls` to review, or `npm install-scripts approve <pkg>` to allow.
+270 verbose cwd /home/pierre/Downloads/swap-aggregator/swap-aggregator
+271 verbose os Linux 7.1.5-1-cachyos
+272 verbose node v22.23.2
+273 verbose npm  v12.0.2
+274 verbose exit 0
+275 info ok
