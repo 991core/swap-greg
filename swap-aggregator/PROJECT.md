@@ -77,11 +77,58 @@ amélioration post-MVP ; au lancement, liste d'incidents majeurs saisie manuelle
    routes, revue légale/réglementaire approfondie.
 
 ## État actuel du code
-MVP Hermes : Next.js + wallet mainnet, `lib/lifi.ts` (`getRoutes` + filtre top 20),
+MVP Hermes : Next.js + wallet EVM injecté, LI.FI (`lib/aggregators/lifi/routes.ts`)
+et orchestrateur de cotations sécurisé (`lib/routing/`),
+filtre top 20,
 `SwapCard` / `TokenSelectModal` / `RouteList`, design branding Hermes / HMS Protocol.
 i18n 100 % fonctionnel (EN/FR, détection automatique, sélecteur, persistance).
 Affichage du taux toujours actif même avec solde insuffisant (avertissement indicatif).
-Paires par défaut : ETH/ETH (mainnet) et ETH/Optimism.
+Paire par défaut : ETH sur Base vers ETH sur Ethereum, si ces deux réseaux sont
+retournés par LI.FI.
+
+## Mise à jour — stabilisation du parcours LI.FI
+
+La priorité a été donnée à un seul parcours exécutable de bout en bout : LI.FI sur
+les chaînes EVM configurées. Le client LI.FI utilise désormais le fournisseur EVM
+officiel et récupère le `WalletClient` depuis wagmi au moment de l’exécution. Le
+changement de réseau est réalisé par wagmi puis contrôlé de nouveau avant la demande
+de signature.
+
+Les cotations possèdent une clé de requête et une durée de vie. Une réponse tardive
+ne peut plus réactiver une ancienne route après la modification du formulaire. Le
+montant utilisateur est parsé sans `Number`, ce qui évite les pertes de précision et
+les erreurs de virgule française. Une route est refusée si elle ne correspond plus
+au wallet, au montant, aux tokens ou au réseau source.
+
+Avant l’exécution, le code vérifie :
+
+- le compte connecté et son adresse ;
+- le réseau source ;
+- le solde du token source ;
+- le gas natif disponible, y compris pour un swap de token ERC-20 ;
+- l’expiration et le montant minimum reçu de la route.
+
+Le prix EUR indicatif est récupéré dynamiquement avec sa date de référence. Les prix
+des tokens sont demandés à LI.FI sur la paire chaîne/adresse, sans déduire le prix
+d’un symbole ou d’une chaîne différente.
+
+Rango et Socket sont explicitement désactivés dans l’UI jusqu’à l’implémentation de
+leur cycle complet. L’ancien code qui retournait une route Rango fictive ou tentait
+d’exécuter toutes les routes via LI.FI a été retiré.
+
+## Fichiers ajoutés ou réorganisés
+
+- `lib/amounts.ts` : parsing et formatage sûrs des montants entiers.
+- `lib/wallet.ts` : configuration wagmi partagée avec le client LI.FI.
+- `lib/routing/config.ts` : frais, slippage, impact maximal et durée de cotation.
+- `lib/routing/quote.ts` : clé et validation d’une cotation.
+- `lib/routing/execute.ts` : pré-vérifications et exécution LI.FI.
+- `lib/routing/useSwapQuotes.ts` : debounce, annulation, expiration et refresh.
+- `tests/` : tests du montant, des cotations, de l’exécution et de la modale.
+
+La feuille de style a été réalignée avec les classes réellement utilisées par les
+composants, et la modale porte désormais le focus, le verrouillage de scroll et la
+sélection effective de la chaîne.
 
 ## Points de vigilance non résolus
 - Cadre légal/réglementaire selon juridictions d'opération (MiCA UE, licences money

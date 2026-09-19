@@ -1,103 +1,28 @@
 "use client";
-
 import type { NormalizedRoute } from "@/lib/types/normalized-route";
 import { formatTokenAmount, formatDuration } from "@/lib/lifi";
-import { parseUnits } from "viem";
 import { formatCurrencyValue } from "@/lib/pricing";
 import { useI18n } from "@/lib/i18n";
 
-type Props = {
-  routes: NormalizedRoute[];
-  selectedId: string | null;
-  onSelect: (route: NormalizedRoute) => void;
-  toDecimals: number;
-  toSymbol: string;
-  currency?: "USD" | "EUR";
-  priceUsd?: number | null;
-};
-
-function routeRouteValue(route: NormalizedRoute, toDecimals: number, priceUsd: number, currency: string): number {
-  if (priceUsd == null || priceUsd <= 0) return 0;
-  const receivedAmount = route.toAmount ?? "0";
-  if (!receivedAmount || receivedAmount === "0") return 0;
-  try {
-    const humanAmount = Number(formatTokenAmount(receivedAmount, toDecimals));
-    return humanAmount > 0 ? humanAmount * priceUsd : 0;
-  } catch {
-    return 0;
-  }
-}
-
-function routeValueLabel(route: NormalizedRoute, toDecimals: number, priceUsd: number | null, currency: "USD" | "EUR"): string | null {
-  if (priceUsd == null) return null;
-  const v = routeRouteValue(route, toDecimals, priceUsd, currency);
-  if (v <= 0) return null;
-  return formatCurrencyValue(v, currency);
-}
-
-export function RouteList({
-  routes,
-  selectedId,
-  onSelect,
-  toDecimals,
-  toSymbol,
-  currency = "USD",
-  priceUsd = null,
-}: Props) {
-  const { translate } = useI18n();
-
-  if (routes.length === 0) return null;
-
-  return (
-    <div className="jumper-routes-widget">
-      {/* Title */}
-      <div className="jumper-routes-title">{translate("route_list_title")}</div>
-
-      {/* Routes */}
-      <div className="jumper-routes-list">
-        {routes.map((route) => {
-          const id = route.id;
-          const selected = id === selectedId;
-          const net = formatTokenAmount(route.toAmount, toDecimals);
-          const duration = formatDuration(route.durationSeconds);
-          const tools = route.toolLabel;
-          const usdLabel = routeValueLabel(route, toDecimals, priceUsd, currency);
-
-          return (
-            <label key={id} className={`jumper-route-card${selected ? " jumper-route-selected" : ""}`}>
-              {/* Radio dot */}
-              <div className="jumper-radio-dot" />
-              <input
-                type="radio"
-                name="jumper-route"
-                checked={selected}
-                onChange={() => onSelect(route)}
-              />
-
-              {/* Content */}
-              <div className="jumper-route-content">
-                {/* Top row: amount + value */}
-                <div className="jumper-route-top">
-                  <span className="jumper-route-amount">
-                    {net} {toSymbol}
-                  </span>
-                  {usdLabel && (
-                    <span className="jumper-route-usd">≈ {usdLabel}</span>
-                  )}
-                </div>
-
-                {/* Bottom row: duration + provider */}
-                <div className="jumper-route-bottom">
-                  <span className="jumper-route-duration">
-                    ⏱ {translate("route_estimated_time", { duration })}
-                  </span>
-                  <span className="jumper-route-tool">{tools}</span>
-                </div>
-              </div>
-            </label>
-          );
-        })}
-      </div>
-    </div>
-  );
+type Props = { routes: NormalizedRoute[]; selectedId: string | null; onSelect: (route: NormalizedRoute) => void; toDecimals: number; toSymbol: string; currency?: "USD" | "EUR"; eurRate?: number | null; priceUsd?: number | null; disabled?: boolean };
+export function RouteList({ routes, selectedId, onSelect, toDecimals, toSymbol, currency = "USD", eurRate = null, priceUsd = null, disabled = false }: Props) {
+  const { translate, lang } = useI18n();
+  if (!routes.length) return null;
+  return <div className="jumper-routes-widget"><h2 className="jumper-routes-title">{translate("route_list_title")}</h2><div className="jumper-routes-list">
+    {routes.map((route) => {
+      const net = formatTokenAmount(route.toAmount, toDecimals, Math.min(toDecimals, 10));
+      const value = priceUsd ? formatCurrencyValue(Number(net) * priceUsd, currency, eurRate, lang) : null;
+      const gas = route.gasCostUSD != null ? formatCurrencyValue(Number(route.gasCostUSD), currency, eurRate, lang) : null;
+      return <label key={route.id} className={`jumper-route-card${selectedId === route.id ? " jumper-route-selected" : ""}`}>
+        <input type="radio" name="swap-route" checked={selectedId === route.id} onChange={() => onSelect(route)} disabled={disabled} />
+        <span className="jumper-route-content"><span className="jumper-route-top"><strong>{net} {toSymbol}</strong>{value && <span className="jumper-hint">≈ {value}</span>}</span>
+          <span className="jumper-route-tool">LI.FI · {route.toolLabel}</span>
+          <span className="jumper-hint">{translate("route_estimated_time", { duration: formatDuration(route.durationSeconds) })}</span>
+          <span className="jumper-hint">{translate("minimum_received")}: {formatTokenAmount(route.toAmountMin, toDecimals, toDecimals)} {toSymbol}</span>
+          <span className="jumper-hint">{translate("network_fee")}: {gas ?? "—"}</span>
+          {route.raw.steps.flatMap((step) => step.estimate.feeCosts ?? []).map((fee, i) => <span key={i} className="jumper-hint">{fee.name}: {formatTokenAmount(fee.amount, fee.token.decimals)} {fee.token.symbol} · {translate(fee.included ? "fee_included" : "fee_additional")}</span>)}
+        </span>
+      </label>;
+    })}
+  </div></div>;
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { ConnectButton } from "@rainbow-me/rainbowkit/components";
 import { SwapCard } from "@/components/SwapCard";
 import { useI18n, LANGUAGES, type Lang } from "@/lib/i18n";
 import { useState } from "react";
@@ -19,7 +19,7 @@ export default function Home() {
       <header className="jumper-header">
         <div className="jumper-brand">
           <span className="jumper-logo">⚡</span>
-          <span className="jumper-name">SwapAggregator</span>
+          <span className="jumper-name">Hermes</span>
           <span className="jumper-tag">Aggregator</span>
         </div>
 
@@ -76,7 +76,7 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="jumper-footer">
-        © 2025 SwapAggregator · Powered by LI.FI, Rango & Socket
+        Hermes · HMS Protocol · LI.FI
       </footer>
     </div>
   );

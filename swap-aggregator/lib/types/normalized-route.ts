@@ -1,17 +1,20 @@
+import type { Route } from "@lifi/sdk";
 export type ProviderName = "lifi" | "socket" | "rango";
-
 export type ProviderSelection = Record<ProviderName, boolean>;
-
 export type NormalizedRoute = {
   id: string;
-  provider: ProviderName;
+  provider: "lifi";
   fromChainId: number;
   toChainId: number;
   fromTokenAddress: string;
   toTokenAddress: string;
+  fromAddress: string;
   fromAmount: string;
   toAmount: string;
+  toAmountMin: string;
+  gasCostUSD: string | null;
   toolLabel: string;
   durationSeconds: number;
-  raw?: unknown;
+  expiresAt: number;
+  raw: Route;
 };

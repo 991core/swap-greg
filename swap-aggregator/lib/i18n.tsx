@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
 
 export type Lang = "en" | "fr";
 
@@ -70,10 +70,65 @@ type TranslationKey =
   | "metadata_description"
   | "nav_swap"
   | "hero_title"
-  | "hero_subtitle";
+  | "hero_subtitle"
+  | "provider_soon"
+  | "amount_invalid"
+  | "insufficient_balance"
+  | "insufficient_gas"
+  | "balance_unavailable"
+  | "quote_expired"
+  | "refresh_quotes"
+  | "quote_changed"
+  | "same_token"
+  | "platform_fee"
+  | "network_fee"
+  | "minimum_received"
+  | "slippage_label"
+  | "fee_included"
+  | "fee_additional"
+  | "fx_unavailable"
+  | "fx_reference"
+  | "swap_success"
+  | "wallet_history"
+  | "lookup_failed"
+  | "custom_token_warning"
+  | "confirm_token"
+  | "native_gas_hint"
+  | "source_token"
+  | "destination_token"
+  | "no_routes_hint"
+  | "execution_progress"
+;
 
 const translations: Record<Lang, Record<TranslationKey, string>> = {
   en: {
+    provider_soon: "Soon",
+    amount_invalid: "Enter a valid amount using one decimal separator (dot or comma).",
+    insufficient_balance: "Insufficient token balance. Quotes remain available.",
+    insufficient_gas: "Not enough native currency for the estimated network fees.",
+    balance_unavailable: "Waiting for the balance on the source network.",
+    quote_expired: "Quote expired. Refresh before swapping.",
+    refresh_quotes: "Refresh quotes",
+    quote_changed: "The wallet or swap details changed. Request a new quote.",
+    same_token: "Choose a different destination token or network.",
+    platform_fee: "Hermes fee (included in quote)",
+    network_fee: "Estimated network fees (additional)",
+    minimum_received: "Minimum received",
+    slippage_label: "Slippage tolerance",
+    fee_included: "Included",
+    fee_additional: "Additional",
+    fx_unavailable: "EUR conversion unavailable. Amounts remain in USD.",
+    fx_reference: "Indicative ECB rate dated {date}.",
+    swap_success: "Route completed. Check your wallet for the received tokens.",
+    wallet_history: "If a transaction was submitted, check its status in your wallet before starting again.",
+    lookup_failed: "Token metadata could not be verified on this network.",
+    custom_token_warning: "Imported token: verify its contract address. A quote may not be available.",
+    confirm_token: "Select {symbol}",
+    native_gas_hint: "Keep some native currency to pay network fees.",
+    source_token: "Select source token",
+    destination_token: "Select destination token",
+    no_routes_hint: "No routes for this pair and amount. Try another pair or refresh.",
+    execution_progress: "Transaction progress",
     hero_tagline: "Top 20 market cap · transparent routes · fees included in net amount.",
     boot_loading: "Loading chains and top 20…",
     boot_no_chains: "LI.FI is not returning any supported chains. Try again later.",
@@ -93,7 +148,7 @@ const translations: Record<Lang, Record<TranslationKey, string>> = {
     connect_to_continue: "Connect a wallet to continue.",
     swap_failed: "Swap execution failed. Check your wallet, network, and funds. Detail: {detail}",
     swap_cta: "Swap",
-    route_list_title: "Best routes",
+    route_list_title: "Available routes",
     routes_fetch_failed: "Failed to load swap routes.",
     lifi_error: "LI.FI error: {message}",
     route_no_payload: "This route cannot be executed because it has no LI.FI payload.",
@@ -128,6 +183,33 @@ const translations: Record<Lang, Record<TranslationKey, string>> = {
     hero_subtitle: "Compare routes from top DEXs in one click.",
   },
   fr: {
+    provider_soon: "Bientôt",
+    amount_invalid: "Saisis un montant valide avec un seul séparateur décimal (point ou virgule).",
+    insufficient_balance: "Solde du token insuffisant. Les cotations restent disponibles.",
+    insufficient_gas: "Solde natif insuffisant pour les frais réseau estimés.",
+    balance_unavailable: "En attente du solde sur le réseau source.",
+    quote_expired: "Cotation expirée. Actualise avant de lancer le swap.",
+    refresh_quotes: "Actualiser les cotations",
+    quote_changed: "Le wallet ou les paramètres ont changé. Demande une nouvelle cotation.",
+    same_token: "Choisis un autre token ou réseau de destination.",
+    platform_fee: "Frais Hermes (inclus dans le devis)",
+    network_fee: "Frais réseau estimés (en supplément)",
+    minimum_received: "Minimum reçu",
+    slippage_label: "Tolérance de slippage",
+    fee_included: "Inclus",
+    fee_additional: "En supplément",
+    fx_unavailable: "Conversion EUR indisponible. Les montants restent en USD.",
+    fx_reference: "Taux indicatif BCE du {date}.",
+    swap_success: "Route terminée. Vérifie les tokens reçus dans ton wallet.",
+    wallet_history: "Si une transaction a été envoyée, vérifie son état dans ton wallet avant de recommencer.",
+    lookup_failed: "Les métadonnées du token n’ont pas pu être vérifiées sur ce réseau.",
+    custom_token_warning: "Token importé : vérifie son adresse de contrat. Une route n’est pas garantie.",
+    confirm_token: "Sélectionner {symbol}",
+    native_gas_hint: "Conserve une partie du solde natif pour payer les frais réseau.",
+    source_token: "Choisir le token source",
+    destination_token: "Choisir le token de destination",
+    no_routes_hint: "Aucune route pour cette paire et ce montant. Change la paire ou actualise.",
+    execution_progress: "Suivi de la transaction",
     hero_tagline:
       "Top 20 market cap · routes transparentes · frais inclus dans le montant net.",
     boot_loading: "Chargement des chaînes et du top 20…",
@@ -149,7 +231,7 @@ const translations: Record<Lang, Record<TranslationKey, string>> = {
     swap_failed:
       "L'exécution du swap a échoué. Vérifie le wallet, le réseau et les fonds. Détail : {detail}",
     swap_cta: "Swap",
-    route_list_title: "Meilleures routes",
+    route_list_title: "Routes disponibles",
     routes_fetch_failed: "Échec du chargement des routes de swap.",
     lifi_error: "Erreur LI.FI : {message}",
     route_no_payload:
@@ -203,7 +285,8 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   const [lang, setLangState] = useState<Lang>("en");
 
   useEffect(() => {
-    const saved = typeof localStorage !== "undefined" && localStorage.getItem("hermes-lang");
+    let saved: string | null = null;
+    try { saved = localStorage.getItem("hermes-lang"); } catch { /* Use browser language. */ }
     if (saved === "en" || saved === "fr") {
       setLangState(saved);
     } else {
@@ -211,14 +294,16 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  useEffect(() => { document.documentElement.lang = lang; }, [lang]);
+
   const setLang = (newLang: Lang) => {
     setLangState(newLang);
     if (typeof localStorage !== "undefined") {
-      localStorage.setItem("hermes-lang", newLang);
+      try { localStorage.setItem("hermes-lang", newLang); } catch { /* Storage may be disabled. */ }
     }
   };
 
-  const translate = (key: TranslationKey, params?: Record<string, string>) => {
+  const translate = useCallback((key: TranslationKey, params?: Record<string, string>) => {
     let result = t(key, lang);
     if (params) {
       Object.entries(params).forEach(([k, v]) => {
@@ -226,7 +311,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
       });
     }
     return result;
-  };
+  }, [lang]);
 
   return (
     <I18nContext.Provider value={{ lang, setLang, translate, detectBrowserLang }}>
