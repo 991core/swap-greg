@@ -2,9 +2,10 @@
 
 ## Scope
 
-Hermes is a Next.js 14 App Router MVP for EVM cross-chain swaps. LI.FI is the
-only active provider. Rango and Socket are intentionally disabled until their
-quote, transaction, and tracking flows are implemented end to end.
+Hermes is a Next.js 14 App Router MVP for EVM cross-chain swaps. LI.FI and
+Rango Basic API (EVM beta) are active. Socket remains disabled. Rango uses its
+documented public TEST key by default; mainnet signing still spends real funds.
+Read `RANGO_INTEGRATION.md` for the adapter limits and remaining manual QA.
 
 The product searches LI.FI tokens by name, symbol or address on supported EVM
 networks, uses transparent platform fees, and
@@ -21,6 +22,9 @@ lets the user select a route. It does not silently force a “best” route.
 - `lib/aggregators/lifi/client.ts` creates the LI.FI client and reads the live
   wallet client from wagmi at execution time.
 - `lib/aggregators/lifi/routes.ts` requests routes with the configured fee and timeout.
+- `lib/aggregators/rango/` owns the separate Rango payload, strict validation,
+  finite approvals, EVM signing and destination tracking. `server.ts` is server-only.
+- `app/api/rango/[operation]/route.ts` proxies only quote/swap/status to fixed hosts.
 - `lib/tokens/catalog.ts` pins the local native/ERC-20 defaults by chain/address,
   decimals and symbol. `TOKEN_CATALOG.md` records their sources and maintenance.
   The form and modal initialize from local configuration without a chain/API gate.
@@ -39,6 +43,8 @@ lets the user select a route. It does not silently force a “best” route.
 - `components/SwapCard.tsx`, `TokenSelectModal.tsx`, and `RouteList.tsx` form
   the client-side swap UI.
 - `components/QuoteCountdown.tsx` shows the animated quote deadline and retry state.
+- `components/TokenIcon.tsx` uses local SVGs for exact catalog identities, with
+  chain/variant badges and an error fallback. Sources are in `TOKEN_LOGOS.md`.
 - `next.config.js` optimizes `viem/chains` imports so unused Tempo worker modules
   are not bundled into the token route. Do not suppress Webpack warnings globally.
 
@@ -46,7 +52,7 @@ lets the user select a route. It does not silently force a “best” route.
 
 - A quote is executable only while its `quoteKey`, wallet, source chain, token
   addresses, amount, recipient, and expiry still match the form.
-- Renew quotes automatically at their deadline (60 seconds). Disable execution
+- Renew quotes automatically at their deadline (30 seconds). Disable execution
   while refreshing; retry errors/empty results after 15 seconds. Abort obsolete
   requests, pause while executing, and wait while hidden/offline. Resuming must
   not overlap requests or accept late responses. Refreshing never signs or swaps.
@@ -71,6 +77,18 @@ lets the user select a route. It does not silently force a “best” route.
   for token amounts.
 - Keep the LI.FI execution provider EVM-only. Do not route a Rango or Socket
   object through `executeLifiRoute`.
+- Query enabled providers in parallel and isolate their failures. Provider
+  toggles invalidate the request immediately. Do not invent routes or fees.
+  Show successful providers as they arrive, but keep execution disabled until
+  the search completes. Ignore late progress callbacks after cancellation.
+- Rango must rebuild and validate its transaction before signing: same protocol,
+  tokens/decimals/account/network, no lower minimum or higher quoted fees, exact
+  native value, EVM calldata, exact-amount approval to the transaction router.
+  Estimate gas and recheck the live account/network/balances after async work.
+- A source receipt is not proof of bridge completion. Verify Rango's destination
+  asset/amount; treat timeouts and unverifiable output as pending, never as a
+  reason to resend. Keep the hash and resumable tracking record; no signatures
+  from timers, refresh, tracking or restored browser storage.
 - Preserve the user-visible minimum received amount, gas estimate, and platform
   fee; do not replace them with a hard-coded estimate.
 
@@ -82,6 +100,9 @@ Copy `.env.example` to `.env.local` when needed:
   Do not expose it in the browser SDK or restore `NEXT_PUBLIC_LIFI_API_KEY`.
 - `TOKEN_SEARCH_REQUESTS_PER_MINUTE` defaults to 60 per process (1–1000).
 - `NEXT_PUBLIC_PLATFORM_FEE_PERCENT` is bounded to 0–100.
+- `RANGO_API_KEY` is server-only, optional for public tests, needed for production.
+- `RANGO_REFERRER_ADDRESS` is required with nonzero fees; Rango supports up to 3%.
+  Fail the Rango provider on incompatible configuration, never silently waive fees.
 
 No secret belongs in the repository.
 
@@ -103,10 +124,12 @@ API access, automatic expiry/refresh/retry, hidden/offline tabs and animation st
 
 ## Deliberate limitations
 
-- Rango, Socket, Solana, non-EVM wallets, GoPlus screening and backend quote
+- Socket, Solana, non-EVM wallets, GoPlus screening and fully server-side quote
   orchestration are future work. The option-B token backend is implemented.
 - Cache/quota are per process; distributed deployments need a shared limit if
   they require a global quota. Browser quote requests are outside that budget.
-- LI.FI coverage, RPC availability, and route prices are external dependencies.
+- LI.FI/Rango coverage, RPC availability, public-key quotas and route prices are external dependencies.
+- Signed Rango mainnet execution and visual browser QA still need manual validation;
+  automated tests use mocked wallets, and only read-only live quotes were checked.
 - Mainnet execution uses real funds; the UI must continue to show the actual
   route data and require an explicit wallet confirmation.

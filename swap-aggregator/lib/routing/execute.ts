@@ -11,11 +11,14 @@ import { getTokenDetails } from "../tokens/client";
 import type { AppToken } from "../tokens/types";
 import { getCatalogToken } from "../tokens/catalog";
 import { requiresTokenConfirmation, tokenKey, tokenVerification } from "../tokens/validation";
+import { routeTokens } from "./details";
+import { executeRangoRoute } from "../aggregators/rango/execute";
+import type { RangoProgress } from "../aggregators/rango/types";
 
 export class SwapValidationError extends Error {
   constructor(public readonly key: "quote_changed" | "insufficient_balance" | "insufficient_gas" | "token_blocked" | "token_metadata_changed" | "token_confirmation_required" | "tokens_unavailable") { super(key); }
 }
-export async function executeSwapQuote(route: NormalizedRoute, params: SwapParams, updateRouteHook: UpdateRouteHook, selection: { fromToken: AppToken; toToken: AppToken }) {
+export async function executeSwapQuote(route: NormalizedRoute, params: SwapParams, updateRouteHook: UpdateRouteHook, selection: { fromToken: AppToken; toToken: AppToken }, onRangoProgress?: (progress: RangoProgress) => void) {
   const check = () => {
     const account = getAccount(walletConfig);
     if (!account.isConnected || account.address?.toLowerCase() !== params.fromAddress.toLowerCase() || !canExecuteQuote(route, params)) {
@@ -23,7 +26,8 @@ export async function executeSwapQuote(route: NormalizedRoute, params: SwapParam
     }
   };
   check();
-  const pairs = [[selection.fromToken, route.raw.fromToken], [selection.toToken, route.raw.toToken]] as const;
+  const tokens = routeTokens(route);
+  const pairs = [[selection.fromToken, tokens.fromToken], [selection.toToken, tokens.toToken]] as const;
   for (const [selected, quoted] of pairs) {
     if (tokenKey(selected) !== tokenKey(quoted) || selected.decimals !== quoted.decimals) throw new SwapValidationError("token_metadata_changed");
     const known = getCatalogToken(selected.chainId, selected.address);
@@ -60,5 +64,9 @@ export async function executeSwapQuote(route: NormalizedRoute, params: SwapParam
   if (gasBalance.value < sourceGasAmount(route) + (native ? amount : BigInt(0)) || gasBalance.value === BigInt(0)) throw new SwapValidationError("insufficient_gas");
   check();
   if (getAccount(walletConfig).chainId !== params.fromChainId) throw new SwapValidationError("quote_changed");
+  if (route.provider === "rango") return executeRangoRoute(route, params, () => {
+    check();
+    if (getAccount(walletConfig).chainId !== params.fromChainId) throw new SwapValidationError("quote_changed");
+  }, onRangoProgress);
   return executeLifiRoute(route.raw, { updateRouteHook, acceptExchangeRateUpdateHook: async () => false });
 }

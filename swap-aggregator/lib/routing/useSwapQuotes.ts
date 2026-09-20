@@ -1,19 +1,18 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { SwapParams } from "../aggregators/lifi/routes";
 import type { NormalizedRoute } from "../types/normalized-route";
-import { getRoutesForSelection } from "./orchestrator";
+import { getRoutesForSelection, type RouteSelectionParams, type ProviderWarning } from "./orchestrator";
 import { quoteKey } from "./quote";
 import { QUOTE_RETRY_MS } from "./config";
 
 type QuoteState = {
   key: string | null; routes: NormalizedRoute[]; loading: boolean; error: string | null;
-  expired: boolean; expiresAt: number | null; retryAt: number | null; waiting: boolean;
+  expired: boolean; expiresAt: number | null; retryAt: number | null; waiting: boolean; warnings: ProviderWarning[];
 };
-const empty: QuoteState = { key: null, routes: [], loading: false, error: null, expired: false, expiresAt: null, retryAt: null, waiting: false };
+const empty: QuoteState = { key: null, routes: [], loading: false, error: null, expired: false, expiresAt: null, retryAt: null, waiting: false, warnings: [] };
 
-export function useSwapQuotes(params: SwapParams | null, enabled = true) {
-  const key = params ? quoteKey(params) : null;
+export function useSwapQuotes(params: RouteSelectionParams | null, enabled = true) {
+  const key = params ? quoteKey(params) + JSON.stringify([params.providers?.lifi ?? true, params.providers?.rango ?? true, params.providers?.socket ?? false]) : null;
   const paramsRef = useRef(params);
   paramsRef.current = params;
   const [state, setState] = useState<QuoteState>(empty);
@@ -46,12 +45,19 @@ export function useSwapQuotes(params: SwapParams | null, enabled = true) {
       setState((old) => ({ ...old, loading: true, error: null, retryAt: null, waiting: false,
         expired: old.expiresAt !== null && old.expiresAt <= Date.now() }));
       try {
-        const routes = await getRoutesForSelection(request, controller.signal);
+        const warnings: ProviderWarning[] = [];
+        const routes = await getRoutesForSelection(request, controller.signal, (warning) => warnings.push(warning), (partial) => {
+          if (controller.signal.aborted || !partial.length) return;
+          // Show fast providers immediately. Execution stays disabled until the
+          // current search completes; no stale results can enter a new request.
+          setState((old) => ({ ...old, key, routes: partial, loading: true, expired: false,
+            expiresAt: Math.min(...partial.map((route) => route.expiresAt)) }));
+        });
         if (controller.signal.aborted) return;
         const expiresAt = routes.length ? Math.min(...routes.map((route) => route.expiresAt)) : null;
         if (expiresAt !== null && (!Number.isFinite(expiresAt) || expiresAt <= Date.now())) throw new Error("Quote expired during refresh.");
         const retryAt = expiresAt === null ? Date.now() + QUOTE_RETRY_MS : null;
-        setState({ key, routes, loading: false, error: null, expired: false, expiresAt, retryAt, waiting: false });
+        setState({ key, routes, loading: false, error: null, expired: false, expiresAt, retryAt, waiting: false, warnings });
         schedule(expiresAt ?? retryAt!);
       } catch (error) {
         if (controller.signal.aborted) return;

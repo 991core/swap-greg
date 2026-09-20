@@ -18,6 +18,9 @@ function detectBrowserLang(): Lang {
 }
 
 type TranslationKey =
+  | "swap_title" | "source_network" | "destination_network" | "balance_label" | "route_details" | "route_duration" | "route_gas" | "route_minimum" | "route_extra_fees" | "route_waiting_others" | "route_sort_hint" | "route_recipient" | "route_amount_exact" | "route_estimates" | "fee_details" | "selected_route"
+  | "highest_output" | "compare_routes" | "routes_empty_description" | "choose_provider" | "provider_unavailable"
+  | "rango_test_notice" | "rango_preparing" | "rango_approval" | "rango_signing" | "rango_tracking" | "rango_pending" | "rango_resume" | "rango_complete" | "rango_failed" | "rango_submitted"
   | "hero_tagline"
   | "boot_loading"
   | "boot_no_chains"
@@ -107,6 +110,37 @@ type TranslationKey =
 
 const translations: Record<Lang, Record<TranslationKey, string>> = {
   en: {
+    swap_title: "Swap tokens",
+    source_network: "Source network",
+    destination_network: "Destination network",
+    balance_label: "Balance",
+    route_details: "Route details",
+    route_duration: "Estimated time",
+    route_gas: "Network fees · extra",
+    route_minimum: "Minimum",
+    route_extra_fees: "Other additional fees · see details",
+    route_waiting_others: "Comparing the remaining providers…",
+    route_sort_hint: "Sorted by tokens received. Network fees are extra.",
+    route_recipient: "Recipient",
+    route_amount_exact: "Quoted amount",
+    route_estimates: "Amounts, fees and arrival times are estimates.",
+    fee_details: "Fee breakdown",
+    selected_route: "Selected",
+    highest_output: "Highest output",
+    compare_routes: "Your route, your choice",
+    routes_empty_description: "Choose your tokens and enter an amount to compare the available routes.",
+    choose_provider: "Select at least one provider to find routes.",
+    provider_unavailable: "{provider} is temporarily unavailable. Other providers remain available.",
+    rango_test_notice: "Rango beta · public test API by default, with limited capacity. These are real mainnet swaps, not simulated funds.",
+    rango_preparing: "Checking the final quote",
+    rango_approval: "Token approval · a separate network fee may apply",
+    rango_signing: "Confirm the swap in your wallet",
+    rango_tracking: "Tracking the swap and destination delivery",
+    rango_pending: "Transaction submitted. Completion is not yet confirmed. Do not send it again; resume tracking below.",
+    rango_resume: "Resume tracking",
+    rango_complete: "Delivery confirmed",
+    rango_submitted: "Transaction submitted",
+    rango_failed: "Check the transaction or refund",
     popular_tokens: "Popular tokens on this network",
     token_search_results: "LI.FI search results",
     tokens_searching: "Searching LI.FI…",
@@ -162,7 +196,7 @@ const translations: Record<Lang, Record<TranslationKey, string>> = {
     destination_token: "Select destination token",
     no_routes_hint: "No routes for this pair and amount. Try another pair or refresh.",
     execution_progress: "Transaction progress",
-    hero_tagline: "LI.FI tokens · transparent routes · fees included in net amount.",
+    hero_tagline: "LI.FI + Rango · transparent routes · your wallet, your choice.",
     boot_loading: "Loading supported networks…",
     boot_no_chains: "LI.FI is not returning any supported chains. Try again later.",
     boot_no_tokens: "No token found via LI.FI on the configured networks.",
@@ -212,10 +246,41 @@ const translations: Record<Lang, Record<TranslationKey, string>> = {
     metadata_description:
       "Find LI.FI tokens by name or address and compare cross-chain routes with transparent fees.",
     nav_swap: "Swap",
-    hero_title: "Cross-chain swaps, made simple",
-    hero_subtitle: "Compare routes from top DEXs in one click.",
+    hero_title: "A clearer way to swap.",
+    hero_subtitle: "Compare what you receive, the fees and the time. Choose your route.",
   },
   fr: {
+    swap_title: "Échanger",
+    source_network: "Réseau de départ",
+    destination_network: "Réseau d’arrivée",
+    balance_label: "Solde",
+    route_details: "Détails de la route",
+    route_duration: "Durée estimée",
+    route_gas: "Frais réseau · en plus",
+    route_minimum: "Minimum",
+    route_extra_fees: "Autres frais en plus · voir le détail",
+    route_waiting_others: "Comparaison des autres providers…",
+    route_sort_hint: "Classées par montant reçu. Les frais réseau s’ajoutent.",
+    route_recipient: "Destinataire",
+    route_amount_exact: "Montant coté",
+    route_estimates: "Les montants, frais et délais restent estimatifs.",
+    fee_details: "Détail des frais",
+    selected_route: "Sélectionnée",
+    highest_output: "Meilleur montant",
+    compare_routes: "Ta route, ton choix",
+    routes_empty_description: "Choisis tes cryptos et saisis un montant pour comparer les routes disponibles.",
+    choose_provider: "Active au moins un provider pour rechercher des routes.",
+    provider_unavailable: "{provider} est temporairement indisponible. Les autres providers restent disponibles.",
+    rango_test_notice: "Rango bêta · API publique de test par défaut, à capacité limitée. Les swaps utilisent de vrais fonds sur le mainnet.",
+    rango_preparing: "Vérification de la cotation finale",
+    rango_approval: "Approbation du token · des frais réseau distincts peuvent s’appliquer",
+    rango_signing: "Confirme le swap dans ton wallet",
+    rango_tracking: "Suivi du swap et de la réception à destination",
+    rango_pending: "Transaction envoyée, mais fin du swap non confirmée. Ne la renvoie pas ; reprends le suivi ci-dessous.",
+    rango_resume: "Reprendre le suivi",
+    rango_complete: "Réception confirmée",
+    rango_submitted: "Transaction envoyée",
+    rango_failed: "Vérifie la transaction ou le remboursement",
     popular_tokens: "Tokens populaires sur ce réseau",
     token_search_results: "Résultats de recherche LI.FI",
     tokens_searching: "Recherche sur LI.FI…",
@@ -272,7 +337,7 @@ const translations: Record<Lang, Record<TranslationKey, string>> = {
     no_routes_hint: "Aucune route pour cette paire et ce montant. Change la paire ou actualise.",
     execution_progress: "Suivi de la transaction",
     hero_tagline:
-      "Tokens LI.FI · routes transparentes · frais inclus dans le montant net.",
+      "LI.FI + Rango · routes transparentes · ton wallet, ton choix.",
     boot_loading: "Chargement des réseaux pris en charge…",
     boot_no_chains: "LI.FI ne renvoie aucune chaîne supportée. Réessaie plus tard.",
     boot_no_tokens: "Aucun token trouvé via LI.FI sur les réseaux configurés.",
@@ -324,8 +389,8 @@ const translations: Record<Lang, Record<TranslationKey, string>> = {
     metadata_description:
       "Recherche de tokens LI.FI par nom ou adresse et comparaison de routes cross-chain avec frais transparents.",
     nav_swap: "Swap",
-    hero_title: "Swaps cross-chain, simplifiés",
-    hero_subtitle: "Comparez les routes des principaux DEX en un clic.",
+    hero_title: "Le swap, plus clair.",
+    hero_subtitle: "Compare le montant reçu, les frais et la durée. Choisis ta route.",
   },
 };
 

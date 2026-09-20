@@ -7,6 +7,8 @@ import { searchTokens } from "@/lib/tokens/client";
 import { SEARCH_LIMITS, TokenSearchError, type AppToken, type TokenSearchResult, type TokenSearchErrorCode } from "@/lib/tokens/types";
 import { isKnownNativeToken, requiresTokenConfirmation, tokenKey, tokenVerification, uniqueTokens } from "@/lib/tokens/validation";
 import { useI18n } from "@/lib/i18n";
+import { TokenIcon } from "./TokenIcon";
+import { ChainSelect } from "./ChainSelect";
 
 type Props = { open: boolean; onClose: () => void; chains: ReadonlyArray<{ id: number; name: string }>; selectedChainId: number; selectedToken: AppToken | null; onSelect: (chainId: number, token: AppToken) => void; title: string };
 type SearchState = { key: string; loading: boolean; result?: TokenSearchResult; error?: TokenSearchErrorCode };
@@ -80,7 +82,7 @@ export default function TokenSelectModal({ open, onClose, chains, selectedChainI
         if (event.key === "Escape") { event.stopPropagation(); onClose(); }
         if (event.key !== "Tab") return;
         const focusable = dialog.current
-          ? Array.from(dialog.current.querySelectorAll('button:not(:disabled), input, select, a[href]')) as HTMLElement[]
+          ? (Array.from(dialog.current.querySelectorAll('button:not(:disabled), input, select, a[href]')) as HTMLElement[]).filter(element => element.tabIndex >= 0)
           : [];
         if (!focusable.length) return;
         const first = focusable[0]; const last = focusable[focusable.length - 1];
@@ -88,13 +90,13 @@ export default function TokenSelectModal({ open, onClose, chains, selectedChainI
         else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
       }}>
       <header className="jumper-modal-header"><h2 id="token-modal-title">{title}</h2><button className="jumper-modal-close" type="button" aria-label={translate("modal_close")} onClick={onClose}>×</button></header>
-      <div className="jumper-modal-search"><label htmlFor="token-chain">{translate("chains_label")}</label>
-        <select id="token-chain" value={chainId} onChange={(event) => { setChainId(Number(event.target.value)); setQuery(""); setLimit(SEARCH_LIMITS[0]); setBrowseAll(false); resetConfirmation(); }}>{chains.map((chain) => <option key={chain.id} value={chain.id}>{chain.name}</option>)}</select>
+      <div className="jumper-modal-search"><span>{translate("chains_label")}</span>
+        <ChainSelect chainId={chainId} chains={chains} label={translate("chains_label")} onChange={(id) => { setChainId(id); setQuery(""); setLimit(SEARCH_LIMITS[0]); setBrowseAll(false); resetConfirmation(); }} />
         <input ref={input} aria-label={translate("search_placeholder")} placeholder={translate("search_placeholder")} value={query} onChange={(event) => { setQuery(event.target.value); setLimit(SEARCH_LIMITS[0]); resetConfirmation(); }} maxLength={100} autoComplete="off" spellCheck={false} />
       </div>
       <div className="jumper-token-list" aria-busy={loading}>
         {pendingToken ? <section className="jumper-resolved-block" aria-label={translate("token_review")}>
-          <strong>{pendingToken.symbol} · {pendingToken.name}</strong>
+          <div className="jumper-token-review-title"><TokenIcon token={pendingToken} network /><strong>{pendingToken.symbol} · {pendingToken.name}</strong></div>
           <p>{chainName}</p><code>{pendingToken.address}</code>
           {explorer && <a href={explorer + "/address/" + pendingToken.address} target="_blank" rel="noopener noreferrer">{translate("view_contract")} ↗</a>}
           <p className="jumper-warning">{translate("custom_token_warning")}</p>
@@ -102,15 +104,15 @@ export default function TokenSelectModal({ open, onClose, chains, selectedChainI
           <div className="jumper-token-actions"><button type="button" className="jumper-refresh" onClick={resetConfirmation}>{translate("token_back")}</button>
             <button type="button" className="jumper-refresh" disabled={!acknowledged} onClick={() => { if (acknowledged) select({ ...pendingToken, riskAcknowledged: true }); }}>{translate("confirm_token", { symbol: pendingToken.symbol })}</button></div>
         </section> : <>
-          <p className="jumper-hint">{translate(normalizedQuery ? "token_search_results" : "popular_tokens")}</p>
+          <div className="jumper-token-list-heading"><p className="jumper-hint">{translate(normalizedQuery ? "token_search_results" : "popular_tokens")}</p><span>{tokens.length}</span></div>
           {tokens.map((token) => {
             const status = tokenVerification(token);
             return <button key={tokenKey(token)} type="button" className="jumper-token-row" disabled={status === "flagged"} aria-pressed={selectedToken !== null && tokenKey(selectedToken) === tokenKey(token)} onClick={() => choose(token)}>
-              {token.logoURI ? <img src={token.logoURI} alt="" className="jumper-token-logo" loading="lazy" referrerPolicy="no-referrer" /> : <span className="jumper-token-logo placeholder">{token.symbol.slice(0, 2)}</span>}
+              <TokenIcon token={token} network />
               <span className="jumper-token-row-info"><strong>{token.symbol}</strong><span>{token.name}</span>
-                <code>{isKnownNativeToken(token) ? translate("native_asset") : token.address}</code>
+                <code title={token.address}>{isKnownNativeToken(token) ? translate("native_asset") : token.address}</code>
                 <span className={"jumper-token-verification " + status}>{translate(status === "flagged" ? "token_flagged" : isKnownNativeToken(token) ? "native_asset" : isCatalogToken(token) ? "token_catalog" : status === "verified" ? "token_verified" : "token_unverified")}</span>
-              </span><span className="jumper-chain-badge">{chainName}</span>
+              </span><span className="jumper-token-row-end"><span className="jumper-chain-badge">{chainName}</span><span aria-hidden="true">{selectedToken && tokenKey(selectedToken) === tokenKey(token) ? "✓" : "↗"}</span></span>
             </button>;
           })}
           {!tokens.length && !loading && !current?.error && <p className="jumper-hint">{translate("no_tokens_for_chain")}</p>}

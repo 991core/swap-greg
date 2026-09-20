@@ -1,9 +1,9 @@
 import type { Route } from "@lifi/sdk";
+import type { RangoPayload } from "../aggregators/rango/types";
 export type ProviderName = "lifi" | "socket" | "rango";
 export type ProviderSelection = Record<ProviderName, boolean>;
-export type NormalizedRoute = {
+type RouteBase = {
   id: string;
-  provider: "lifi";
   fromChainId: number;
   toChainId: number;
   fromTokenAddress: string;
@@ -16,5 +16,7 @@ export type NormalizedRoute = {
   toolLabel: string;
   durationSeconds: number;
   expiresAt: number;
-  raw: Route;
 };
+export type LifiNormalizedRoute = RouteBase & { provider: "lifi"; raw: Route };
+export type RangoNormalizedRoute = RouteBase & { provider: "rango"; raw: RangoPayload };
+export type NormalizedRoute = LifiNormalizedRoute | RangoNormalizedRoute;

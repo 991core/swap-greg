@@ -1,7 +1,8 @@
 # Architecture Hermes
 
 Hermes utilise Next.js 14 App Router, React 18, TypeScript, wagmi/viem,
-RainbowKit, le SDK LI.FI 4.7 et son fournisseur d'exécution Ethereum officiel.
+RainbowKit, le SDK LI.FI 4.7 et son fournisseur d'exécution Ethereum officiel,
+ainsi que l'API Basic Rango pour l'EVM.
 Les réseaux EVM de `lib/chains.ts` sont la référence commune à la
 découverte, au wallet et aux contrôles des métadonnées.
 
@@ -73,7 +74,9 @@ navigateur ne passent pas par ce service.
 
 `lib/tokens/validation.ts` vérifie réseau/adresse, décimales entières
 0–255, noms et symboles bornés, puis copie uniquement les champs utiles. Les logos
-doivent être des URL HTTPS. L'identité est `chainId:adresse-en-minuscules` ;
+externes doivent être des URL HTTPS. Les logos du catalogue sont des SVG locaux,
+livrés dans `public/tokens/` et sélectionnés par réseau/adresse (`TOKEN_LOGOS.md`).
+L'identité est `chainId:adresse-en-minuscules` ;
 le symbole n'est jamais une clé de déduplication.
 
 Le verdict le plus restrictif prévaut : un résultat `flagged`, y compris
@@ -94,10 +97,14 @@ Voir `TOKEN_CATALOG.md` pour la liste et les sources. Aucun prix n'est inventé 
 
 ## Cotations et exécution
 
-Les cotations restent demandées par le SDK navigateur, avec timeout 15 s. Le
-service `lib/routing/` normalise, déduplique et trie les routes par
+Les cotations LI.FI passent par le SDK navigateur ; celles de Rango passent par
+un proxy Next.js avec clé serveur. Les deux recherches sélectionnées démarrent
+en parallèle avec timeout 15 s. Une panne de provider n'efface pas les routes de
+l'autre ; l'interface signale la disponibilité partielle. Socket reste désactivé.
+Le service `lib/routing/` normalise, déduplique par ID/provider et trie les routes par
 montant net décroissant. La clé de cotation lie compte, chaînes, adresses et montant.
-Les réponses périmées sont ignorées et les cotations expirent au bout de 60 s.
+Les réponses périmées sont ignorées et les cotations expirent au bout de 30 s.
+La sélection des providers fait aussi partie de la clé de requête du hook.
 `useSwapQuotes` planifie alors une nouvelle requête immédiatement. Les anciennes
 routes restent affichées mais sont désactivées pendant le renouvellement. Une
 réponse échouée, vide ou déjà expirée programme une tentative après 15 s ; elle
@@ -111,6 +118,14 @@ qui se vide et une animation pendant la recherche. Les préférences de mouvemen
 réduits sont respectées ; le lecteur d'écran n'annonce pas chaque seconde.
 L'actualisation automatique n'appelle jamais le wallet ni la fonction d'exécution.
 
+L'orchestrateur publie les résultats de chaque provider dès leur arrivée. Le hook
+affiche ces routes pendant que les autres recherches continuent, sans permettre
+l'exécution avant la fin du cycle. L'annulation bloque aussi les résultats partiels.
+Les cartes mettent en avant montant reçu, durée, gas et minimum ; les frais
+additionnels sont signalés et le détail des montants/contrats reste dépliable.
+Les listes de réseaux avec logos sont accessibles au clavier. Le choix USD/EUR
+est mémorisé localement ; EUR reste indisponible sans taux de référence valide.
+
 Avant toute action du wallet, `executeSwapQuote` :
 
 1. vérifie le compte, les paramètres et l'expiration de la cotation ;
@@ -121,12 +136,33 @@ Avant toute action du wallet, `executeSwapQuote` :
    métadonnées différentes ou un nouveau besoin de consentement ;
 5. revérifie le compte après cette attente, active le réseau source si nécessaire,
    contrôle les soldes ERC-20/natif et réserve le gas ;
-6. revérifie la cotation et le compte, puis confie l'exécution au fournisseur EVM LI.FI.
+6. revérifie la cotation et le compte, puis choisit l'exécuteur par provider :
+   SDK EVM LI.FI ou préparation/signature/suivi Rango. Les payloads sont distincts.
 
 Le wallet client est récupéré depuis wagmi au moment de l'action. Les changements
 automatiques de taux sont refusés ; les signatures restent demandées par le wallet.
 Une nouvelle requête locale ne garantit pas un nouveau scan chez LI.FI : leurs
 verdicts peuvent être mis en cache et ne constituent pas une garantie de sécurité.
+
+### Rango Basic API
+
+`POST /api/rango/{quote,swap,status}` accepte uniquement des entrées bornées et
+validées. L'hôte est fixe selon la clé publique de test ou privée, jamais issu du
+client ; les clés et détails d'erreur privés restent au serveur. Des budgets
+séparés par processus protègent les cotations, préparations et suivis.
+
+La transaction finale conserve le protocole, les tokens, le compte et le minimum
+sélectionnés. Aucun frais coté ne peut augmenter automatiquement. L'exécuteur
+accepte uniquement EVM, valeur exacte et approval limitée au principal, attend
+la receipt d'approval puis reconstruit la transaction. Les contrôles de compte,
+chaîne et validité sont répétés après les attentes, puis le gas et les soldes
+sont estimés à nouveau avant signature.
+
+Le suivi distingue l'envoi source de la livraison finale. Timeout ou résultat
+incomplet signifie « en attente », pas échec autorisant un renvoi. Le hash et le
+requestId sont conservés en local pour une reprise après rechargement ; les
+nouveaux swaps sont bloqués pendant cette attente. Aucune reprise ne signe.
+Voir [RANGO_INTEGRATION.md](./RANGO_INTEGRATION.md) pour les limites et références.
 
 ## Montants et prix
 
@@ -135,7 +171,9 @@ une virgule ou un point décimal. Les entiers LI.FI restent des chaînes ; expos
 signes, séparateurs de milliers et excès de décimales sont rejetés.
 
 Les frais plateforme sont configurables, avec slippage 0,5 % et impact maximal
-5 %. Le montant net, le minimum reçu et les frais réseau restent distincts.
+5 % chez LI.FI ; Rango refuse les verdicts d'impact élevé de son API.
+Rango exige un destinataire de commission pour des frais non nuls et accepte
+au maximum 3 %. Le montant net, le minimum reçu et les frais réseau restent distincts.
 Les prix USD passent aussi par le service tokens, par réseau/adresse. Le taux EUR
 vient de la BCE via Frankfurter, avec sa date et un repli sur USD si indisponible.
 Ces demandes de prix sont indépendantes de l'authenticité : leur échec ne retire
@@ -148,6 +186,9 @@ pas une entrée du catalogue local et ne bloque pas sa sélection.
 | `LIFI_API_KEY` | Clé optionnelle privée du service tokens ; remplace l'ancienne variable publique. |
 | `TOKEN_SEARCH_REQUESTS_PER_MINUTE` | Budget local d'appels du service tokens. |
 | `NEXT_PUBLIC_PLATFORM_FEE_PERCENT` | Frais Hermes 0–100. |
+| `RANGO_API_KEY` | Clé serveur privée facultative ; clé publique de test par défaut. |
+| `RANGO_REFERRER_ADDRESS` | Commission Rango non nulle (plafond 3 %). |
+| `lib/aggregators/rango/` | Validation API, signature EVM et suivi séparés de LI.FI. |
 | `lib/tokens/client.ts` | HTTP navigateur et validation des réponses. |
 | `lib/tokens/catalog.ts` | Métadonnées locales épinglées et recherche synchrone. |
 | `lib/contractTokenResolver.ts` | Wrapper de résolution LI.FI par adresse ; aucun fallback RPC. |
@@ -171,6 +212,8 @@ Ils couvrent également l'exemption exacte du catalogue, les homonymes malveilla
 l'actualisation automatique, les délais de retry, la suspension et le compte à rebours.
 Ils ne déplacent pas de fonds.
 
-Rango, Socket, wallets non-EVM, scan GoPlus, scoring des bridges et orchestration
-serveur des cotations restent hors périmètre. La disponibilité d'une route dépend
-de LI.FI, de la liquidité et du montant demandé.
+Socket, wallets non-EVM, scan GoPlus, scoring des bridges et orchestration
+entièrement serveur restent hors périmètre. Rango est en bêta, limité aux
+transactions EVM acceptées par son validateur. Le parcours signé complet reste
+à vérifier manuellement. La disponibilité d'une route dépend des providers,
+de leurs quotas, de la liquidité et du montant demandé.

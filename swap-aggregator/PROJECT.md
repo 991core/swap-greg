@@ -39,8 +39,8 @@ Frontend → Orchestrateur (appels parallèles) → [LI.FI, Socket, Rango] en pa
 ## Sources d'agrégation retenues
 - **LI.FI** — socle principal, meilleure couverture EVM, SDK officiel `@lifi/sdk`.
 - **Socket** — bon pour logique de routing personnalisée par-dessus leur API.
-- **Rango** — à ajouter pour couvrir Bitcoin/Solana/Cosmos/TON au-delà de l'EVM.
-- Ordre d'intégration : LI.FI seul d'abord (MVP), puis Socket, puis Rango.
+- **Rango** — désormais intégré en bêta EVM ; Bitcoin/Solana/Cosmos/TON restent futurs.
+- Ordre actualisé : LI.FI, puis Rango à la demande utilisateur ; Socket ensuite.
 
 ## Score de fiabilité (par bridge sous-jacent)
 Table `bridge_reliability` (Postgres) avec : TVL, volume 30j, date de lancement, historique
@@ -62,17 +62,19 @@ amélioration post-MVP ; au lancement, liste d'incidents majeurs saisie manuelle
 ## Stack technique
 - **Frontend** : Next.js (App Router) + TypeScript
 - **Wallet** : wagmi + viem + RainbowKit
-- **Agrégation** : `@lifi/sdk` (officiel), puis API Socket et Rango ensuite
+- **Agrégation** : `@lifi/sdk` (officiel) et API Basic Rango ; Socket ensuite
 - **Backend** : API Next.js pour la recherche/métadonnées/prix des tokens avec cache,
   validation et clé privée. Les cotations et l'exécution LI.FI restent côté navigateur.
-  L'orchestration multi-agrégateurs et le scoring serveur restent à développer.
+  Les appels Rango passent par un proxy serveur ; l'orchestrateur navigateur
+  lance les providers sélectionnés en parallèle. Le scoring serveur reste futur.
 - **DB fiabilité** : Postgres
 
 ## Roadmap
 1. **MVP (fait)** : LI.FI seul, UI type Jumper (réseau + token), recherche élargie
    LI.FI via l'option B, multi-routes avec choix utilisateur, frais via `fee` SDK.
    Mainnet EVM.
-2. **Semaine 3-4** : ajout Socket + Rango, orchestrateur parallèle, normalisation/dédup.
+2. **Extension actuelle** : Rango EVM bêta, orchestrateur parallèle, logos locaux,
+   normalisation et isolation des erreurs. Restent Socket et validation mainnet signée.
 3. **Mois 2** : score de fiabilité (version simplifiée TVL + ancienneté d'abord).
 4. **Post-MVP / différé** : ingestion automatisée des incidents (Apify/cron), streaming des
    routes, revue légale/réglementaire approfondie.
@@ -82,7 +84,8 @@ MVP Hermes : Next.js + wallet EVM injecté, LI.FI (`lib/aggregators/lifi/routes.
 et orchestrateur de cotations sécurisé (`lib/routing/`),
 API de recherche de tokens LI.FI avec cache serveur et validation,
 `SwapCard` / `TokenSelectModal` / `RouteList`, design branding Hermes / HMS Protocol.
-i18n 100 % fonctionnel (EN/FR, détection automatique, sélecteur, persistance).
+i18n de l'interface EN/FR (détection automatique, sélecteur, persistance) ; certains
+messages techniques des providers restent en anglais.
 Affichage du taux toujours actif même avec solde insuffisant (avertissement indicatif).
 Paire par défaut : ETH sur Base vers ETH sur Ethereum, disponible dès le premier
 affichage avec les réseaux configurés localement.
@@ -136,6 +139,17 @@ l'annulation de recherche, le consentement et les changements de métadonnées o
 de statut avant exécution. README, architecture et guide de reprise reflètent ce
 nouveau périmètre.
 
+## Mise à jour — lecture des routes et interface
+
+- Actualisation automatique toutes les 30 secondes et affichage des réponses
+  dès l'arrivée de chaque provider, avec exécution bloquée pendant la recherche.
+- Suppression du bouton de navigation Swap isolé ; formulaire et comparaison
+  réorganisés pour desktop et mobile.
+- Sélecteurs de réseaux avec logos et navigation clavier, choix USD/EUR mémorisé.
+- Cartes centrées sur le montant reçu, la durée, les frais réseau et le minimum.
+  Les frais additionnels sont signalés ; contrats et détail des frais se déplient.
+  Les très petits montants et frais ne sont pas arrondis à zéro à l'affichage.
+
 ## Mise à jour — catalogue instantané et cotations automatiques
 
 - `lib/tokens/catalog.ts` contient les actifs natifs et les principaux ERC-20
@@ -144,7 +158,7 @@ nouveau périmètre.
   décimales et sources figurent dans `TOKEN_CATALOG.md` ; un homonyme n'est pas exempté.
 - Le formulaire ne dépend plus du chargement de la liste des réseaux LI.FI.
   La recherche élargie reste accessible ; les prix et les routes restent dynamiques.
-- À 60 secondes, les cotations se renouvellent automatiquement. Un anneau animé
+- À 30 secondes, les cotations se renouvellent automatiquement. Un anneau animé
   affiche le temps restant et l'état de recherche. Pendant ce renouvellement,
   le swap est désactivé ; erreurs et résultats vides sont retentés après 15 secondes.
 - Les demandes attendent en arrière-plan/hors ligne et sont suspendues pendant
@@ -166,9 +180,28 @@ Le prix EUR indicatif est récupéré dynamiquement avec sa date de référence.
 des tokens sont demandés à LI.FI sur la paire chaîne/adresse, sans déduire le prix
 d’un symbole ou d’une chaîne différente.
 
-Rango et Socket sont explicitement désactivés dans l’UI jusqu’à l’implémentation de
-leur cycle complet. L’ancien code qui retournait une route Rango fictive ou tentait
-d’exécuter toutes les routes via LI.FI a été retiré.
+Rango est maintenant activé en bêta avec cotation, préparation EVM, approval
+bornée et suivi de réception. Socket reste explicitement désactivé. Aucune route
+fictive n'est utilisée et les transactions Rango ne passent pas dans LI.FI.
+
+## Mise à jour — interface et premier provider supplémentaire
+
+- Logos SVG locaux pour les 39 entrées du catalogue, badges de réseau et de
+  variante, fallback d'image. Sources dans `TOKEN_LOGOS.md`.
+- Sélecteurs et cartes enrichis, état vide explicatif, providers activables,
+  affichage du provider/protocole et des erreurs partielles.
+- Clé publique de test Rango par défaut et proxy serveur à hôtes fixes. Le mode
+  test de l'API reste du mainnet : aucune transaction réelle n'a été lancée ici.
+- Préflight commun aux deux providers ; exécuteur Rango séparé, contrôle du min
+  reçu et des frais avant chaque signature, approvals exactes avec reset si requis.
+- Suivi de livraison finale, gestion explicite des remboursements/attentes,
+  conservation du transfert en attente et bouton de reprise après rechargement.
+- Cotation Rango réelle ETH/Base → ETH/Ethereum vérifiée en lecture seule,
+  tests des wallets simulés et build vérifiés. Le parcours signé complet et la
+  revue visuelle navigateur restent à faire avant production.
+
+Voir `RANGO_INTEGRATION.md` pour le périmètre supporté, les quotas publics,
+la configuration de commission et les garanties/limites des contrôles.
 
 ## Fichiers ajoutés ou réorganisés
 
@@ -176,7 +209,7 @@ d’exécuter toutes les routes via LI.FI a été retiré.
 - `lib/wallet.ts` : configuration wagmi partagée avec le client LI.FI.
 - `lib/routing/config.ts` : frais, slippage, impact maximal et durée de cotation.
 - `lib/routing/quote.ts` : clé et validation d’une cotation.
-- `lib/routing/execute.ts` : pré-vérifications et exécution LI.FI.
+- `lib/routing/execute.ts` : pré-vérifications et dispatch LI.FI/Rango.
 - `lib/routing/useSwapQuotes.ts` : debounce, annulation, expiration et refresh.
 - `tests/` : tests du montant, des cotations, de l’exécution et de la modale.
 

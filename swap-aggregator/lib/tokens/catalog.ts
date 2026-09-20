@@ -213,12 +213,19 @@ const erc20Tokens: readonly AppToken[] = [
   {"chainId":42161,"address":"0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9","decimals":6,"symbol":"USDT0","name":"USDT0","priceUSD":"0"}
 ];
 
+// Used only while constructing the reviewed catalog. Never resolve arbitrary
+// search results by symbol: getCatalogToken still keys by chain AND address.
+const catalogIcons: Record<string, string> = {
+  ETH: "eth", WETH: "eth", USDC: "usdc", USDT: "usdt", USDT0: "usdt", DAI: "dai",
+  WBTC: "wbtc", cbBTC: "btc", BTCB: "btc", LINK: "link", BNB: "bnb", WBNB: "bnb",
+  AVAX: "avax", WAVAX: "avax", POL: "chain-polygon", OP: "chain-optimism", XDAI: "dai", METIS: "chain-metis",
+};
 const catalog: readonly Readonly<AppToken>[] = Object.freeze([
   ...APP_CHAINS.map((chain) => ({
     ...chain.nativeCurrency, chainId: chain.id, address: NATIVE_ADDRESS, priceUSD: "0",
   })),
   ...erc20Tokens,
-].map((token) => Object.freeze(token)));
+].map((token) => Object.freeze({ ...token, logoURI: `/tokens/${catalogIcons[token.symbol]}.svg` })));
 
 export function getCatalogToken(chainId: number, address: string): AppToken | null {
   const token = catalog.find((item) => item.chainId === chainId && item.address.toLowerCase() === address.trim().toLowerCase());

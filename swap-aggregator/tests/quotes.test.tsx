@@ -12,6 +12,40 @@ import { params, quote, rawRoute } from "./fixtures";
 const fetchQuotes = vi.mocked(getRoutesForSelection);
 beforeEach(() => { vi.useFakeTimers(); fetchQuotes.mockReset(); });
 describe("quote lifetime", () => {
+  it("shows partial routes while loading and rejects late progress after a form change", async () => {
+    let progress: Parameters<typeof getRoutesForSelection>[3];
+    let finish!: (routes: NormalizedRoute[]) => void;
+    fetchQuotes.mockImplementation((_request, _signal, _warn, onProgress) => {
+      progress = onProgress;
+      return new Promise(resolve => { finish = resolve; });
+    });
+    const hook = renderHook(({ input }: { input: SwapParams | null }) => useSwapQuotes(input), { initialProps: { input: params as SwapParams | null } });
+    await act(() => vi.advanceTimersByTimeAsync(500));
+    act(() => progress?.([quote()]));
+    expect(hook.result.current.routes).toHaveLength(1);
+    expect(hook.result.current.loading).toBe(true);
+    hook.rerender({ input: null });
+    act(() => progress?.([quote("lifi:late")]));
+    await act(async () => finish([quote("lifi:late")]));
+    expect(hook.result.current.routes).toEqual([]);
+    expect(hook.result.current.loading).toBe(false);
+  });
+  it("invalidates quotes and cancels the old request when providers change", async () => {
+    fetchQuotes.mockResolvedValue([quote()]);
+    const hook = renderHook(({ providers }) => useSwapQuotes({ ...params, providers }), { initialProps: { providers: { lifi: true, rango: true, socket: false } } });
+    await act(() => vi.advanceTimersByTimeAsync(500));
+    const signal = fetchQuotes.mock.calls[0][1];
+    hook.rerender({ providers: { lifi: true, rango: false, socket: false } });
+    expect(hook.result.current.routes).toEqual([]); expect(signal?.aborted).toBe(true);
+    await act(() => vi.advanceTimersByTimeAsync(500));
+    expect(fetchQuotes.mock.calls[1][0].providers?.rango).toBe(false);
+  });
+  it("keeps provider warnings beside successful routes", async () => {
+    fetchQuotes.mockImplementation(async (_params, _signal, warn) => { warn?.({ provider: "rango", message: "unavailable" }); return [quote()]; });
+    const hook = renderHook(() => useSwapQuotes(params));
+    await act(() => vi.advanceTimersByTimeAsync(500));
+    expect(hook.result.current.routes).toHaveLength(1); expect(hook.result.current.warnings).toEqual([{ provider: "rango", message: "unavailable" }]); expect(hook.result.current.error).toBeNull();
+  });
   it("ignores a late response after the amount has been cleared", async () => {
     let resolve!: (routes: NormalizedRoute[]) => void;
     fetchQuotes.mockReturnValue(new Promise((done) => { resolve = done; }));
@@ -39,7 +73,9 @@ describe("quote lifetime", () => {
     const hook = renderHook(() => useSwapQuotes(params));
     await act(() => vi.advanceTimersByTimeAsync(500));
     expect(canExecuteQuote(route, params)).toBe(true);
-    await act(() => vi.advanceTimersByTimeAsync(59_500));
+    await act(() => vi.advanceTimersByTimeAsync(29_499));
+    expect(fetchQuotes).toHaveBeenCalledTimes(1);
+    await act(() => vi.advanceTimersByTimeAsync(1));
     expect(fetchQuotes).toHaveBeenCalledTimes(2);
     expect(hook.result.current.loading).toBe(true);
     expect(hook.result.current.expired).toBe(true);
@@ -62,7 +98,7 @@ describe("quote lifetime", () => {
   it("retries a failed refresh after a delay without reviving expired routes", async () => {
     fetchQuotes.mockImplementationOnce(async () => [quote()]).mockRejectedValueOnce(new Error("upstream offline")).mockImplementation(async () => [quote()]);
     const hook = renderHook(() => useSwapQuotes(params));
-    await act(() => vi.advanceTimersByTimeAsync(60_500));
+    await act(() => vi.advanceTimersByTimeAsync(30_500));
     expect(hook.result.current.expired).toBe(true);
     expect(hook.result.current.error).toBe("upstream offline");
     expect(hook.result.current.retryAt).toBe(Date.now() + QUOTE_RETRY_MS);
@@ -89,7 +125,7 @@ describe("quote lifetime", () => {
     let finish!: (routes: NormalizedRoute[]) => void;
     fetchQuotes.mockImplementationOnce(async () => [quote()]).mockImplementationOnce(() => new Promise((done) => { finish = done; }));
     const hook = renderHook(({ input }: { input: SwapParams | null }) => useSwapQuotes(input), { initialProps: { input: params as SwapParams | null } });
-    await act(() => vi.advanceTimersByTimeAsync(60_500));
+    await act(() => vi.advanceTimersByTimeAsync(30_500));
     const signal = fetchQuotes.mock.calls[1][1];
     hook.rerender({ input: null }); expect(signal?.aborted).toBe(true);
     await act(async () => finish([quote()]));

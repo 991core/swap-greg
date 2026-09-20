@@ -28,11 +28,24 @@ beforeEach(() => {
 
 it("changing the modal chain changes its token list and the selected token's chain", async () => {
   const onSelect = mount(); await tick(0);
-  fireEvent.change(screen.getByRole("combobox"), { target: { value: "8453" } }); await tick(0);
-  expect(screen.getByRole<HTMLSelectElement>("combobox").value).toBe("8453");
+  fireEvent.click(screen.getByRole("combobox")); fireEvent.click(screen.getByRole("option", { name: "Base" })); await tick(0);
+  expect(screen.getByRole("combobox").getAttribute("aria-label")).toBe("Chains: Base");
   expect(searchTokens).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole("button", { name: /USDC/ }));
   expect(onSelect).toHaveBeenCalledWith(8453, expect.objectContaining({ chainId: 8453, symbol: "USDC", decimals: 6 }));
+});
+it("supports keyboard network navigation and Escape closes only the network menu", async () => {
+  mount();
+  const trigger = screen.getByRole("combobox");
+  fireEvent.keyDown(trigger, { key: "ArrowDown" });
+  expect(document.activeElement).toBe(screen.getByRole("option", { name: "Ethereum" }));
+  fireEvent.keyDown(document.activeElement!, { key: "End" });
+  expect(document.activeElement).toBe(screen.getByRole("option", { name: "Base" }));
+  fireEvent.keyDown(document.activeElement!, { key: "Escape" });
+  expect(screen.queryByRole("listbox")).toBeNull();
+  expect(screen.getByRole("dialog")).toBeTruthy();
+  expect(document.activeElement).toBe(trigger);
+  expect(searchTokens).not.toHaveBeenCalled();
 });
 it("debounces catalogue searches and retains homonymous contracts", async () => {
   vi.mocked(searchTokens).mockImplementation(async (chainId, query = "") => result(chainId, query, query === "cafe" ? [custom, { ...custom, address: "0x3333333333333333333333333333333333333333" }] : []));
@@ -73,7 +86,7 @@ it("clears consent and stale rows immediately when switching networks", async ()
   vi.mocked(searchTokens).mockImplementation(async (chainId, query = "") => result(chainId, query, query ? [{ ...custom, chainId }] : []));
   const onSelect = mount(); type("cafe"); await tick(); fireEvent.click(screen.getByRole("button", { name: /CAFE/ }));
   fireEvent.click(screen.getByRole("checkbox"));
-  fireEvent.change(screen.getByRole("combobox"), { target: { value: "8453" } });
+  fireEvent.click(screen.getByRole("combobox")); fireEvent.click(screen.getByRole("option", { name: "Base" }));
   expect(screen.queryByRole("checkbox")).toBeNull(); expect(screen.queryByRole("button", { name: /CAFE/ })).toBeNull();
   type("cafe"); await tick(); fireEvent.click(screen.getByRole("button", { name: /CAFE/ }));
   expect(screen.getByRole<HTMLInputElement>("checkbox").checked).toBe(false); expect(onSelect).not.toHaveBeenCalled();
