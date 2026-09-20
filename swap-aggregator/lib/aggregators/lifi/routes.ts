@@ -11,8 +11,8 @@ export type SwapParams = {
 };
 export type { AppToken } from "../../tokens/types";
 
-// Native defaults are chain configuration, not an ERC-20 discovery fallback.
-// LI.FI recognition is checked again before execution.
+// Native metadata comes from chain configuration. The interactive defaults use
+// the broader reviewed catalog in lib/tokens/catalog.ts.
 export function buildKnownFallbackTokens(chainId: number): AppToken[] {
   const chain = APP_CHAINS.find((c) => c.id === chainId);
   if (!chain) return [];

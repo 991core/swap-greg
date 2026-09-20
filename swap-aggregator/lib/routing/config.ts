@@ -6,4 +6,5 @@ export const PLATFORM_FEE = feePercent / 100;
 export const SLIPPAGE = 0.005;
 export const MAX_PRICE_IMPACT = 0.05;
 export const QUOTE_TTL_MS = 60_000;
+export const QUOTE_RETRY_MS = 15_000;
 export const ROUTE_TIMEOUT_MS = 15_000;

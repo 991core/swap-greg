@@ -7,13 +7,18 @@ découverte, au wallet et aux contrôles des métadonnées.
 
 ## Recherche de tokens — option B
 
-La modale charge les tokens populaires du réseau actif à son ouverture. Une saisie
-déclenche la recherche après 300 ms ; changer la saisie, le réseau ou fermer la
+La modale affiche les tokens principaux de `lib/tokens/catalog.ts` dès son ouverture,
+sans requête API. Les réseaux et la paire initiale sont aussi configurés localement.
+Une saisie filtre ces entrées immédiatement et déclenche une recherche LI.FI après
+300 ms, sauf pour une adresse exacte déjà au catalogue. Le bouton de parcours
+élargi permet aussi de charger la liste distante sans saisir de nom.
+Changer la saisie, le réseau ou fermer la
 modale annule la requête et invalide immédiatement ses résultats et son consentement.
 
 ```mermaid
 flowchart TD
-  A[Modale de tokens] --> B[API Next.js]
+  A[Modale de tokens] --> L[Catalogue local immédiat]
+  A --> B[API Next.js]
   B --> C{Cache valide ?}
   C -->|Oui| E[Réponse validée]
   C -->|Non| D[LI.FI]
@@ -73,15 +78,19 @@ le symbole n'est jamais une clé de déduplication.
 
 Le verdict le plus restrictif prévaut : un résultat `flagged`, y compris
 dans le détail d'un fournisseur ou un doublon, bloque le token. Un statut absent
-ou `unverified` exige une confirmation avec contrat complet, réseau et
+ou `unverified` exige, hors catalogue local, une confirmation avec contrat complet, réseau et
 explorateur. Le consentement `riskAcknowledged` reste dans la sélection
 locale et n'est jamais accepté dans les données reçues de l'API. Changer de
 recherche ou réseau efface le panneau et sa case de confirmation.
 
-L'actif natif configuré est reconnu par réseau + adresse zéro + décimales + symbole.
-Il peut être proposé au démarrage sans importer de contrat ERC-20. Sa reconnaissance
-LI.FI est tout de même vérifiée avant exécution. Aucune décimale ou valeur USD n'est
-inventée à partir d'un symbole.
+Le catalogue local épingle les actifs natifs et une sélection d'ERC-20 par réseau,
+adresse, décimales et symbole. Il est versionné ; aucune réponse API ne peut l'étendre.
+Ces actifs sont exemptés de consentement d'import et de requête d'authenticité.
+Le statut affiché « Catalogue Hermes » est distinct du verdict LI.FI. Un signalement
+reçu dans une recherche ou la cotation reste prioritaire. Les copies d'une entrée
+renvoyées aux appelants ne permettent pas de modifier les données épinglées.
+Voir `TOKEN_CATALOG.md` pour la liste et les sources. Aucun prix n'est inventé :
+`priceUSD: "0"` signifie qu'aucun prix n'est encore disponible.
 
 ## Cotations et exécution
 
@@ -89,14 +98,27 @@ Les cotations restent demandées par le SDK navigateur, avec timeout 15 s. Le
 service `lib/routing/` normalise, déduplique et trie les routes par
 montant net décroissant. La clé de cotation lie compte, chaînes, adresses et montant.
 Les réponses périmées sont ignorées et les cotations expirent au bout de 60 s.
+`useSwapQuotes` planifie alors une nouvelle requête immédiatement. Les anciennes
+routes restent affichées mais sont désactivées pendant le renouvellement. Une
+réponse échouée, vide ou déjà expirée programme une tentative après 15 s ; elle
+ne réactive pas une route périmée. Une seule requête peut être active par cycle.
+La fonction tient compte de l'heure réelle au retour d'un onglet masqué ou à la
+reconnexion. Le timer et les listeners sont nettoyés lors d'un changement de
+paramètres, de la fermeture du composant ou de la suspension pour exécution.
+
+`QuoteCountdown` affiche les secondes jusqu'à la prochaine échéance, un anneau
+qui se vide et une animation pendant la recherche. Les préférences de mouvements
+réduits sont respectées ; le lecteur d'écran n'annonce pas chaque seconde.
+L'actualisation automatique n'appelle jamais le wallet ni la fonction d'exécution.
 
 Avant toute action du wallet, `executeSwapQuote` :
 
 1. vérifie le compte, les paramètres et l'expiration de la cotation ;
 2. compare l'identité et les décimales de la sélection avec les tokens du devis ;
 3. refuse les signalements connus et les imports sans consentement ;
-4. relit les deux tokens avec `fresh=1`, puis refuse une indisponibilité,
-   un signalement, des métadonnées différentes ou un nouveau besoin de consentement ;
+4. compare les actifs locaux à leurs métadonnées épinglées ; relit les autres
+   tokens avec `fresh=1`, puis refuse une indisponibilité, un signalement, des
+   métadonnées différentes ou un nouveau besoin de consentement ;
 5. revérifie le compte après cette attente, active le réseau source si nécessaire,
    contrôle les soldes ERC-20/natif et réserve le gas ;
 6. revérifie la cotation et le compte, puis confie l'exécution au fournisseur EVM LI.FI.
@@ -116,6 +138,8 @@ Les frais plateforme sont configurables, avec slippage 0,5 % et impact maximal
 5 %. Le montant net, le minimum reçu et les frais réseau restent distincts.
 Les prix USD passent aussi par le service tokens, par réseau/adresse. Le taux EUR
 vient de la BCE via Frankfurter, avec sa date et un repli sur USD si indisponible.
+Ces demandes de prix sont indépendantes de l'authenticité : leur échec ne retire
+pas une entrée du catalogue local et ne bloque pas sa sélection.
 
 ## Configuration et modules
 
@@ -125,16 +149,26 @@ vient de la BCE via Frankfurter, avec sa date et un repli sur USD si indisponibl
 | `TOKEN_SEARCH_REQUESTS_PER_MINUTE` | Budget local d'appels du service tokens. |
 | `NEXT_PUBLIC_PLATFORM_FEE_PERCENT` | Frais Hermes 0–100. |
 | `lib/tokens/client.ts` | HTTP navigateur et validation des réponses. |
+| `lib/tokens/catalog.ts` | Métadonnées locales épinglées et recherche synchrone. |
 | `lib/contractTokenResolver.ts` | Wrapper de résolution LI.FI par adresse ; aucun fallback RPC. |
 | `lib/aggregators/lifi/client.ts` | SDK navigateur et fournisseur EVM, sans clé privée. |
 | `lib/routing/execute.ts` | Contrôles avant exécution. |
 | `components/TokenSelectModal.tsx` | Recherche, consentement, focus trap et scroll. |
+| `components/QuoteCountdown.tsx` | Compteur d'expiration et états de renouvellement. |
+| `next.config.js` | Imports optimisés de `viem/chains`, sans les modules Tempo inutilisés. |
+
+L'import global de `viem/chains` entraînait `tempo/VirtualMaster` et son import
+dynamique de workers Node dans le bundle de l'API. `optimizePackageImports` conserve
+uniquement les exports nécessaires, corrigeant le warning `Critical dependency`
+sans patcher `node_modules`, changer de version ou filtrer les diagnostics.
 
 ## Vérifications et limites
 
 Exécuter `npm run typecheck`, `npm test`, `npm run lint` et `npm run build`.
 Les tests contrôlent les paramètres API, homonymes, cache, quotas, erreurs, consentement,
 réponses tardives, métadonnées avant signature et protections de cotation existantes.
+Ils couvrent également l'exemption exacte du catalogue, les homonymes malveillants,
+l'actualisation automatique, les délais de retry, la suspension et le compte à rebours.
 Ils ne déplacent pas de fonds.
 
 Rango, Socket, wallets non-EVM, scan GoPlus, scoring des bridges et orchestration

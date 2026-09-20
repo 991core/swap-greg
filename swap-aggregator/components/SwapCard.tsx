@@ -1,13 +1,15 @@
 "use client";
 
-import type { ExtendedChain, RouteExtended } from "@lifi/sdk";
+import type { RouteExtended } from "@lifi/sdk";
 import { useEffect, useRef, useState } from "react";
 import { useAccount, useBalance, useReadContract } from "wagmi";
 import { erc20Abi, type Address } from "viem";
 import { RouteList } from "./RouteList";
 import TokenSelectModal from "./TokenSelectModal";
-import { CHAIN_LABELS } from "@/lib/chains";
-import { type AppToken, type SwapParams, fetchSupportedChains, buildKnownFallbackTokens, formatTokenAmount, parseTokenAmount } from "@/lib/lifi";
+import { QuoteCountdown } from "./QuoteCountdown";
+import { APP_CHAINS, CHAIN_LABELS } from "@/lib/chains";
+import { getPopularTokens } from "@/lib/tokens/catalog";
+import { type AppToken, type SwapParams, formatTokenAmount, parseTokenAmount } from "@/lib/lifi";
 import { balancePercentage } from "@/lib/amounts";
 import { formatCurrencyValue, fetchTokenPriceUsd, fetchUsdEurRate, getPriceLookupKey, type FxRate } from "@/lib/pricing";
 import { useI18n } from "@/lib/i18n";
@@ -30,14 +32,10 @@ function TokenSelector({ token, chainId, onClick }: { token: AppToken | null; ch
 export function SwapCard() {
   const { address, isConnected } = useAccount();
   const { translate, lang } = useI18n();
-  const [chains, setChains] = useState<ExtendedChain[]>([]);
-  const [tokensByChain, setTokensByChain] = useState<Record<number, AppToken[]>>({});
-  const [bootLoading, setBootLoading] = useState(true);
-  const [bootError, setBootError] = useState<"boot_no_chains" | "boot_failed" | null>(null);
   const [fromChainId, setFromChainId] = useState(8453);
   const [toChainId, setToChainId] = useState(1);
-  const [fromToken, setFromToken] = useState<AppToken | null>(null);
-  const [toToken, setToToken] = useState<AppToken | null>(null);
+  const [fromToken, setFromToken] = useState<AppToken | null>(() => getPopularTokens(8453)[0]);
+  const [toToken, setToToken] = useState<AppToken | null>(() => getPopularTokens(1)[0]);
   const [amount, setAmount] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [swapping, setSwapping] = useState(false);
@@ -71,26 +69,6 @@ export function SwapCard() {
   const price = (token: AppToken | null) => token ? priceLookup[getPriceLookupKey(token)] ?? Number(token.priceUSD ?? 0) : 0;
   const inputValue = parsed && fromToken && price(fromToken) > 0 ? Number(formatTokenAmount(parsed, fromToken.decimals, fromToken.decimals)) * price(fromToken) : null;
   const outputValue = receivePreview && price(toToken) > 0 ? Number(receivePreview) * price(toToken) : null;
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const supported = await fetchSupportedChains();
-        if (cancelled) return;
-        if (!supported.length) { setBootError("boot_no_chains"); return; }
-        const tokens = Object.fromEntries(supported.map((c) => [c.id, buildKnownFallbackTokens(c.id)]));
-        setChains(supported); setTokensByChain(tokens);
-        const source = supported.find((c) => c.id === 8453)?.id ?? supported[0].id;
-        const destination = supported.find((c) => c.id === 1)?.id ?? supported.at(-1)!.id;
-        const defaultToken = (id: number) => tokens[id]?.find((t) => /^0x0{40}$/i.test(t.address)) ?? tokens[id]?.[0] ?? null;
-        setFromChainId(source); setToChainId(destination);
-        setFromToken(defaultToken(source)); setToToken(defaultToken(destination));
-      } catch { if (!cancelled) setBootError("boot_failed"); }
-      finally { if (!cancelled) setBootLoading(false); }
-    })();
-    return () => { cancelled = true; };
-  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -136,8 +114,6 @@ export function SwapCard() {
     }
   }
 
-  if (bootLoading) return <div className="jumper-state" role="status"><div className="jumper-skeleton" /><p>{translate("boot_loading")}</p></div>;
-  if (bootError) return <p className="jumper-error" role="alert">{translate(bootError)}</p>;
   const actions = execution?.steps.flatMap((step) => step.execution?.actions ?? []) ?? [];
   const label = !isConnected ? translate("cta_connect_wallet") : swapping ? translate("cta_executing") : quotes.loading ? translate("cta_searching") : translate("cta_swap");
   return <>
@@ -181,11 +157,11 @@ export function SwapCard() {
       {actions.length > 0 && <div className="jumper-progress"><p>{translate("execution_progress")}</p>{actions.map((action, index) => <div key={index}><span>{action.type} · {action.status}</span>{action.txLink && /^https:\/\//.test(action.txLink) && <a href={action.txLink} target="_blank" rel="noopener noreferrer">{action.txHash?.slice(0, 12) ?? "↗"} ↗</a>}</div>)}</div>}
     </div>
     <aside className="jumper-routes-panel" aria-live="polite">
-      <RouteList routes={quotes.routes} selectedId={selectedRoute?.id ?? null} onSelect={(route) => setSelectedId(route.id)} toDecimals={toToken?.decimals ?? 18} toSymbol={toToken?.symbol ?? ""} currency={currency} eurRate={fx?.rate ?? null} priceUsd={price(toToken)} disabled={swapping || quotes.expired} />
+      {params && <QuoteCountdown expiresAt={quotes.expiresAt} retryAt={quotes.retryAt} loading={quotes.loading} waiting={quotes.waiting} suspended={swapping} />}
+      <RouteList routes={quotes.routes} selectedId={selectedRoute?.id ?? null} onSelect={(route) => setSelectedId(route.id)} toDecimals={toToken?.decimals ?? 18} toSymbol={toToken?.symbol ?? ""} currency={currency} eurRate={fx?.rate ?? null} priceUsd={price(toToken)} disabled={swapping || quotes.loading || quotes.expired} />
       {params && !quotes.loading && !quotes.routes.length && !quotes.error && <p className="jumper-hint">{translate("no_routes_hint")}</p>}
-      {quotes.expired && <p className="jumper-warning">{translate("quote_expired")}</p>}
       {params && <button type="button" className="jumper-refresh" disabled={swapping || quotes.loading} onClick={quotes.refresh}>{translate("refresh_quotes")}</button>}
     </aside>
-    <TokenSelectModal open={modalSide !== null && !swapping} onClose={() => setModalSide(null)} chains={chains} tokensByChain={tokensByChain} selectedChainId={modalSide === "to" ? toChainId : fromChainId} selectedToken={modalSide === "to" ? toToken : fromToken} onSelect={(chainId, token) => handleSelect(modalSide ?? "from", chainId, token)} title={translate(modalSide === "to" ? "destination_token" : "source_token")} />
+    <TokenSelectModal open={modalSide !== null && !swapping} onClose={() => setModalSide(null)} chains={APP_CHAINS} selectedChainId={modalSide === "to" ? toChainId : fromChainId} selectedToken={modalSide === "to" ? toToken : fromToken} onSelect={(chainId, token) => handleSelect(modalSide ?? "from", chainId, token)} title={translate(modalSide === "to" ? "destination_token" : "source_token")} />
   </>;
 }

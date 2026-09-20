@@ -19,7 +19,7 @@ opaque.
 - **Montant net reçu** est la métrique de référence affichée, frais déjà déduits — jamais un
   taux de frais isolé qui nécessiterait un calcul mental à l'utilisateur.
 - **Univers de tokens** : recherche LI.FI par nom, symbole ou adresse sur les réseaux
-  EVM configurés ; populaires à l'ouverture, catalogue élargi à la demande. Un résultat
+  EVM configurés ; catalogue local instantané à l'ouverture, recherche élargie à la demande. Un résultat
   ne garantit ni sa sécurité ni une route pour chaque paire/montant.
 
 ## Architecture backend (cible, pas le MVP)
@@ -84,8 +84,8 @@ API de recherche de tokens LI.FI avec cache serveur et validation,
 `SwapCard` / `TokenSelectModal` / `RouteList`, design branding Hermes / HMS Protocol.
 i18n 100 % fonctionnel (EN/FR, détection automatique, sélecteur, persistance).
 Affichage du taux toujours actif même avec solde insuffisant (avertissement indicatif).
-Paire par défaut : ETH sur Base vers ETH sur Ethereum, si ces deux réseaux sont
-retournés par LI.FI.
+Paire par défaut : ETH sur Base vers ETH sur Ethereum, disponible dès le premier
+affichage avec les réseaux configurés localement.
 
 ## Mise à jour — stabilisation du parcours LI.FI
 
@@ -124,16 +124,41 @@ La clé facultative passe de `NEXT_PUBLIC_LIFI_API_KEY` à `LIFI_API_KEY` et res
 sur le serveur ; elle concerne le service tokens, pas les cotations du navigateur.
 Aucune base de données ou intégration GoPlus n'est nécessaire pour cette version.
 
-Un token signalé par LI.FI est bloqué. Un token non vérifié demande un contrôle
-explicite de l'adresse et du réseau, avec confirmation du risque. Avant le swap,
-les deux tokens sont relus sans le cache local et leurs décimales/identités sont
-comparées à la sélection et à la cotation. Une vérification indisponible bloque
-l'exécution. Les verdicts LI.FI peuvent être incomplets ou mis en cache en amont.
+Un token signalé par LI.FI est bloqué. Hors catalogue local, un token non vérifié
+demande un contrôle explicite de l'adresse et du réseau, avec confirmation du risque.
+Avant le swap, les tokens hors catalogue sont relus sans le cache local ; les autres
+utilisent leurs métadonnées épinglées. Les décimales/identités sont comparées à la
+sélection et à la cotation. Une vérification indisponible bloque les tokens hors
+catalogue. Les verdicts LI.FI peuvent être incomplets ou mis en cache en amont.
 
 Les tests ajoutés couvrent le service API, les homonymes, le cache, les quotas,
 l'annulation de recherche, le consentement et les changements de métadonnées ou
 de statut avant exécution. README, architecture et guide de reprise reflètent ce
 nouveau périmètre.
+
+## Mise à jour — catalogue instantané et cotations automatiques
+
+- `lib/tokens/catalog.ts` contient les actifs natifs et les principaux ERC-20
+  retenus par réseau. La modale les affiche sans réseau et ils ne nécessitent
+  aucune requête d'authenticité, y compris avant exécution. Les adresses précises,
+  décimales et sources figurent dans `TOKEN_CATALOG.md` ; un homonyme n'est pas exempté.
+- Le formulaire ne dépend plus du chargement de la liste des réseaux LI.FI.
+  La recherche élargie reste accessible ; les prix et les routes restent dynamiques.
+- À 60 secondes, les cotations se renouvellent automatiquement. Un anneau animé
+  affiche le temps restant et l'état de recherche. Pendant ce renouvellement,
+  le swap est désactivé ; erreurs et résultats vides sont retentés après 15 secondes.
+- Les demandes attendent en arrière-plan/hors ligne et sont suspendues pendant
+  une exécution. Le retour à l'onglet actualise une cotation périmée sans doublon.
+  Aucune transaction n'est déclenchée par le timer.
+- L'optimisation d'import `viem/chains` évite de compiler les workers Tempo
+  inutilisés et corrige le warning de lancement `ox/tempo/virtualMasterPool.js`.
+
+Validation : tests de catalogue, imposteurs, exécution sans vérification API des
+actifs locaux, renouvellement, retry, réponses tardives, offline/onglet masqué et
+animation. Les transactions restent simulées ; aucun fonds n'a été engagé.
+Le contrôle visuel navigateur n'a pas été réalisé dans l'environnement de travail
+(Chromium absent) ; les états du compteur et le parcours de renouvellement sont
+couverts par les tests DOM.
 
 ## Affichage et intégrations
 

@@ -1,8 +1,9 @@
 import { getAddress } from "viem";
 import { APP_CHAINS, isAppChainId } from "../chains";
 import { SEARCH_LIMITS, TokenSearchError, type AppToken } from "./types";
+import { isCatalogToken, NATIVE_ADDRESS } from "./catalog";
 
-export const NATIVE_ADDRESS = "0x0000000000000000000000000000000000000000";
+export { NATIVE_ADDRESS } from "./catalog";
 const unsafeText = /[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/;
 export function looksLikeAddress(value: string): boolean { return /^0x[0-9a-f]{40}$/i.test(value.trim()); }
 export function tokenKey(token: { chainId: number; address: string }): string { return `${token.chainId}:${token.address.toLowerCase()}`; }
@@ -18,7 +19,7 @@ export function isKnownNativeToken(token: AppToken): boolean {
   return Boolean(chain && token.address.toLowerCase() === NATIVE_ADDRESS && token.decimals === chain.nativeCurrency.decimals && token.symbol === chain.nativeCurrency.symbol);
 }
 export function requiresTokenConfirmation(token: AppToken): boolean {
-  return tokenVerification(token) === "unverified" && !isKnownNativeToken(token);
+  return tokenVerification(token) === "unverified" && !isCatalogToken(token);
 }
 
 function validText(value: unknown, maxLength: number): value is string {

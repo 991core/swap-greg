@@ -1,21 +1,22 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import type { ExtendedChain } from "@lifi/sdk";
 import { APP_CHAINS } from "@/lib/chains";
+import { getCatalogToken, getPopularTokens, isCatalogToken } from "@/lib/tokens/catalog";
 import { searchTokens } from "@/lib/tokens/client";
 import { SEARCH_LIMITS, TokenSearchError, type AppToken, type TokenSearchResult, type TokenSearchErrorCode } from "@/lib/tokens/types";
 import { isKnownNativeToken, requiresTokenConfirmation, tokenKey, tokenVerification, uniqueTokens } from "@/lib/tokens/validation";
 import { useI18n } from "@/lib/i18n";
 
-type Props = { open: boolean; onClose: () => void; chains: ExtendedChain[]; tokensByChain: Record<number, AppToken[]>; selectedChainId: number; selectedToken: AppToken | null; onSelect: (chainId: number, token: AppToken) => void; title: string };
+type Props = { open: boolean; onClose: () => void; chains: ReadonlyArray<{ id: number; name: string }>; selectedChainId: number; selectedToken: AppToken | null; onSelect: (chainId: number, token: AppToken) => void; title: string };
 type SearchState = { key: string; loading: boolean; result?: TokenSearchResult; error?: TokenSearchErrorCode };
-export default function TokenSelectModal({ open, onClose, chains, tokensByChain, selectedChainId, selectedToken, onSelect, title }: Props) {
+export default function TokenSelectModal({ open, onClose, chains, selectedChainId, selectedToken, onSelect, title }: Props) {
   const { translate } = useI18n();
   const [query, setQuery] = useState("");
   const [chainId, setChainId] = useState(selectedChainId);
   const [limit, setLimit] = useState<number>(SEARCH_LIMITS[0]);
   const [retry, setRetry] = useState(0);
+  const [browseAll, setBrowseAll] = useState(false);
   const [state, setState] = useState<SearchState | null>(null);
   const [confirmation, setConfirmation] = useState<{ key: string; token: AppToken } | null>(null);
   const [acknowledged, setAcknowledged] = useState(false);
@@ -23,16 +24,17 @@ export default function TokenSelectModal({ open, onClose, chains, tokensByChain,
   const consent = useRef<HTMLInputElement>(null);
   const dialog = useRef<HTMLDivElement>(null);
   const normalizedQuery = query.trim().toLowerCase();
-  const requestKey = chainId + ":" + normalizedQuery + ":" + limit;
+  const remoteSearch = Boolean((normalizedQuery || browseAll) && !getCatalogToken(chainId, normalizedQuery));
+  const requestKey = chainId + ":" + normalizedQuery + ":" + limit + ":" + browseAll;
   const current = state?.key === requestKey ? state : null;
-  const loading = !current || current.loading;
+  const loading = remoteSearch && (!current || current.loading);
   const pendingToken = confirmation?.key === requestKey ? confirmation.token : null;
   const chainName = chains.find((chain) => chain.id === chainId)?.name ?? String(chainId);
   const explorer = APP_CHAINS.find((chain) => chain.id === chainId)?.blockExplorers?.default.url;
 
   useEffect(() => {
     if (!open) return;
-    setChainId(selectedChainId); setQuery(""); setLimit(SEARCH_LIMITS[0]); setState(null);
+    setChainId(selectedChainId); setQuery(""); setLimit(SEARCH_LIMITS[0]); setState(null); setBrowseAll(false);
     setConfirmation(null); setAcknowledged(false);
     const previousFocus = document.activeElement as HTMLElement | null;
     const overflow = document.body.style.overflow;
@@ -42,7 +44,7 @@ export default function TokenSelectModal({ open, onClose, chains, tokensByChain,
   }, [open, selectedChainId]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || !remoteSearch) return;
     const controller = new AbortController();
     setState({ key: requestKey, loading: true });
     const timer = setTimeout(async () => {
@@ -54,14 +56,15 @@ export default function TokenSelectModal({ open, onClose, chains, tokensByChain,
       }
     }, normalizedQuery ? 300 : 0);
     return () => { controller.abort(); clearTimeout(timer); };
-  }, [open, chainId, normalizedQuery, limit, requestKey, retry]);
+  }, [open, chainId, normalizedQuery, limit, requestKey, retry, remoteSearch]);
 
   useEffect(() => { if (pendingToken) consent.current?.focus(); }, [pendingToken]);
 
   if (!open) return null;
   const found = current?.result?.tokens ?? [];
-  const initial = normalizedQuery ? [] : (tokensByChain[chainId] ?? []).filter((token) => token.chainId === chainId && !found.some((item) => tokenKey(item) === tokenKey(token)));
-  const tokens = uniqueTokens([...found, ...initial]);
+  const local = getPopularTokens(chainId, normalizedQuery);
+  // Local rows render synchronously; upstream negative verdicts still win.
+  const tokens = uniqueTokens([...local, ...found]);
   const select = (token: AppToken) => {
     if (token.chainId !== chainId || tokenVerification(token) === "flagged") return;
     onSelect(chainId, token); onClose();
@@ -86,7 +89,7 @@ export default function TokenSelectModal({ open, onClose, chains, tokensByChain,
       }}>
       <header className="jumper-modal-header"><h2 id="token-modal-title">{title}</h2><button className="jumper-modal-close" type="button" aria-label={translate("modal_close")} onClick={onClose}>×</button></header>
       <div className="jumper-modal-search"><label htmlFor="token-chain">{translate("chains_label")}</label>
-        <select id="token-chain" value={chainId} onChange={(event) => { setChainId(Number(event.target.value)); setQuery(""); setLimit(SEARCH_LIMITS[0]); resetConfirmation(); }}>{chains.map((chain) => <option key={chain.id} value={chain.id}>{chain.name}</option>)}</select>
+        <select id="token-chain" value={chainId} onChange={(event) => { setChainId(Number(event.target.value)); setQuery(""); setLimit(SEARCH_LIMITS[0]); setBrowseAll(false); resetConfirmation(); }}>{chains.map((chain) => <option key={chain.id} value={chain.id}>{chain.name}</option>)}</select>
         <input ref={input} aria-label={translate("search_placeholder")} placeholder={translate("search_placeholder")} value={query} onChange={(event) => { setQuery(event.target.value); setLimit(SEARCH_LIMITS[0]); resetConfirmation(); }} maxLength={100} autoComplete="off" spellCheck={false} />
       </div>
       <div className="jumper-token-list" aria-busy={loading}>
@@ -106,12 +109,13 @@ export default function TokenSelectModal({ open, onClose, chains, tokensByChain,
               {token.logoURI ? <img src={token.logoURI} alt="" className="jumper-token-logo" loading="lazy" referrerPolicy="no-referrer" /> : <span className="jumper-token-logo placeholder">{token.symbol.slice(0, 2)}</span>}
               <span className="jumper-token-row-info"><strong>{token.symbol}</strong><span>{token.name}</span>
                 <code>{isKnownNativeToken(token) ? translate("native_asset") : token.address}</code>
-                <span className={"jumper-token-verification " + status}>{translate(status === "flagged" ? "token_flagged" : isKnownNativeToken(token) ? "native_asset" : status === "verified" ? "token_verified" : "token_unverified")}</span>
+                <span className={"jumper-token-verification " + status}>{translate(status === "flagged" ? "token_flagged" : isKnownNativeToken(token) ? "native_asset" : isCatalogToken(token) ? "token_catalog" : status === "verified" ? "token_verified" : "token_unverified")}</span>
               </span><span className="jumper-chain-badge">{chainName}</span>
             </button>;
           })}
           {!tokens.length && !loading && !current?.error && <p className="jumper-hint">{translate("no_tokens_for_chain")}</p>}
           {loading && <p role="status" className="jumper-hint">{translate("tokens_searching")}</p>}
+          {!normalizedQuery && !browseAll && <button type="button" className="jumper-refresh" onClick={() => setBrowseAll(true)}>{translate("tokens_browse")}</button>}
           {current?.error && <div role="status" className="jumper-warning"><p>{translate(current.error)}</p>
             {!["invalid_search", "invalid_address"].includes(current.error) && <button type="button" className="jumper-refresh" onClick={() => setRetry((old) => old + 1)}>{translate("token_retry")}</button>}</div>}
           {current?.result?.hasMore && <button type="button" className="jumper-refresh" onClick={() => setLimit(SEARCH_LIMITS.find((value) => value > limit) ?? limit)}>{translate("tokens_more")}</button>}

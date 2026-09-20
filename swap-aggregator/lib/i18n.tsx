@@ -76,7 +76,7 @@ type TranslationKey =
   | "insufficient_balance"
   | "insufficient_gas"
   | "balance_unavailable"
-  | "quote_expired"
+  | "quotes_refresh_in" | "quotes_refreshing" | "quotes_retry_in" | "quotes_suspended" | "quotes_waiting"
   | "refresh_quotes"
   | "quote_changed"
   | "same_token"
@@ -99,7 +99,7 @@ type TranslationKey =
   | "no_routes_hint"
   | "execution_progress"
   | "popular_tokens" | "token_search_results" | "tokens_searching" | "tokens_more" | "tokens_refine"
-  | "token_verified" | "token_unverified" | "token_flagged" | "native_asset"
+  | "token_verified" | "token_unverified" | "token_flagged" | "native_asset" | "token_catalog" | "tokens_browse"
   | "token_review" | "view_contract" | "token_acknowledge" | "token_back" | "token_retry" | "token_route_hint"
   | "invalid_search" | "invalid_address" | "rate_limited" | "tokens_unavailable"
   | "token_blocked" | "token_metadata_changed" | "token_confirmation_required"
@@ -113,6 +113,8 @@ const translations: Record<Lang, Record<TranslationKey, string>> = {
     tokens_more: "Show more tokens",
     tokens_refine: "First 200 results shown. Refine the name or paste the full contract address.",
     token_verified: "Verified status from LI.FI",
+    token_catalog: "Hermes curated token",
+    tokens_browse: "Browse more tokens on LI.FI",
     token_unverified: "Unverified · confirmation required",
     token_flagged: "Flagged by LI.FI · blocked",
     native_asset: "Native asset",
@@ -134,7 +136,11 @@ const translations: Record<Lang, Record<TranslationKey, string>> = {
     insufficient_balance: "Insufficient token balance. Quotes remain available.",
     insufficient_gas: "Not enough native currency for the estimated network fees.",
     balance_unavailable: "Waiting for the balance on the source network.",
-    quote_expired: "Quote expired. Refresh before swapping.",
+    quotes_refresh_in: "Auto-refresh in {seconds}s",
+    quotes_refreshing: "Refreshing quotes…",
+    quotes_retry_in: "Next attempt in {seconds}s",
+    quotes_suspended: "Auto-refresh paused during the transaction",
+    quotes_waiting: "Auto-refresh will resume when connected",
     refresh_quotes: "Refresh quotes",
     quote_changed: "The wallet or swap details changed. Request a new quote.",
     same_token: "Choose a different destination token or network.",
@@ -216,6 +222,8 @@ const translations: Record<Lang, Record<TranslationKey, string>> = {
     tokens_more: "Afficher plus de tokens",
     tokens_refine: "Les 200 premiers résultats sont affichés. Précise le nom ou colle l’adresse complète du contrat.",
     token_verified: "Statut vérifié fourni par LI.FI",
+    token_catalog: "Token du catalogue Hermes",
+    tokens_browse: "Parcourir plus de tokens sur LI.FI",
     token_unverified: "Non vérifié · confirmation requise",
     token_flagged: "Signalé par LI.FI · bloqué",
     native_asset: "Actif natif",
@@ -237,7 +245,11 @@ const translations: Record<Lang, Record<TranslationKey, string>> = {
     insufficient_balance: "Solde du token insuffisant. Les cotations restent disponibles.",
     insufficient_gas: "Solde natif insuffisant pour les frais réseau estimés.",
     balance_unavailable: "En attente du solde sur le réseau source.",
-    quote_expired: "Cotation expirée. Actualise avant de lancer le swap.",
+    quotes_refresh_in: "Actualisation automatique dans {seconds}s",
+    quotes_refreshing: "Actualisation des cotations…",
+    quotes_retry_in: "Nouvelle tentative dans {seconds}s",
+    quotes_suspended: "Actualisation suspendue pendant la transaction",
+    quotes_waiting: "L’actualisation reprendra avec la connexion",
     refresh_quotes: "Actualiser les cotations",
     quote_changed: "Le wallet ou les paramètres ont changé. Demande une nouvelle cotation.",
     same_token: "Choisis un autre token ou réseau de destination.",

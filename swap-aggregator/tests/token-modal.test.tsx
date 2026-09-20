@@ -7,6 +7,7 @@ import { TokenSearchError, type AppToken, type TokenSearchResult } from "../lib/
 import TokenSelectModal from "../components/TokenSelectModal";
 import { I18nProvider } from "../lib/i18n";
 import { fromToken, toToken } from "./fixtures";
+import { getCatalogToken } from "../lib/tokens/catalog";
 
 const chains = [{ id: 1, name: "Ethereum" }, { id: 8453, name: "Base" }] as ExtendedChain[];
 const custom: AppToken = { ...fromToken, chainId: 1, symbol: "CAFE", name: "Cafe Token", address: "0x2222222222222222222222222222222222222222", verificationStatus: "unverified" };
@@ -15,7 +16,7 @@ function result(chainId: number, query: string, tokens: AppToken[] = [], extra: 
 }
 function mount() {
   const onSelect = vi.fn();
-  render(<I18nProvider><TokenSelectModal open onClose={vi.fn()} onSelect={onSelect} title="Select source token" selectedChainId={1} selectedToken={toToken} chains={chains} tokensByChain={{ 1: [toToken], 8453: [fromToken] }} /></I18nProvider>);
+  render(<I18nProvider><TokenSelectModal open onClose={vi.fn()} onSelect={onSelect} title="Select source token" selectedChainId={1} selectedToken={toToken} chains={chains} /></I18nProvider>);
   return onSelect;
 }
 async function tick(ms = 300) { await act(async () => { await vi.advanceTimersByTimeAsync(ms); }); }
@@ -29,14 +30,14 @@ it("changing the modal chain changes its token list and the selected token's cha
   const onSelect = mount(); await tick(0);
   fireEvent.change(screen.getByRole("combobox"), { target: { value: "8453" } }); await tick(0);
   expect(screen.getByRole<HTMLSelectElement>("combobox").value).toBe("8453");
-  expect(searchTokens).toHaveBeenLastCalledWith(8453, "", expect.objectContaining({ limit: 25 }));
-  fireEvent.click(screen.getByRole("button", { name: /ETH/ }));
-  expect(onSelect).toHaveBeenCalledWith(8453, fromToken);
+  expect(searchTokens).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: /USDC/ }));
+  expect(onSelect).toHaveBeenCalledWith(8453, expect.objectContaining({ chainId: 8453, symbol: "USDC", decimals: 6 }));
 });
 it("debounces catalogue searches and retains homonymous contracts", async () => {
   vi.mocked(searchTokens).mockImplementation(async (chainId, query = "") => result(chainId, query, query === "cafe" ? [custom, { ...custom, address: "0x3333333333333333333333333333333333333333" }] : []));
   mount(); await tick(0); type("caf"); await tick(200); type("cafe"); await tick(299);
-  expect(searchTokens).toHaveBeenCalledOnce(); await tick(1);
+  expect(searchTokens).not.toHaveBeenCalled(); await tick(1);
   expect(searchTokens).toHaveBeenLastCalledWith(1, "cafe", expect.objectContaining({ limit: 25, signal: expect.any(AbortSignal) }));
   expect(screen.getAllByRole("button", { name: /CAFE/ })).toHaveLength(2);
 });
@@ -89,4 +90,45 @@ it("distinguishes rate limits from an empty catalogue and supports retry", async
   expect(screen.queryByText("No tokens available for this selection.")).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "Try again" })); await tick();
   expect(screen.getByRole("button", { name: /CAFE/ })).toBeTruthy();
+});
+it("displays and selects major assets immediately without fetching or consent", async () => {
+  vi.mocked(searchTokens).mockRejectedValue(new Error("offline"));
+  const onSelect = mount();
+  const usdc = screen.getByRole("button", { name: /USDC/ });
+  expect(screen.queryByText("Searching LI.FI…")).toBeNull();
+  fireEvent.click(usdc);
+  expect(onSelect).toHaveBeenCalledWith(1, expect.objectContaining({ symbol: "USDC", decimals: 6 }));
+  expect(screen.queryByRole("checkbox")).toBeNull();
+  await tick(1000); expect(searchTokens).not.toHaveBeenCalled();
+});
+it("finds a known contract locally by its exact address without an API request", async () => {
+  const onSelect = mount();
+  const address = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
+  type(address); fireEvent.click(screen.getByRole("button", { name: /USDC/ })); await tick();
+  expect(onSelect).toHaveBeenCalledWith(1, getCatalogToken(1, address));
+  expect(searchTokens).not.toHaveBeenCalled();
+});
+it("keeps local matches visible instantly and through a remote search outage", async () => {
+  vi.mocked(searchTokens).mockRejectedValue(new TokenSearchError("tokens_unavailable"));
+  mount(); type("usdc"); expect(screen.getByRole("button", { name: /USDC/ })).toBeTruthy();
+  await tick(); expect(screen.getByRole("button", { name: /USDC/ })).toBeTruthy();
+  expect(screen.getByText(/verification is unavailable/)).toBeTruthy();
+});
+it("does not give a same-symbol impostor the catalog exemption", async () => {
+  vi.mocked(searchTokens).mockImplementation(async (chainId, query = "") => result(chainId, query, [{ ...custom, symbol: "USDC" }]));
+  const onSelect = mount(); type("usdc"); await tick();
+  expect(screen.getAllByRole("button", { name: /USDC/ })).toHaveLength(2);
+  fireEvent.click(screen.getByRole("button", { name: /USDC Cafe Token/ }));
+  expect(screen.getByRole("checkbox")).toBeTruthy(); expect(onSelect).not.toHaveBeenCalled();
+});
+it("keeps a negative remote verdict on a duplicate catalog asset", async () => {
+  const known = getCatalogToken(1, "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48")!;
+  vi.mocked(searchTokens).mockImplementation(async (chainId, query = "") => result(chainId, query, [{ ...known, verificationStatus: "flagged" }]));
+  mount(); type("usdc"); await tick();
+  expect(screen.getByRole<HTMLButtonElement>("button", { name: /USDC/ }).disabled).toBe(true);
+});
+it("only fetches the remote popular list when browsing more is requested", async () => {
+  mount(); await tick(); expect(searchTokens).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "Browse more tokens on LI.FI" })); await tick(0);
+  expect(searchTokens).toHaveBeenCalledWith(1, "", expect.objectContaining({ limit: 25 }));
 });

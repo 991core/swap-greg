@@ -20,8 +20,8 @@ npm run dev
 
 Ouvre [Hermes en local](http://localhost:3000). Le wallet utilise le connecteur
 injecté du navigateur (MetaMask, Rabby, etc.), via wagmi/RainbowKit ; aucun projet
-WalletConnect n'est requis. La paire initiale est ETH/Base → ETH/Ethereum lorsque
-ces réseaux sont disponibles.
+WalletConnect n'est requis. La paire initiale est ETH/Base → ETH/Ethereum.
+Le formulaire et les réseaux configurés sont disponibles sans attendre LI.FI.
 
 ## Configuration
 
@@ -40,10 +40,14 @@ Le slippage reste à 0,5 % et l'impact maximal à 5 %.
 ## Recherche de tokens — option B
 
 - Choisir le réseau dans la modale : Ethereum, Base, Arbitrum, Optimism, Polygon,
-  BNB Chain, Avalanche, Gnosis ou Metis, selon la disponibilité LI.FI.
-- À l'ouverture, charger les tokens populaires de ce réseau. Les actifs natifs
-  configurés restent immédiatement disponibles ; le catalogue complet n'est pas
-  téléchargé au démarrage.
+  BNB Chain, Avalanche, Gnosis ou Metis.
+- À l'ouverture, afficher immédiatement les principaux tokens du catalogue local
+  `lib/tokens/catalog.ts`, sans appel API. Il comprend les actifs natifs et une
+  sélection d'ERC-20 dont les adresses et décimales sont épinglées par réseau.
+  La liste et ses sources sont décrites dans [TOKEN_CATALOG.md](./TOKEN_CATALOG.md).
+- Les résultats locaux apparaissent immédiatement pendant la saisie. Une adresse
+  exacte du catalogue est résolue localement, sans requête d'authenticité.
+- « Parcourir plus de tokens sur LI.FI » charge le catalogue distant à la demande.
 - Rechercher un nom ou symbole après 300 ms de pause, ou coller une adresse EVM
   complète. Les anciennes requêtes sont annulées et leurs réponses ignorées.
 - Afficher 25 résultats, puis 50, 100 et 200 avec « Afficher plus ». Au-delà,
@@ -63,14 +67,24 @@ une limite globale. Aucune base de données ni service de scan externe n'est req
 - **Signalé par LI.FI :** sélection désactivée et exécution bloquée, même si un
   autre verdict du même token est positif.
 - **Non vérifié ou statut absent :** adresse complète, réseau, lien vers
-  l'explorateur et confirmation explicite avant sélection. L'actif natif connu
-  dans la configuration du réseau est dispensé de cette confirmation d'import.
+  l'explorateur et confirmation explicite avant sélection, sauf entrée exacte du
+  catalogue local. Cette exemption ne dépend jamais du seul nom ou symbole.
+- **Catalogue Hermes :** métadonnées locales, sans vérification d'authenticité API
+  à la sélection ni avant exécution. Ce libellé ne prétend pas être un verdict LI.FI.
 - **Statut vérifié :** indication provenant de LI.FI, sans promesse de sécurité.
 - Vérification du réseau, de l'adresse et des décimales ; aucune résolution RPC
   seule n'est acceptée comme preuve de reconnaissance par LI.FI.
-- Avant de démarrer l'exécution, relire les deux tokens auprès de LI.FI en
-  contournant le cache local. Une indisponibilité, un signalement, un changement
-  d'identité/décimales ou l'absence de confirmation requise bloque le swap.
+- Avant de démarrer l'exécution, comparer les métadonnées épinglées des tokens
+  locaux avec la sélection et la cotation. Pour les autres tokens seulement,
+  relire LI.FI en contournant le cache : une indisponibilité, un signalement, un
+  changement d'identité/décimales ou l'absence de consentement bloque le swap.
+- Un signalement déjà présent dans la sélection ou la cotation bloque aussi un
+  token local. Le catalogue doit être maintenu dans le code ; aucun résultat de
+  recherche ne peut y ajouter automatiquement un contrat.
+
+Les appels de prix, de cotation et les contrôles de soldes continuent normalement.
+Une panne de métadonnées ne bloque pas les tokens locaux, mais une cotation valide
+reste indispensable : la liste locale ne garantit aucune liquidité ni route.
 
 LI.FI peut lui-même renvoyer des verdicts mis en cache ou incomplets. L'option B
 n'intègre pas GoPlus et ne détecte pas tous les risques d'un contrat.
@@ -83,13 +97,20 @@ et les [limites du screening LI.FI](https://docs.li.fi/introduction/learn-more/h
 2. Saisir un montant : conversion décimale en entier avec `BigInt`,
    virgule française acceptée sans perte de précision.
 3. Comparer et choisir une route LI.FI. Les cotations sont annulées si les
-   paramètres changent et expirent après une minute.
+   paramètres changent et se renouvellent automatiquement après une minute.
+   Un anneau animé affiche les secondes restantes, puis l'actualisation en cours.
 4. Contrôler les tokens, le compte, le réseau source, le solde ERC-20/natif et la
    réserve de gas avant exécution.
 5. Confirmer les transactions dans le wallet. Les modifications automatiques du
    taux sont refusées ; la progression et les liens de transactions sont affichés.
 
 Les frais Hermes, le gas estimé et le minimum reçu restent visibles.
+Pendant le renouvellement, l'ancienne cotation n'est plus exécutable. Une erreur
+ou une absence de route entraîne une nouvelle tentative après 15 secondes.
+Les demandes attendent si l'onglet est masqué ou hors ligne et reprennent au retour.
+L'actualisation est suspendue pendant l'exécution ; elle ne signe ni ne lance de swap.
+Le bouton d'actualisation manuelle reste disponible et l'animation respecte
+la préférence système de réduction des mouvements.
 Le taux EUR indicatif vient de la BCE via Frankfurter avec sa date ; l'interface
 revient au USD si la référence manque. L'interface est disponible en français et
 en anglais.
@@ -99,9 +120,10 @@ en anglais.
 | Emplacement | Responsabilité |
 | --- | --- |
 | `app/api/tokens/search/route.ts` | API de recherche et erreurs HTTP publiques. |
-| `lib/tokens/` | Validation, client HTTP, cache serveur et quota. |
+| `lib/tokens/` | Catalogue local, validation, client HTTP, cache serveur et quota. |
 | `components/TokenSelectModal.tsx` | Recherche, résultats, consentement et accessibilité. |
 | `components/SwapCard.tsx` | Formulaire, soldes, sélection et progression. |
+| `components/QuoteCountdown.tsx` | Compte à rebours, animation et état de renouvellement. |
 | `lib/aggregators/lifi/` | Cotations et exécution SDK avec fournisseur EVM. |
 | `lib/routing/` | Expiration, annulation, normalisation et pré-vérifications. |
 | `lib/chains.ts` | Réseaux EVM configurés. |
@@ -119,6 +141,11 @@ Les tests couvrent notamment les montants, les cotations périmées, le compte e
 soldes, les homonymes, la validation des métadonnées, le cache, les quotas, les
 réponses tardives et les confirmations d'import. Les tests automatisés utilisent
 des réponses contrôlées et ne réalisent pas de transaction mainnet.
+
+`next.config.js` optimise les imports de `viem/chains` pour éviter d'embarquer
+les chaînes inutilisées. Cela corrige l'avertissement Webpack
+`ox/_esm/tempo/internal/virtualMasterPool.js — Critical dependency` lors de la
+compilation de `/api/tokens/search`, sans masquer les avertissements.
 
 ## Hors périmètre
 

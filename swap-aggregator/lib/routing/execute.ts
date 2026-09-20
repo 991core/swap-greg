@@ -9,6 +9,7 @@ import type { NormalizedRoute } from "../types/normalized-route";
 import { canExecuteQuote, sourceGasAmount } from "./quote";
 import { getTokenDetails } from "../tokens/client";
 import type { AppToken } from "../tokens/types";
+import { getCatalogToken } from "../tokens/catalog";
 import { requiresTokenConfirmation, tokenKey, tokenVerification } from "../tokens/validation";
 
 export class SwapValidationError extends Error {
@@ -25,12 +26,17 @@ export async function executeSwapQuote(route: NormalizedRoute, params: SwapParam
   const pairs = [[selection.fromToken, route.raw.fromToken], [selection.toToken, route.raw.toToken]] as const;
   for (const [selected, quoted] of pairs) {
     if (tokenKey(selected) !== tokenKey(quoted) || selected.decimals !== quoted.decimals) throw new SwapValidationError("token_metadata_changed");
+    const known = getCatalogToken(selected.chainId, selected.address);
+    if (known && (known.decimals !== selected.decimals || known.symbol !== selected.symbol)) throw new SwapValidationError("token_metadata_changed");
     if (tokenVerification(selected) === "flagged" || tokenVerification(quoted) === "flagged") throw new SwapValidationError("token_blocked");
     if (requiresTokenConfirmation(selected) && !selected.riskAcknowledged) throw new SwapValidationError("token_confirmation_required");
   }
-  // Bypass the discovery cache before requesting any wallet action.
+  // Pinned assets use local metadata. Only other contracts need a fresh API
+  // check; a flagged verdict in either the selection or quote still blocks all.
   let latest: (AppToken | null)[];
-  try { latest = await Promise.all(pairs.map(([token]) => getTokenDetails(token.chainId, token.address, { fresh: true }))); }
+  try { latest = await Promise.all(pairs.map(([token]) =>
+    getCatalogToken(token.chainId, token.address) ?? getTokenDetails(token.chainId, token.address, { fresh: true })));
+  }
   catch { throw new SwapValidationError("tokens_unavailable"); }
   latest.forEach((token, index) => {
     if (!token) throw new SwapValidationError("tokens_unavailable");
