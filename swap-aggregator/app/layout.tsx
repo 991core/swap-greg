@@ -5,7 +5,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Hermes — HMS Protocol",
-  description: "Swap and bridge cross-chain with transparent fees. Top 20 market cap.",
+  description: "Find LI.FI tokens by name or address and compare cross-chain routes with transparent fees.",
 };
 
 export default function RootLayout({

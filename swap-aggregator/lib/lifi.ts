@@ -1,12 +1,9 @@
 export {
   fetchRoutes,
   fetchSupportedChains,
-  fetchTopTokensByChain,
-  fetchWalletTokenBalances,
   buildKnownFallbackTokens,
   type AppToken,
   type SwapParams,
-  type TokenBalanceEntry,
 } from "./aggregators/lifi/routes";
 export { executeLifiRoute } from "./aggregators/lifi/execute";
 export { getRoutesForSelection as fetchNormalizedRoutes } from "./routing/orchestrator";

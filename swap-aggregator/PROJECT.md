@@ -18,8 +18,9 @@ opaque.
   décroissant, sans étiquette "recommandé".
 - **Montant net reçu** est la métrique de référence affichée, frais déjà déduits — jamais un
   taux de frais isolé qui nécessiterait un calcul mental à l'utilisateur.
-- **Univers de tokens** : top 20 market cap (liste curatée), pas le catalogue complet des
-  agrégateurs.
+- **Univers de tokens** : recherche LI.FI par nom, symbole ou adresse sur les réseaux
+  EVM configurés ; populaires à l'ouverture, catalogue élargi à la demande. Un résultat
+  ne garantit ni sa sécurité ni une route pour chaque paire/montant.
 
 ## Architecture backend (cible, pas le MVP)
 ```
@@ -62,15 +63,15 @@ amélioration post-MVP ; au lancement, liste d'incidents majeurs saisie manuelle
 - **Frontend** : Next.js (App Router) + TypeScript
 - **Wallet** : wagmi + viem + RainbowKit
 - **Agrégation** : `@lifi/sdk` (officiel), puis API Socket et Rango ensuite
-- **Backend** : pas nécessaire pour le MVP (appels LI.FI directs depuis le frontend) ;
-  devient nécessaire pour l'orchestration multi-agrégateurs, les frais côté serveur, et le
-  scoring de fiabilité
+- **Backend** : API Next.js pour la recherche/métadonnées/prix des tokens avec cache,
+  validation et clé privée. Les cotations et l'exécution LI.FI restent côté navigateur.
+  L'orchestration multi-agrégateurs et le scoring serveur restent à développer.
 - **DB fiabilité** : Postgres
 
 ## Roadmap
-1. **MVP (fait)** : LI.FI seul, UI type Jumper (chaîne + token), top 20 market cap filtré
-   LI.FI, multi-routes avec choix utilisateur, frais via `fee` SDK. Mainnet EVM (les
-   testnets LI.FI ne couvrent que ETH/USDC).
+1. **MVP (fait)** : LI.FI seul, UI type Jumper (réseau + token), recherche élargie
+   LI.FI via l'option B, multi-routes avec choix utilisateur, frais via `fee` SDK.
+   Mainnet EVM.
 2. **Semaine 3-4** : ajout Socket + Rango, orchestrateur parallèle, normalisation/dédup.
 3. **Mois 2** : score de fiabilité (version simplifiée TVL + ancienneté d'abord).
 4. **Post-MVP / différé** : ingestion automatisée des incidents (Apify/cron), streaming des
@@ -79,7 +80,7 @@ amélioration post-MVP ; au lancement, liste d'incidents majeurs saisie manuelle
 ## État actuel du code
 MVP Hermes : Next.js + wallet EVM injecté, LI.FI (`lib/aggregators/lifi/routes.ts`)
 et orchestrateur de cotations sécurisé (`lib/routing/`),
-filtre top 20,
+API de recherche de tokens LI.FI avec cache serveur et validation,
 `SwapCard` / `TokenSelectModal` / `RouteList`, design branding Hermes / HMS Protocol.
 i18n 100 % fonctionnel (EN/FR, détection automatique, sélecteur, persistance).
 Affichage du taux toujours actif même avec solde insuffisant (avertissement indicatif).
@@ -107,6 +108,34 @@ Avant l’exécution, le code vérifie :
 - le solde du token source ;
 - le gas natif disponible, y compris pour un swap de token ERC-20 ;
 - l’expiration et le montant minimum reçu de la route.
+
+## Mise à jour — option B : recherche LI.FI élargie
+
+La restriction top 20 et les anciens fallbacks de recherche ont été retirés.
+La modale recherche par nom, symbole ou adresse sur le réseau sélectionné, après
+300 ms de pause. Les résultats progressent de 25 à 50, 100 puis 200 ; une recherche
+exacte par adresse reste accessible indépendamment de ce plafond. Deux contrats
+portant le même symbole sont conservés séparément. Les petits prix unitaires ne
+sont plus exclus par le filtre par défaut de LI.FI.
+
+`app/api/tokens/search/route.ts` et `lib/tokens/` fournissent validation, cache
+d'une minute (256 entrées), regroupement des demandes et quotas par instance.
+La clé facultative passe de `NEXT_PUBLIC_LIFI_API_KEY` à `LIFI_API_KEY` et reste
+sur le serveur ; elle concerne le service tokens, pas les cotations du navigateur.
+Aucune base de données ou intégration GoPlus n'est nécessaire pour cette version.
+
+Un token signalé par LI.FI est bloqué. Un token non vérifié demande un contrôle
+explicite de l'adresse et du réseau, avec confirmation du risque. Avant le swap,
+les deux tokens sont relus sans le cache local et leurs décimales/identités sont
+comparées à la sélection et à la cotation. Une vérification indisponible bloque
+l'exécution. Les verdicts LI.FI peuvent être incomplets ou mis en cache en amont.
+
+Les tests ajoutés couvrent le service API, les homonymes, le cache, les quotas,
+l'annulation de recherche, le consentement et les changements de métadonnées ou
+de statut avant exécution. README, architecture et guide de reprise reflètent ce
+nouveau périmètre.
+
+## Affichage et intégrations
 
 Le prix EUR indicatif est récupéré dynamiquement avec sa date de référence. Les prix
 des tokens sont demandés à LI.FI sur la paire chaîne/adresse, sans déduire le prix

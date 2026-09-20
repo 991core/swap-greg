@@ -93,6 +93,13 @@ button:not(:disabled):hover { background: var(--surface-hover); border-color: va
 .jumper-token-row[aria-pressed="true"] { border-color: #594174; background: #2c203b; }
 .jumper-token-row-info { flex: 1; min-width: 0; display: grid; }
 .jumper-token-row-info > span { color: var(--muted); font-size: 11px; }
+.jumper-token-row-info code { font-size: 10px; overflow-wrap: anywhere; margin-top: 4px; }
+.jumper-token-row-info .jumper-token-verification { margin-top: 4px; }
+.jumper-token-row-info .flagged { color: #ff9a9a; }
+.jumper-token-row:disabled { opacity: .65; cursor: not-allowed; }
+.jumper-token-consent { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; }
+.jumper-token-consent input { width: auto; margin-top: 3px; }
+.jumper-token-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 14px; }
 .jumper-resolved-block { border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
 .jumper-resolved-block code { display: block; overflow-wrap: anywhere; font-size: 11px; margin: 8px 0; }
 @media (max-width: 760px) {

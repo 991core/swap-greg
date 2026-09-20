@@ -1,6 +1,5 @@
-import { getToken } from "@lifi/sdk";
 import type { AppToken } from "./aggregators/lifi/routes";
-import { getLifiSdkClient } from "./aggregators/lifi/client";
+import { getTokenDetails } from "./tokens/client";
 
 const prices = new Map<string, { expiresAt: number; value: number }>();
 export type FxRate = { rate: number; date: string };
@@ -11,7 +10,8 @@ export async function fetchTokenPriceUsd(token: AppToken): Promise<number | null
   const cached = prices.get(getPriceLookupKey(token));
   if (cached && cached.expiresAt > Date.now()) return cached.value;
   try {
-    const latest = await getToken(getLifiSdkClient(), token.chainId, token.address, { signal: AbortSignal.timeout(5000) });
+    const latest = await getTokenDetails(token.chainId, token.address);
+    if (!latest) return null;
     const price = Number(latest.priceUSD);
     if (latest.chainId !== token.chainId || latest.address.toLowerCase() !== token.address.toLowerCase() || !Number.isFinite(price) || price <= 0) return null;
     prices.set(getPriceLookupKey(token), { value: price, expiresAt: Date.now() + 60_000 });

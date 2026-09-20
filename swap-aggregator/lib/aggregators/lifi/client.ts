@@ -6,7 +6,6 @@ import { isAppChainId } from "../../chains";
 
 export const lifiClient = createClient({
   integrator: "hermes-hms",
-  apiKey: process.env.NEXT_PUBLIC_LIFI_API_KEY || undefined,
   preloadChains: false,
   providers: [EthereumProvider({
     getWalletClient: async () => {

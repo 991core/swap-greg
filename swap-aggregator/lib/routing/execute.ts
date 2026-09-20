@@ -7,17 +7,38 @@ import type { SwapParams } from "../aggregators/lifi/routes";
 import { executeLifiRoute } from "../aggregators/lifi/execute";
 import type { NormalizedRoute } from "../types/normalized-route";
 import { canExecuteQuote, sourceGasAmount } from "./quote";
+import { getTokenDetails } from "../tokens/client";
+import type { AppToken } from "../tokens/types";
+import { requiresTokenConfirmation, tokenKey, tokenVerification } from "../tokens/validation";
 
 export class SwapValidationError extends Error {
-  constructor(public readonly key: "quote_changed" | "insufficient_balance" | "insufficient_gas") { super(key); }
+  constructor(public readonly key: "quote_changed" | "insufficient_balance" | "insufficient_gas" | "token_blocked" | "token_metadata_changed" | "token_confirmation_required" | "tokens_unavailable") { super(key); }
 }
-export async function executeSwapQuote(route: NormalizedRoute, params: SwapParams, updateRouteHook: UpdateRouteHook) {
+export async function executeSwapQuote(route: NormalizedRoute, params: SwapParams, updateRouteHook: UpdateRouteHook, selection: { fromToken: AppToken; toToken: AppToken }) {
   const check = () => {
     const account = getAccount(walletConfig);
     if (!account.isConnected || account.address?.toLowerCase() !== params.fromAddress.toLowerCase() || !canExecuteQuote(route, params)) {
       throw new SwapValidationError("quote_changed");
     }
   };
+  check();
+  const pairs = [[selection.fromToken, route.raw.fromToken], [selection.toToken, route.raw.toToken]] as const;
+  for (const [selected, quoted] of pairs) {
+    if (tokenKey(selected) !== tokenKey(quoted) || selected.decimals !== quoted.decimals) throw new SwapValidationError("token_metadata_changed");
+    if (tokenVerification(selected) === "flagged" || tokenVerification(quoted) === "flagged") throw new SwapValidationError("token_blocked");
+    if (requiresTokenConfirmation(selected) && !selected.riskAcknowledged) throw new SwapValidationError("token_confirmation_required");
+  }
+  // Bypass the discovery cache before requesting any wallet action.
+  let latest: (AppToken | null)[];
+  try { latest = await Promise.all(pairs.map(([token]) => getTokenDetails(token.chainId, token.address, { fresh: true }))); }
+  catch { throw new SwapValidationError("tokens_unavailable"); }
+  latest.forEach((token, index) => {
+    if (!token) throw new SwapValidationError("tokens_unavailable");
+    const selected = pairs[index][0];
+    if (tokenKey(token) !== tokenKey(selected) || token.decimals !== selected.decimals) throw new SwapValidationError("token_metadata_changed");
+    if (tokenVerification(token) === "flagged") throw new SwapValidationError("token_blocked");
+    if (requiresTokenConfirmation(token) && !selected.riskAcknowledged) throw new SwapValidationError("token_confirmation_required");
+  });
   check();
   if (!isAppChainId(params.fromChainId)) throw new SwapValidationError("quote_changed");
   if (getAccount(walletConfig).chainId !== params.fromChainId) await switchChain(walletConfig, { chainId: params.fromChainId });

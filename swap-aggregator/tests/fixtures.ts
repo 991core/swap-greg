@@ -3,7 +3,7 @@ import type { AppToken, SwapParams } from "../lib/aggregators/lifi/routes";
 import type { NormalizedRoute } from "../lib/types/normalized-route";
 export const wallet = "0x1111111111111111111111111111111111111111";
 export const native = "0x0000000000000000000000000000000000000000";
-export const fromToken: AppToken = { address: native, chainId: 8453, decimals: 18, symbol: "ETH", name: "Ether", priceUSD: "2500", topSymbol: "ETH" };
+export const fromToken: AppToken = { address: native, chainId: 8453, decimals: 18, symbol: "ETH", name: "Ether", priceUSD: "2500", verificationStatus: "verified" };
 export const toToken: AppToken = { ...fromToken, chainId: 1 };
 export const params: SwapParams = { fromChainId: 8453, toChainId: 1, fromTokenAddress: native, toTokenAddress: native, fromAmount: "1000000000000000", fromAddress: wallet };
 export function rawRoute(id = "quote-a"): Route {

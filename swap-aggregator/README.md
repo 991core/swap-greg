@@ -1,116 +1,126 @@
 # Hermes (HMS Protocol) — MVP
 
-Agrégateur de swap/bridge cross-chain inspiré du principe Jumper : sélection chaîne + token,
-affichage de **toutes** les routes LI.FI (tri par montant net), choix utilisateur.
-Tokens limités au **top 20 market cap** (liste statique), filtrés à ce que LI.FI expose
-sur chaque chaîne.
+Agrégateur de swap/bridge cross-chain : sélection réseau + token, comparaison
+des routes LI.FI et choix utilisateur, avec frais transparents.
 
-## État du parcours LI.FI
-
-Le parcours LI.FI EVM est maintenant le seul fournisseur activable dans l’interface
-et il suit ce flux :
-
-1. Le wallet est connecté avec wagmi/RainbowKit.
-2. Les chaînes EVM supportées et les tokens sont chargés depuis LI.FI.
-3. Le montant est converti en entier avec `BigInt`, en acceptant `1.25` et `1,25`
-   sans interpréter les séparateurs de milliers.
-4. Les cotations sont annulées lorsqu’un paramètre change, expirent après une minute
-   et sont refusées si le wallet, le réseau, le token ou le montant ne correspondent
-   plus.
-5. Le fournisseur EVM officiel de `@lifi/sdk-provider-ethereum` exécute les étapes
-   et demande une confirmation explicite pour chaque transaction.
-
-Rango et Socket apparaissent comme intégrations à venir. Ils ne sont pas interrogés
-et ne peuvent pas être sélectionnés tant que leur cycle quote → transaction → suivi
-n’est pas implémenté.
-
-> Les testnets LI.FI ne listent pratiquement que ETH/USDC — le MVP tourne donc en **mainnet**
-> pour pouvoir proposer le top 20.
+La recherche couvre les tokens reconnus par LI.FI sur les réseaux EVM configurés,
+par **nom, symbole ou adresse de contrat**. La présence d'un token dans les
+résultats ne garantit ni sa sécurité, ni une route pour la paire et le montant
+demandés.
 
 ## Installation
 
+Node.js 22.12 ou supérieur est requis.
+
 ```bash
-npm install
+npm ci
 cp .env.example .env.local
-```
-
-Remplis `.env.local` si nécessaire :
-- `NEXT_PUBLIC_LIFI_API_KEY` : optionnel (tier gratuit sans clé)
-- `NEXT_PUBLIC_PLATFORM_FEE_PERCENT` : frais plateforme (défaut `0`)
-
-La connexion utilise le connecteur de wallet injecté par le navigateur (MetaMask,
-Rabby, etc.) via wagmi/RainbowKit ; aucun projet WalletConnect n'est requis dans
-ce MVP.
-
-Le montant doit être compris entre `0` et `100`. Le slippage LI.FI est fixé à `0,5 %`
-et le prix impact maximal accepté à `5 %`.
-
-## Lancer en dev
-
-```bash
 npm run dev
 ```
 
-Ouvre http://localhost:3000 — connecte un wallet, choisis une paire du top 20 disponible
-sur la chaîne, saisis un montant, sélectionne une route, lance le swap.
+Ouvre [Hermes en local](http://localhost:3000). Le wallet utilise le connecteur
+injecté du navigateur (MetaMask, Rabby, etc.), via wagmi/RainbowKit ; aucun projet
+WalletConnect n'est requis. La paire initiale est ETH/Base → ETH/Ethereum lorsque
+ces réseaux sont disponibles.
 
-## Univers tokens
+## Configuration
 
-Allowlist dans `lib/topTokens.ts` (BTC, ETH, USDT, BNB, XRP, SOL, USDC, …).  
-Intersection avec LI.FI par chaîne (Ethereum, Base, Arbitrum, Optimism, Polygon, BNB, Avalanche).
-Ex. ADA n’apparaît pas s’il n’y a pas d’équivalent listé ; BTC apparaît via WBTC sur EVM.
+| Variable | Usage |
+| --- | --- |
+| `LIFI_API_KEY` | Facultative, utilisée uniquement sur le serveur pour la recherche, les métadonnées et les prix des tokens. |
+| `TOKEN_SEARCH_REQUESTS_PER_MINUTE` | Budget d'appels LI.FI de ce service, par instance serveur ; défaut 60, valeur entière de 1 à 1000. |
+| `NEXT_PUBLIC_PLATFORM_FEE_PERCENT` | Frais Hermes en pourcentage, de 0 à 100 ; défaut 0. |
+
+**Migration :** remplacer `NEXT_PUBLIC_LIFI_API_KEY` par
+`LIFI_API_KEY` dans l'environnement du serveur. L'ancienne variable
+n'est plus utilisée. Les cotations et l'exécution restent dans le SDK navigateur,
+sans cette clé privée ; celle-ci augmente uniquement les quotas du service tokens.
+Le slippage reste à 0,5 % et l'impact maximal à 5 %.
+
+## Recherche de tokens — option B
+
+- Choisir le réseau dans la modale : Ethereum, Base, Arbitrum, Optimism, Polygon,
+  BNB Chain, Avalanche, Gnosis ou Metis, selon la disponibilité LI.FI.
+- À l'ouverture, charger les tokens populaires de ce réseau. Les actifs natifs
+  configurés restent immédiatement disponibles ; le catalogue complet n'est pas
+  téléchargé au démarrage.
+- Rechercher un nom ou symbole après 300 ms de pause, ou coller une adresse EVM
+  complète. Les anciennes requêtes sont annulées et leurs réponses ignorées.
+- Afficher 25 résultats, puis 50, 100 et 200 avec « Afficher plus ». Au-delà,
+  préciser la recherche ou utiliser l'adresse exacte, indépendante de cette limite.
+- Identifier les tokens par réseau + adresse. Deux contrats ayant le même symbole
+  restent distincts. Aucun filtre « top 20 » ou prix unitaire minimum n'est appliqué.
+
+La route Next.js `GET /api/tokens/search` relaie les demandes vers
+LI.FI. Elle valide les entrées et les métadonnées, regroupe les appels identiques,
+limite les appels simultanés à 8 et garde au plus 256 entrées de cache pendant
+60 secondes (10 secondes pour un résultat vide). Ces limites sont **par processus** ;
+un déploiement sur plusieurs instances devra partager les quotas/cache s'il veut
+une limite globale. Aucune base de données ni service de scan externe n'est requis.
+
+## Contrôles des tokens
+
+- **Signalé par LI.FI :** sélection désactivée et exécution bloquée, même si un
+  autre verdict du même token est positif.
+- **Non vérifié ou statut absent :** adresse complète, réseau, lien vers
+  l'explorateur et confirmation explicite avant sélection. L'actif natif connu
+  dans la configuration du réseau est dispensé de cette confirmation d'import.
+- **Statut vérifié :** indication provenant de LI.FI, sans promesse de sécurité.
+- Vérification du réseau, de l'adresse et des décimales ; aucune résolution RPC
+  seule n'est acceptée comme preuve de reconnaissance par LI.FI.
+- Avant de démarrer l'exécution, relire les deux tokens auprès de LI.FI en
+  contournant le cache local. Une indisponibilité, un signalement, un changement
+  d'identité/décimales ou l'absence de confirmation requise bloque le swap.
+
+LI.FI peut lui-même renvoyer des verdicts mis en cache ou incomplets. L'option B
+n'intègre pas GoPlus et ne détecte pas tous les risques d'un contrat.
+Voir la [documentation de recherche LI.FI](https://docs.li.fi/sdk/token-management)
+et les [limites du screening LI.FI](https://docs.li.fi/introduction/learn-more/hypernative-token-screening).
+
+## Parcours de swap
+
+1. Connecter le wallet et choisir les tokens.
+2. Saisir un montant : conversion décimale en entier avec `BigInt`,
+   virgule française acceptée sans perte de précision.
+3. Comparer et choisir une route LI.FI. Les cotations sont annulées si les
+   paramètres changent et expirent après une minute.
+4. Contrôler les tokens, le compte, le réseau source, le solde ERC-20/natif et la
+   réserve de gas avant exécution.
+5. Confirmer les transactions dans le wallet. Les modifications automatiques du
+   taux sont refusées ; la progression et les liens de transactions sont affichés.
+
+Les frais Hermes, le gas estimé et le minimum reçu restent visibles.
+Le taux EUR indicatif vient de la BCE via Frankfurter avec sa date ; l'interface
+revient au USD si la référence manque. L'interface est disponible en français et
+en anglais.
 
 ## Structure
 
-```
-app/
-  layout.tsx          # metadata Hermes + Providers
-  page.tsx            # brand + Connect + SwapCard
-  providers.tsx       # wagmi mainnet chains + RainbowKit
-  globals.css         # design system
-components/
-  SwapCard.tsx        # widget From/To + invert + exécution
-  TokenSelectModal.tsx
-  RouteList.tsx       # multi-routes, radio, montant net
-lib/
-  lifi.ts             # getRoutes / getTokens / format
-  topTokens.ts        # allowlist top 20
-  chains.ts           # chaînes EVM supportées
-```
+| Emplacement | Responsabilité |
+| --- | --- |
+| `app/api/tokens/search/route.ts` | API de recherche et erreurs HTTP publiques. |
+| `lib/tokens/` | Validation, client HTTP, cache serveur et quota. |
+| `components/TokenSelectModal.tsx` | Recherche, résultats, consentement et accessibilité. |
+| `components/SwapCard.tsx` | Formulaire, soldes, sélection et progression. |
+| `lib/aggregators/lifi/` | Cotations et exécution SDK avec fournisseur EVM. |
+| `lib/routing/` | Expiration, annulation, normalisation et pré-vérifications. |
+| `lib/chains.ts` | Réseaux EVM configurés. |
 
-## Nouveautés récentes
-
-- **i18n 100 %** : l'interface complète est traduite EN/FR. La langue est détectée automatiquement (`navigator.language`), le choix est persigné dans `localStorage`, et le fallback strict est `en`. Le sélecteur de langue est dans le header.
-- **Affichage du taux avec solde insuffisant** : la validation de solde est découplée du calcul/affichage du taux. Le taux est toujours affiché même si le wallet n'a pas assez de fonds ; un avertissement discret signale que l'exécution est impossible.
-- **Paire par défaut** : au montage, la sélection initiale pointe vers ETH/Base vers ETH/Ethereum lorsque ces deux réseaux et tokens sont disponibles.
-
-## Hors scope MVP
-
-Socket/Rango, score de fiabilité, ranking market cap live, Solana wallet natif.
-
-## Sécurité et validation
-
-- La route sélectionnée est liée à l’adresse du wallet, à la chaîne source, aux
-  adresses des tokens et au montant exact de la demande.
-- Les devis expirés, les changements de compte et les changements de réseau sont
-  bloqués avant toute transaction.
-- Le solde du token source et le solde natif réservé au gas sont vérifiés avant
-  l’exécution.
-- Le taux EUR est chargé depuis une source de référence avec sa date ; aucune valeur
-  fixe n’est utilisée comme taux de change.
-- Une adresse de contrat personnalisée est lue sur le réseau sélectionné et ses
-  décimales sont vérifiées avant d’être proposée.
-
-## Vérifications locales
+## Vérifications
 
 ```bash
-npm install
 npm run typecheck
 npm test
 npm run lint
 npm run build
 ```
 
-Les tests couvrent la conversion décimale, l’expiration et l’invalidation des devis,
-le changement de compte pendant un changement de réseau, les soldes ERC-20, les
-adresses de contrats et le changement de chaîne dans la modale.
+Les tests couvrent notamment les montants, les cotations périmées, le compte et les
+soldes, les homonymes, la validation des métadonnées, le cache, les quotas, les
+réponses tardives et les confirmations d'import. Les tests automatisés utilisent
+des réponses contrôlées et ne réalisent pas de transaction mainnet.
+
+## Hors périmètre
+
+Rango et Socket restent désactivés. Les wallets non-EVM, le scan GoPlus, le score
+de fiabilité des bridges et l'orchestration serveur des cotations restent à traiter.

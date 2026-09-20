@@ -1,128 +1,142 @@
 # Architecture Hermes
 
-Hermes est un MVP de swap/bridge cross-chain sur chaînes EVM. Le parcours
-exécutable utilise LI.FI ; les adaptateurs Rango et Socket restent désactivés
-jusqu'à ce qu'ils disposent d'un cycle complet cotation → transaction → suivi.
+Hermes utilise Next.js 14 App Router, React 18, TypeScript, wagmi/viem,
+RainbowKit, le SDK LI.FI 4.7 et son fournisseur d'exécution Ethereum officiel.
+Les réseaux EVM de `lib/chains.ts` sont la référence commune à la
+découverte, au wallet et aux contrôles des métadonnées.
 
-## Stack et périmètre
+## Recherche de tokens — option B
 
-- Next.js 14 App Router, React 18 et TypeScript strict.
-- wagmi/viem pour les wallets et les appels RPC, RainbowKit pour l'interface de
-  connexion, React Query pour le cache UI.
-- `@lifi/sdk` 4.7 et `@lifi/sdk-provider-ethereum` pour la cotation et
-  l'exécution EVM.
-- Mainnet EVM : Ethereum, Base, Arbitrum, Optimism, Polygon, BNB Chain,
-  Avalanche, Gnosis et Metis selon la disponibilité LI.FI.
-- Wallet navigateur injecté (MetaMask, Rabby, etc.). Aucun project ID
-  WalletConnect n'est nécessaire dans cette version.
+La modale charge les tokens populaires du réseau actif à son ouverture. Une saisie
+déclenche la recherche après 300 ms ; changer la saisie, le réseau ou fermer la
+modale annule la requête et invalide immédiatement ses résultats et son consentement.
 
-## Flux d'une cotation
-
-```text
-Wallet + sélection utilisateur
-        ↓
-lib/aggregators/lifi/routes.ts  →  LI.FI getRoutes/getTokens
-        ↓
-lib/routing/normalize.ts        →  vérification du destinataire et des montants
-        ↓
-deduplicate.ts + sort.ts        →  routes distinctes, montant net décroissant
-        ↓
-useSwapQuotes.ts                →  debounce, annulation, TTL d'une minute
-        ↓
-RouteList.tsx                   →  choix explicite de l'utilisateur
+```mermaid
+flowchart TD
+  A[Modale de tokens] --> B[API Next.js]
+  B --> C{Cache valide ?}
+  C -->|Oui| E[Réponse validée]
+  C -->|Non| D[LI.FI]
+  D --> E
+  E --> A
 ```
 
-Chaque cotation garde une `quoteKey` calculée sur le wallet, les chaînes, les
-tokens et le montant. Une réponse tardive ou une route expirée est retirée de
-l'interface et ne peut pas être exécutée.
+### Contrat HTTP
 
-## Flux d'exécution
+`GET /api/tokens/search` est une route dynamique Node.js :
 
-`lib/routing/execute.ts` effectue les contrôles suivants avant tout appel LI.FI :
-
-1. compte connecté et adresse identique à celle de la cotation ;
-2. réseau source actif, avec changement via wagmi si nécessaire ;
-3. montant et paramètres toujours identiques à la cotation ;
-4. solde ERC-20 ou natif suffisant ;
-5. réserve de gas natif suffisante, y compris pour un token ERC-20 ;
-6. montant minimum reçu et validité temporelle de la route.
-
-Le client LI.FI crée `EthereumProvider` avec un `WalletClient` récupéré au
-moment de l'action. Il refuse l'exécution si aucun wallet EVM actif n'est
-disponible. Les changements de taux proposés par le SDK sont également refusés
-pour éviter de signer une transaction différente de celle affichée.
-
-## Modules principaux
-
-| Module | Responsabilité |
+| Paramètre | Valeurs |
 | --- | --- |
-| `app/providers.tsx` | Wagmi, React Query et RainbowKit autour de l'application. |
-| `lib/wallet.ts` | Configuration wagmi partagée et transports RPC. |
-| `lib/chains.ts` | Allowlist des chaînes EVM et leurs libellés. |
-| `lib/aggregators/lifi/client.ts` | Client LI.FI et wallet client live. |
-| `lib/aggregators/lifi/routes.ts` | Chaînes, tokens, routes et balances LI.FI. |
-| `lib/routing/orchestrator.ts` | Sélection du fournisseur actif (LI.FI uniquement), normalisation et tri. |
-| `lib/routing/useSwapQuotes.ts` | Cycle de vie des cotations côté client. |
-| `lib/routing/execute.ts` | Pré-vérifications de sécurité et appel d'exécution. |
-| `lib/amounts.ts` | Parsing décimal strict et formatage `BigInt`. |
-| `lib/contractTokenResolver.ts` | Métadonnées vérifiées par chaîne pour une adresse EVM. |
-| `lib/pricing.ts` | Prix USD par chaîne/adresse et taux USD/EUR daté. |
-| `components/SwapCard.tsx` | Formulaire, soldes, sélection de route et progression. |
-| `components/TokenSelectModal.tsx` | Recherche, changement de chaîne, focus trap et tokens personnalisés. |
-| `components/RouteList.tsx` | Montant minimum, gas, frais et outil LI.FI par route. |
+| `chainId` | Identifiant décimal d'un réseau EVM configuré, obligatoire. |
+| `query` | Nom, symbole ou adresse EVM ; vide pour les tokens populaires ; 100 caractères maximum. |
+| `limit` | 25 (défaut), 50, 100 ou 200. |
+| `fresh` | 0 (défaut) ou 1 ; 1 exige une adresse exacte et contourne le cache local. |
 
-## Montants et frais
+La réponse contient `chainId`, `query`, `tokens`, `limit`, `hasMore`, `truncated`, `checkedAt`.
+Les erreurs publiques sont 400 (entrée invalide), 429 (quota/concurrence, avec
+`Retry-After: 60`) ou 503 (vérification indisponible). Une réponse
+LI.FI 404 pour une adresse exacte devient une liste vide. Les autres erreurs ne
+sont jamais converties en une fausse absence de token ni exposées avec leurs
+détails privés. Toutes les réponses HTTP utilisent `Cache-Control: no-store`.
 
-`parseTokenAmount` accepte une seule virgule ou un seul point décimal et rejette
-les signes, exposants, séparateurs de milliers, `Infinity` et les valeurs qui
-dépassent les décimales du token. Les valeurs sont transmises à LI.FI en chaînes
-entières, sans passage par `Number`.
+### Service serveur
 
-Les paramètres partagés sont dans `lib/routing/config.ts` : frais plateforme
-configurables, slippage `0,5 %`, impact maximal `5 %`, durée de cotation
-`60 s` et timeout de requête `15 s`. Le montant net et le montant minimum reçu
-sont affichés séparément.
+`lib/tokens/search.server.ts` porte la frontière `server-only`
+et crée un client LI.FI sans wallet. Il lit `LIFI_API_KEY` uniquement
+sur le serveur. Les demandes de liste utilisent `getTokens` avec réseau,
+type EVM, recherche textuelle, `minPriceUSD: 0`, tri market cap et
+`limit + 1` pour détecter la troncature. Une adresse passe par
+`getToken`, sans fallback CoinGecko ou RPC.
 
-## Tokens et prix
+Les limites de résultats servent à l'affichage, pas à constituer une allowlist :
+la recherche exacte reste accessible au-delà des 200 premiers résultats.
 
-La liste de tokens est filtrée sur les chaînes réellement exposées par LI.FI.
-Le token natif est construit avec l'adresse zéro de la chaîne courante ; aucun
-prix Ethereum n'est réutilisé sur une autre chaîne. Une adresse personnalisée
-doit être une adresse EVM valide et ses décimales/symbole sont lus sur le réseau
-sélectionné avant affichage.
-
-Le prix USD vient de LI.FI pour le couple `(chainId, tokenAddress)`. Le taux EUR
-vient d'une source ECB via Frankfurter et est rejeté s'il est absent ou trop
-ancien ; l'interface retombe alors sur l'affichage USD.
-
-## Configuration
-
-| Variable | Usage |
+| Limite locale | Valeur |
 | --- | --- |
-| `NEXT_PUBLIC_LIFI_API_KEY` | Clé LI.FI optionnelle pour les quotas. |
-| `NEXT_PUBLIC_PLATFORM_FEE_PERCENT` | Frais Hermes, bornés entre 0 et 100. |
+| Cache | 256 entrées maximum, TTL 60 s ; résultat vide 10 s. |
+| Appels simultanés | 8 ; requêtes identiques regroupées. |
+| Budget d'appels LI.FI | 60/minute par défaut, configurable entre 1 et 1000. |
+| Timeout LI.FI | 8 s, sans retry automatique. |
+| Timeout du client HTTP | 10 s, associé au signal d'annulation. |
 
-Les valeurs locales vont dans `.env.local`. Le fichier `.env.example` ne contient
-aucun secret.
+Ces limites sont en mémoire **par processus**, et ne constituent pas un quota
+global entre instances ou régions. Un cache et un compteur partagés, ou une limite
+en amont, pourront être ajoutés pour un déploiement distribué. Les cotations SDK
+navigateur ne passent pas par ce service.
 
-## Vérifications
+### Validation et consentement
 
-```bash
-npm run typecheck
-npm test
-npm run lint
-npm run build
-```
+`lib/tokens/validation.ts` vérifie réseau/adresse, décimales entières
+0–255, noms et symboles bornés, puis copie uniquement les champs utiles. Les logos
+doivent être des URL HTTPS. L'identité est `chainId:adresse-en-minuscules` ;
+le symbole n'est jamais une clé de déduplication.
 
-Les tests couvrent le parsing et la précision des montants, l'invalidation des
-cotations, l'expiration, les destinataires incohérents, les soldes ERC-20/gas,
-les métadonnées de contrats, le taux EUR et le changement de chaîne de la modale.
+Le verdict le plus restrictif prévaut : un résultat `flagged`, y compris
+dans le détail d'un fournisseur ou un doublon, bloque le token. Un statut absent
+ou `unverified` exige une confirmation avec contrat complet, réseau et
+explorateur. Le consentement `riskAcknowledged` reste dans la sélection
+locale et n'est jamais accepté dans les données reçues de l'API. Changer de
+recherche ou réseau efface le panneau et sa case de confirmation.
 
-## Limites connues
+L'actif natif configuré est reconnu par réseau + adresse zéro + décimales + symbole.
+Il peut être proposé au démarrage sans importer de contrat ERC-20. Sa reconnaissance
+LI.FI est tout de même vérifiée avant exécution. Aucune décimale ou valeur USD n'est
+inventée à partir d'un symbole.
 
-- Rango, Socket, Solana et les wallets non-EVM sont hors périmètre de ce MVP.
-- La disponibilité des tokens et des routes dépend de LI.FI et des RPC publics.
-- Les transactions mainnet utilisent des fonds réels ; l'application ne promet
-  pas de rendement ni de protection contre la volatilité.
-- Le scoring de fiabilité, l'orchestration backend et le streaming des routes
-  sont réservés à une itération ultérieure.
+## Cotations et exécution
+
+Les cotations restent demandées par le SDK navigateur, avec timeout 15 s. Le
+service `lib/routing/` normalise, déduplique et trie les routes par
+montant net décroissant. La clé de cotation lie compte, chaînes, adresses et montant.
+Les réponses périmées sont ignorées et les cotations expirent au bout de 60 s.
+
+Avant toute action du wallet, `executeSwapQuote` :
+
+1. vérifie le compte, les paramètres et l'expiration de la cotation ;
+2. compare l'identité et les décimales de la sélection avec les tokens du devis ;
+3. refuse les signalements connus et les imports sans consentement ;
+4. relit les deux tokens avec `fresh=1`, puis refuse une indisponibilité,
+   un signalement, des métadonnées différentes ou un nouveau besoin de consentement ;
+5. revérifie le compte après cette attente, active le réseau source si nécessaire,
+   contrôle les soldes ERC-20/natif et réserve le gas ;
+6. revérifie la cotation et le compte, puis confie l'exécution au fournisseur EVM LI.FI.
+
+Le wallet client est récupéré depuis wagmi au moment de l'action. Les changements
+automatiques de taux sont refusés ; les signatures restent demandées par le wallet.
+Une nouvelle requête locale ne garantit pas un nouveau scan chez LI.FI : leurs
+verdicts peuvent être mis en cache et ne constituent pas une garantie de sécurité.
+
+## Montants et prix
+
+`lib/amounts.ts` convertit la saisie avec `BigInt` et accepte
+une virgule ou un point décimal. Les entiers LI.FI restent des chaînes ; exposants,
+signes, séparateurs de milliers et excès de décimales sont rejetés.
+
+Les frais plateforme sont configurables, avec slippage 0,5 % et impact maximal
+5 %. Le montant net, le minimum reçu et les frais réseau restent distincts.
+Les prix USD passent aussi par le service tokens, par réseau/adresse. Le taux EUR
+vient de la BCE via Frankfurter, avec sa date et un repli sur USD si indisponible.
+
+## Configuration et modules
+
+| Emplacement ou variable | Responsabilité |
+| --- | --- |
+| `LIFI_API_KEY` | Clé optionnelle privée du service tokens ; remplace l'ancienne variable publique. |
+| `TOKEN_SEARCH_REQUESTS_PER_MINUTE` | Budget local d'appels du service tokens. |
+| `NEXT_PUBLIC_PLATFORM_FEE_PERCENT` | Frais Hermes 0–100. |
+| `lib/tokens/client.ts` | HTTP navigateur et validation des réponses. |
+| `lib/contractTokenResolver.ts` | Wrapper de résolution LI.FI par adresse ; aucun fallback RPC. |
+| `lib/aggregators/lifi/client.ts` | SDK navigateur et fournisseur EVM, sans clé privée. |
+| `lib/routing/execute.ts` | Contrôles avant exécution. |
+| `components/TokenSelectModal.tsx` | Recherche, consentement, focus trap et scroll. |
+
+## Vérifications et limites
+
+Exécuter `npm run typecheck`, `npm test`, `npm run lint` et `npm run build`.
+Les tests contrôlent les paramètres API, homonymes, cache, quotas, erreurs, consentement,
+réponses tardives, métadonnées avant signature et protections de cotation existantes.
+Ils ne déplacent pas de fonds.
+
+Rango, Socket, wallets non-EVM, scan GoPlus, scoring des bridges et orchestration
+serveur des cotations restent hors périmètre. La disponibilité d'une route dépend
+de LI.FI, de la liquidité et du montant demandé.

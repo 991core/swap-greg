@@ -7,7 +7,7 @@ import { erc20Abi, type Address } from "viem";
 import { RouteList } from "./RouteList";
 import TokenSelectModal from "./TokenSelectModal";
 import { CHAIN_LABELS } from "@/lib/chains";
-import { type AppToken, type SwapParams, fetchSupportedChains, fetchTopTokensByChain, formatTokenAmount, parseTokenAmount } from "@/lib/lifi";
+import { type AppToken, type SwapParams, fetchSupportedChains, buildKnownFallbackTokens, formatTokenAmount, parseTokenAmount } from "@/lib/lifi";
 import { balancePercentage } from "@/lib/amounts";
 import { formatCurrencyValue, fetchTokenPriceUsd, fetchUsdEurRate, getPriceLookupKey, type FxRate } from "@/lib/pricing";
 import { useI18n } from "@/lib/i18n";
@@ -79,8 +79,7 @@ export function SwapCard() {
         const supported = await fetchSupportedChains();
         if (cancelled) return;
         if (!supported.length) { setBootError("boot_no_chains"); return; }
-        const tokens = await fetchTopTokensByChain(supported.map((c) => c.id));
-        if (cancelled) return;
+        const tokens = Object.fromEntries(supported.map((c) => [c.id, buildKnownFallbackTokens(c.id)]));
         setChains(supported); setTokensByChain(tokens);
         const source = supported.find((c) => c.id === 8453)?.id ?? supported[0].id;
         const destination = supported.find((c) => c.id === 1)?.id ?? supported.at(-1)!.id;
@@ -127,7 +126,7 @@ export function SwapCard() {
       const completed = await executeSwapQuote(route, params, (updated) => {
         setExecution(updated);
         quotes.updateRoute(normalizeLifiRoute(updated, params, route.expiresAt));
-      });
+      }, { fromToken: fromToken!, toToken: toToken! });
       setExecution(completed); setSuccess(completed.steps.every((step) => step.execution?.status === "DONE"));
     } catch (cause) {
       setError(cause instanceof SwapValidationError ? translate(cause.key) : cause instanceof Error ? cause.message : translate("swap_exec_error"));
