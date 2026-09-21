@@ -225,3 +225,17 @@ sélection effective de la chaîne.
 - Choix définitif entre affichage synchrone vs streaming des routes — pas encore tranché.
 - Couverture LI.FI inégale selon la chaîne (ex. ADA souvent absent ; XRP/DOGE surtout BSC).
 - Swaps mainnet = fonds réels — prudence en usage.
+
+## Variante — interface compacte CoW / Jumper
+
+La branche `design/cow-jumper` reprend la maquette validée : widget unique centré,
+champs empilés et routes intégrées, palette violet sombre, en-tête arrondi avec
+USD/EUR, langue et wallet. Les cartes affichent montant, minimum, frais et durée ;
+les détails techniques restent dépliables. Le compte à rebours de 30 secondes
+est compact. Le bouton de connexion du widget ouvre désormais RainbowKit.
+Le thème des fenêtres wallet est défini dans `lib/wallet-theme.ts`.
+
+Les adaptateurs, contrôles avant signature et mécanismes de renouvellement ne
+changent pas. Les 189 tests et les vérifications TypeScript/lint/build passent.
+Le contrôle visuel navigateur est bloqué par l’interdiction d’ouvrir les pages
+locales dans cet environnement ; il reste à effectuer avec le serveur Next local.

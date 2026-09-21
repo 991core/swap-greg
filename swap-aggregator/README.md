@@ -8,6 +8,19 @@ par **nom, symbole ou adresse de contrat**. La présence d'un token dans les
 résultats ne garantit ni sa sécurité, ni une route pour la paire et le montant
 demandés.
 
+## Variante d’interface `design/cow-jumper`
+
+Widget centré inspiré de CoW Swap, palette violette inspirée de Jumper, identité
+Hermes conservée. Les routes sont intégrées sous les champs, avec montant reçu,
+minimum, frais et durée visibles ; leurs détails se déplient. La devise USD/EUR
+est dans l’en-tête, les frais Hermes et le slippage juste avant la confirmation.
+Le renouvellement automatique reste à 30 secondes, avec anneau et compte à rebours.
+Les fenêtres du wallet reprennent la même palette.
+
+Validation : 189 tests, TypeScript, lint et build réussis. Le rendu navigateur
+reste à contrôler : l’environnement de revue bloque les pages locales. Aucun
+swap réel n’a été signé pendant cette refonte.
+
 ## Installation
 
 Node.js 22.12 ou supérieur est requis.

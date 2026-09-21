@@ -3,8 +3,8 @@ import { useEffect, useState } from "react";
 import { useI18n } from "@/lib/i18n";
 import { QUOTE_TTL_MS, QUOTE_RETRY_MS } from "@/lib/routing/config";
 
-type Props = { expiresAt: number | null; retryAt: number | null; loading: boolean; waiting: boolean; suspended: boolean };
-export function QuoteCountdown({ expiresAt, retryAt, loading, waiting, suspended }: Props) {
+type Props = { expiresAt: number | null; retryAt: number | null; loading: boolean; waiting: boolean; suspended: boolean; compact?: boolean };
+export function QuoteCountdown({ expiresAt, retryAt, loading, waiting, suspended, compact = false }: Props) {
   const { translate } = useI18n();
   const [now, setNow] = useState(Date.now);
   useEffect(() => {
@@ -19,10 +19,10 @@ export function QuoteCountdown({ expiresAt, retryAt, loading, waiting, suspended
   const progress = Math.max(0, Math.min(1, remaining / (retryAt ? QUOTE_RETRY_MS : QUOTE_TTL_MS)));
   const spinning = !suspended && !waiting && (loading || (deadline !== null && seconds === 0));
   const label = translate(suspended ? "quotes_suspended" : waiting ? "quotes_waiting" : spinning ? "quotes_refreshing" : retryAt ? "quotes_retry_in" : "quotes_refresh_in", { seconds: String(seconds) });
-  return <div className={"jumper-quote-clock" + (spinning ? " is-refreshing" : "")} role="timer" aria-live="off" aria-label={label}>
+  return <div className={"jumper-quote-clock" + (spinning ? " is-refreshing" : "")} role="timer" aria-live="off" aria-label={label} title={label}>
     <svg viewBox="0 0 40 40" aria-hidden="true"><circle className="jumper-clock-track" cx="20" cy="20" r="16" />
       <circle className="jumper-clock-progress" cx="20" cy="20" r="16" pathLength="100" strokeDasharray="100" strokeDashoffset={spinning ? 70 : 100 * (1 - progress)} />
-      {!spinning && <text x="20" y="24" textAnchor="middle">{suspended || waiting ? "–" : seconds}</text>}
-    </svg><span>{label}</span>
+      {!compact && !spinning && <text x="20" y="24" textAnchor="middle">{suspended || waiting ? "–" : seconds}</text>}
+    </svg><span>{compact && !spinning && !waiting && !suspended && !retryAt ? `${seconds} s` : label}{compact && <small>{translate("auto_short")} · {QUOTE_TTL_MS / 1000} s</small>}</span>
   </div>;
 }

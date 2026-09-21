@@ -18,6 +18,7 @@ function detectBrowserLang(): Lang {
 }
 
 type TranslationKey =
+  | "routes_short" | "slippage_short" | "hermes_fee_short" | "auto_short" | "wallet_network"
   | "swap_title" | "source_network" | "destination_network" | "balance_label" | "route_details" | "route_duration" | "route_gas" | "route_minimum" | "route_extra_fees" | "route_waiting_others" | "route_sort_hint" | "route_recipient" | "route_amount_exact" | "route_estimates" | "fee_details" | "selected_route"
   | "highest_output" | "compare_routes" | "routes_empty_description" | "choose_provider" | "provider_unavailable"
   | "rango_test_notice" | "rango_preparing" | "rango_approval" | "rango_signing" | "rango_tracking" | "rango_pending" | "rango_resume" | "rango_complete" | "rango_failed" | "rango_submitted"
@@ -110,6 +111,7 @@ type TranslationKey =
 
 const translations: Record<Lang, Record<TranslationKey, string>> = {
   en: {
+    routes_short: "Routes", slippage_short: "Slippage", hermes_fee_short: "Hermes fee", auto_short: "Auto", wallet_network: "Change network",
     swap_title: "Swap tokens",
     source_network: "Source network",
     destination_network: "Destination network",
@@ -250,6 +252,7 @@ const translations: Record<Lang, Record<TranslationKey, string>> = {
     hero_subtitle: "Compare what you receive, the fees and the time. Choose your route.",
   },
   fr: {
+    routes_short: "Routes", slippage_short: "Slippage", hermes_fee_short: "Frais Hermes", auto_short: "Auto", wallet_network: "Changer de réseau",
     swap_title: "Échanger",
     source_network: "Réseau de départ",
     destination_network: "Réseau d’arrivée",

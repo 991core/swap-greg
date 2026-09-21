@@ -2,16 +2,16 @@
 
 import type { RouteExtended } from "@lifi/sdk";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useAccount, useBalance, useReadContract } from "wagmi";
 import { erc20Abi, type Address } from "viem";
 import { RouteList } from "./RouteList";
 import TokenSelectModal from "./TokenSelectModal";
 import { QuoteCountdown } from "./QuoteCountdown";
 import { ChainSelect } from "./ChainSelect";
-import { ChainIcon } from "./ChainIcon";
 import { CurrencySwitch } from "./CurrencySwitch";
 import { quoteAmount } from "@/lib/presentation";
-import { APP_CHAINS, CHAIN_LABELS } from "@/lib/chains";
+import { APP_CHAINS } from "@/lib/chains";
 import { getPopularTokens } from "@/lib/tokens/catalog";
 import { type AppToken, formatTokenAmount, parseTokenAmount } from "@/lib/lifi";
 import { balancePercentage } from "@/lib/amounts";
@@ -40,7 +40,7 @@ function TokenSelector({ token, onClick }: { token: AppToken | null; onClick: ()
   </button>;
 }
 
-export function SwapCard() {
+export function SwapCard({ onConnect }: { onConnect?: () => void } = {}) {
   const { address, isConnected } = useAccount();
   const { translate, lang } = useI18n();
   const [fromChainId, setFromChainId] = useState(8453);
@@ -59,6 +59,7 @@ export function SwapCard() {
   const [error, setError] = useState<string | null>(null);
   const [modalSide, setModalSide] = useState<Side | null>(null);
   const [priceLookup, setPriceLookup] = useState<Record<string, number>>({});
+  const [currencySlot, setCurrencySlot] = useState<HTMLElement | null>(null);
   const [currencyPreference, setCurrencyPreference] = useState<"USD" | "EUR">("USD");
   const [fx, setFx] = useState<FxRate | null>(null);
   const currency = currencyPreference === "EUR" && fx ? "EUR" : "USD";
@@ -86,6 +87,7 @@ export function SwapCard() {
   const outputValue = receivePreview && price(toToken) > 0 ? Number(receivePreview) * price(toToken) : null;
 
   useEffect(() => {
+    setCurrencySlot(document.getElementById("hermes-currency-slot"));
     try { setPendingRango(readPendingRango(localStorage.getItem(PENDING_RANGO_KEY))); } catch { /* Storage can be disabled. */ }
     try { if (localStorage.getItem("hermes-currency") === "EUR") setCurrencyPreference("EUR"); } catch { /* Default to USD. */ }
   }, []);
@@ -168,8 +170,11 @@ export function SwapCard() {
   const actions = execution?.steps.flatMap((step) => step.execution?.actions ?? []) ?? [];
   const label = !isConnected ? translate("cta_connect_wallet") : pendingRango ? translate("rango_submitted") : swapping ? translate("cta_executing") : quotes.loading ? translate("cta_searching") : translate("cta_swap");
   return <>
+    {currencySlot && createPortal(<CurrencySwitch value={currency} onChange={changeCurrency} eurAvailable={Boolean(fx)} />, currencySlot)}
     <div className="jumper-swap-widget">
-      <div className="jumper-swap-toolbar"><h2>{translate("swap_title")}</h2><CurrencySwitch value={currency} onChange={changeCurrency} eurAvailable={Boolean(fx)} /></div>
+      <div className="jumper-swap-toolbar"><div className="jumper-swap-title"><h2>{translate("swap_title")}</h2><div className="jumper-providers"><span className="jumper-hint">{translate("providers_label")}</span>
+        {(["lifi", "rango"] as const).map((provider) => <button key={provider} type="button" className={`jumper-prov${providers[provider] ? " active" : ""}`} aria-pressed={providers[provider]} aria-label={provider === "lifi" ? "LI.FI" : "Rango"} disabled={swapping || Boolean(pendingRango)} onClick={() => { setProviders((old) => ({ ...old, [provider]: !old[provider] })); setSelectedId(null); }}><ProviderBadge provider={provider} />{provider === "rango" && <span className="jumper-beta">Beta</span>}<span aria-hidden="true">{providers[provider] ? "✓" : "+"}</span></button>)}
+      </div></div>{!currencySlot && <CurrencySwitch value={currency} onChange={changeCurrency} eurAvailable={Boolean(fx)} />}</div>
       <fieldset disabled={swapping} className="jumper-form">
         <div className="jumper-panel">
           <div className="jumper-panel-header"><label htmlFor="swap-amount">{translate("send_label")}</label>
@@ -189,14 +194,22 @@ export function SwapCard() {
           <p className="jumper-hint">{currencyValue(outputValue) ?? "—"}</p>
         </div>
       </fieldset>
-      <div className="jumper-providers"><span className="jumper-hint">{translate("providers_label")}</span>
-        {(["lifi", "rango"] as const).map((provider) => <button key={provider} type="button" className={`jumper-prov${providers[provider] ? " active" : ""}`} aria-pressed={providers[provider]} aria-label={provider === "lifi" ? "LI.FI" : "Rango"} disabled={swapping || Boolean(pendingRango)} onClick={() => { setProviders((old) => ({ ...old, [provider]: !old[provider] })); setSelectedId(null); }}><ProviderBadge provider={provider} />{provider === "rango" && <span className="jumper-beta">Beta</span>}<span aria-hidden="true">{providers[provider] ? "✓" : "+"}</span></button>)}
-      </div>
-      {providers.rango && <p className="jumper-test-notice">{translate("rango_test_notice")}</p>}
       {!providers.lifi && !providers.rango && <p className="jumper-warning">{translate("choose_provider")}</p>}
-      <dl className="jumper-summary"><div><dt>{translate("platform_fee")}</dt><dd>{(PLATFORM_FEE * 100).toLocaleString(lang)}%</dd></div><div><dt>{translate("slippage_label")}</dt><dd>{SLIPPAGE * 100}%</dd></div></dl>
+    <aside className="jumper-routes-panel" aria-label={translate("route_list_title")}>
+      <div className="jumper-routes-heading"><h2>{translate("routes_short")} {quotes.routes.length > 0 && <span className="jumper-route-count">{quotes.routes.length}</span>}</h2>
+        <div className="jumper-routes-tools">{params && <QuoteCountdown compact expiresAt={quotes.expiresAt} retryAt={quotes.retryAt} loading={quotes.loading} waiting={quotes.waiting} suspended={swapping || Boolean(pendingRango)} />}
+        {params && <button type="button" className="jumper-refresh-icon" aria-label={translate("refresh_quotes")} title={translate("refresh_quotes")} disabled={swapping || Boolean(pendingRango) || quotes.loading} onClick={quotes.refresh}>↻</button>}</div>
+      </div>
+      {!quotes.routes.length && !quotes.loading && <div className="jumper-routes-empty"><span aria-hidden="true">⇄</span><p>{translate(params ? "no_routes_hint" : "routes_empty_description")}</p></div>}
+      {quotes.loading && <div role="status" className="jumper-route-loading"><span>{translate(quotes.routes.length ? "route_waiting_others" : "searching_routes")}</span>{!quotes.routes.length && <div className="jumper-route-skeleton" aria-hidden="true"><i /><i /><i /></div>}</div>}
+      {quotes.warnings.map((warning) => <p key={warning.provider} className="jumper-warning">{translate("provider_unavailable", { provider: warning.provider === "lifi" ? "LI.FI" : "Rango" })}</p>)}
+      <RouteList routes={quotes.routes} selectedId={selectedRoute?.id ?? null} onSelect={(route) => setSelectedId(route.id)} toDecimals={toToken?.decimals ?? 18} toSymbol={toToken?.symbol ?? ""} currency={currency} eurRate={fx?.rate ?? null} priceUsd={price(toToken)} disabled={swapping || Boolean(pendingRango) || quotes.loading || quotes.expired} />
+    </aside>
+      <div className="jumper-swap-footer">
+      <details className="jumper-settings"><summary><span aria-hidden="true">⚙</span><span>{translate("slippage_short")} {(SLIPPAGE * 100).toLocaleString(lang)}%</span><span className="jumper-settings-divider">·</span><span>{translate("hermes_fee_short")} {(PLATFORM_FEE * 100).toLocaleString(lang)}%</span><span className="jumper-settings-chevron" aria-hidden="true">⌄</span></summary>
+      <dl className="jumper-summary"><div><dt>{translate("platform_fee")}</dt><dd>{(PLATFORM_FEE * 100).toLocaleString(lang)}%</dd></div><div><dt>{translate("slippage_label")}</dt><dd>{SLIPPAGE * 100}%</dd></div></dl><p className="jumper-hint">{translate("route_sort_hint")} {translate("route_estimates")}</p></details>
       {currency === "EUR" && fx && <p className="jumper-hint">{translate("fx_reference", { date: fx.date })}</p>}
-      <button type="button" className="jumper-cta" disabled={!canSwap} onClick={() => void handleSwap()}>{label}</button>
+      <button type="button" className="jumper-cta" disabled={isConnected ? !canSwap : !onConnect} onClick={() => isConnected ? void handleSwap() : onConnect?.()}>{label}</button>
       <div aria-live="polite">
         {amount.trim() && parsed == null && <p className="jumper-error">{translate("amount_invalid")}</p>}
         {sameToken && <p className="jumper-hint">{translate("same_token")}</p>}
@@ -211,19 +224,9 @@ export function SwapCard() {
       {actions.length > 0 && <div className="jumper-progress"><p>{translate("execution_progress")}</p>{actions.map((action, index) => <div key={index}><span>{action.type} · {action.status}</span>{action.txLink && /^https:\/\//.test(action.txLink) && <a href={action.txLink} target="_blank" rel="noopener noreferrer">{action.txHash?.slice(0, 12) ?? "↗"} ↗</a>}</div>)}</div>}
       {rangoProgress && <div className="jumper-progress" role="status"><p>Rango · {translate(`rango_${rangoProgress.stage}`)}</p>{rangoProgress.txLink && <a href={rangoProgress.txLink} target="_blank" rel="noopener noreferrer">{rangoProgress.txHash?.slice(0, 12)} ↗</a>}</div>}
       {pendingRango && <div className="jumper-warning" role="status"><p>{translate("rango_pending")}</p><a href={transactionLink(pendingRango.chainId, pendingRango.txHash)} target="_blank" rel="noopener noreferrer">{pendingRango.txHash.slice(0, 12)} ↗</a><button type="button" className="jumper-refresh" disabled={swapping} onClick={() => void resumeRango()}>{translate("rango_resume")}</button></div>}
-    </div>
-    <aside className="jumper-routes-panel" aria-label={translate("route_list_title")}>
-      <div className="jumper-routes-heading"><h2>{translate("route_list_title")} {quotes.routes.length > 0 && <span className="jumper-route-count">{quotes.routes.length}</span>}</h2>
-        {params && <button type="button" className="jumper-refresh-icon" aria-label={translate("refresh_quotes")} title={translate("refresh_quotes")} disabled={swapping || Boolean(pendingRango) || quotes.loading} onClick={quotes.refresh}>↻</button>}
+      {providers.rango && <p className="jumper-test-notice">{translate("rango_test_notice")}</p>}
       </div>
-      <div className="jumper-network-path"><span><ChainIcon chainId={fromChainId} size={17} />{CHAIN_LABELS[fromChainId]}</span><span aria-hidden="true">→</span><span><ChainIcon chainId={toChainId} size={17} />{CHAIN_LABELS[toChainId]}</span></div>
-      {params && <QuoteCountdown expiresAt={quotes.expiresAt} retryAt={quotes.retryAt} loading={quotes.loading} waiting={quotes.waiting} suspended={swapping || Boolean(pendingRango)} />}
-      {!quotes.routes.length && !quotes.loading && <div className="jumper-routes-empty"><span className="jumper-empty-symbol" aria-hidden="true">⇄</span><h3>{translate(params ? "no_routes" : "compare_routes")}</h3><p>{translate(params ? "no_routes_hint" : "routes_empty_description")}</p><div><ProviderBadge provider="lifi" /><span>+</span><ProviderBadge provider="rango" /></div></div>}
-      {quotes.loading && <div role="status" className="jumper-route-loading"><span>{translate(quotes.routes.length ? "route_waiting_others" : "searching_routes")}</span>{!quotes.routes.length && <div className="jumper-route-skeleton" aria-hidden="true"><i /><i /><i /></div>}</div>}
-      {quotes.warnings.map((warning) => <p key={warning.provider} className="jumper-warning">{translate("provider_unavailable", { provider: warning.provider === "lifi" ? "LI.FI" : "Rango" })}</p>)}
-      <RouteList routes={quotes.routes} selectedId={selectedRoute?.id ?? null} onSelect={(route) => setSelectedId(route.id)} toDecimals={toToken?.decimals ?? 18} toSymbol={toToken?.symbol ?? ""} currency={currency} eurRate={fx?.rate ?? null} priceUsd={price(toToken)} disabled={swapping || Boolean(pendingRango) || quotes.loading || quotes.expired} />
-      {quotes.routes.length > 0 && <p className="jumper-route-disclaimer">{translate("route_sort_hint")} {translate("route_estimates")}</p>}
-    </aside>
+    </div>
     <TokenSelectModal open={modalSide !== null && !swapping} onClose={() => setModalSide(null)} chains={APP_CHAINS} selectedChainId={modalSide === "to" ? toChainId : fromChainId} selectedToken={modalSide === "to" ? toToken : fromToken} onSelect={(chainId, token) => handleSelect(modalSide ?? "from", chainId, token)} title={translate(modalSide === "to" ? "destination_token" : "source_token")} />
   </>;
 }

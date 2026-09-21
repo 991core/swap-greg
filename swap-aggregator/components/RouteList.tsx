@@ -24,27 +24,24 @@ export function RouteList({ routes, selectedId, onSelect, toDecimals, toSymbol, 
       const selected = selectedId === route.id;
       return <article key={route.id} className={`jumper-route-card${selected ? " jumper-route-selected" : ""}`}>
         <label className="jumper-route-choice">
-          <span className="jumper-route-provider-row">
-            <ProviderBadge provider={route.provider} />
-            {index === 0 && <span className="jumper-route-best">{translate("highest_output")}</span>}
-            <input type="radio" name="swap-route" aria-label={`${route.provider === "lifi" ? "LI.FI" : "Rango"} · ${net.exact} ${toSymbol} · ${route.toolLabel}`}
+          <input type="radio" name="swap-route" aria-label={`${route.provider === "lifi" ? "LI.FI" : "Rango"} · ${net.exact} ${toSymbol} · ${route.toolLabel}`}
               checked={selected} onChange={() => onSelect(route)} disabled={disabled} />
-          </span>
+          <span className="jumper-route-provider-row"><ProviderBadge provider={route.provider} /><span className="jumper-route-tool" title={route.toolLabel}>· {route.toolLabel}</span></span>
           <span className="jumper-route-output" title={`${net.exact} ${toSymbol}`}>
             <strong>{net.rounded ? "≈ " : ""}{net.short}</strong><span>{toSymbol}</span>
           </span>
-          <span className="jumper-route-value">{value ? (value.startsWith("<") ? value : `≈ ${value}`) : translate("receive_label")}</span>
-          <span className="jumper-route-tool">{route.toolLabel}</span>
           <span className="jumper-route-metrics">
-            <span><span>{translate("route_duration")}</span><strong>{formatDuration(route.durationSeconds)}</strong></span>
-            <span><span>{translate("route_gas")}</span><strong>{gas ?? "—"}</strong></span>
+            <span title={translate("network_fee")}><span>{translate("route_gas")}</span> <strong>{gas ?? "—"}</strong></span>
+            <span title={translate("route_duration")}><span aria-hidden="true">◷</span><span className="jumper-sr-only">{translate("route_duration")}</span> <strong>{formatDuration(route.durationSeconds)}</strong></span>
           </span>
           <span className="jumper-route-minimum"><span>{translate("minimum_received")}</span><strong>{minimum} {toSymbol}</strong></span>
+          {index === 0 && <span className="jumper-route-best">{translate("highest_output")}</span>}
           {extraFees && <span className="jumper-route-extra">{translate("route_extra_fees")}</span>}
         </label>
         <details className="jumper-route-details">
-          <summary>{translate("route_details")}<span aria-hidden="true">⌄</span></summary>
+          <summary title={translate("route_details")}><span className="jumper-sr-only">{translate("route_details")}</span><span aria-hidden="true">⌄</span></summary>
           <div className="jumper-route-detail-body">
+            {value && <p className="jumper-route-value">{value.startsWith("<") ? value : `≈ ${value}`}</p>}
             <div className="jumper-route-path"><TokenIcon token={tokens.fromToken} /><span>{tokens.fromToken.symbol}<small>{CHAIN_LABELS[route.fromChainId]}</small></span><span aria-hidden="true">→</span><TokenIcon token={tokens.toToken} /><span>{tokens.toToken.symbol}<small>{CHAIN_LABELS[route.toChainId]}</small></span></div>
             <dl className="jumper-route-breakdown">
               <div><dt>{translate("route_amount_exact")}</dt><dd>{net.exact} {toSymbol}</dd></div>

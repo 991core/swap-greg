@@ -15,6 +15,11 @@ lets the user select a route. It does not silently force a “best” route.
 
 - `app/page.tsx` renders the Hermes shell and the RainbowKit connect button.
 - `app/providers.tsx` mounts wagmi, React Query, and RainbowKit.
+- `lib/wallet-theme.ts` supplies the purple RainbowKit theme; keep its root
+  RainbowKit import type-only to avoid bundling optional wallet connectors.
+- The `design/cow-jumper` variant embeds routes inside the central widget.
+  `SwapCard` portals the currency control into the header slot, with a standalone
+  fallback. Keep the countdown and wallet connection action functional.
 - `lib/wallet.ts` defines the wagmi config. It uses the injected browser-wallet
   connector so the server build does not pull optional Coinbase/Base x402
   connectors. There is no WalletConnect project ID in the current MVP.
