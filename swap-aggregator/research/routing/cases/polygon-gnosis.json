@@ -1,0 +1,17 @@
+{
+  "name": "USDC natif Polygon vers EURe V2 Gnosis",
+  "from": { "chainId": 137, "address": "0x3c499c542cef5e3811e1192ce70d8cc03d5c3359", "decimals": 6, "symbol": "USDC" },
+  "to": { "chainId": 100, "address": "0x420ca0f9b9b604ce0fd9c18ef134c705e5fa3430", "decimals": 18, "symbol": "EURe" },
+  "amount": "200000000",
+  "slippageBps": 50,
+  "providers": ["lifi", "relay", "cow"],
+  "discover": true,
+  "maxPivotsPerChain": 3,
+  "options": {
+    "pivots": [{ "chainId": 100, "address": "0xe91d153e0b41518a2ce8dd3d7944fa863463a97d", "decimals": 18, "symbol": "WXDAI" }],
+    "maxLegs": 3,
+    "maxRequests": 60,
+    "concurrency": 4,
+    "beamWidthPerAsset": 2
+  }
+}

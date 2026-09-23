@@ -1,0 +1,36 @@
+{
+  "cycleId": "hermes-routing-001",
+  "date": "2026-09-23",
+  "topic": "Generic EVM route search compared with LI.FI",
+  "protocol": "OSINT-IA supplied for this task",
+  "stages": {
+    "discovery": "completed",
+    "technical_validation": "completed",
+    "field_evidence": "completed with scope limits",
+    "falsification": "completed, economic superiority unresolved",
+    "synthesis": "completed; local economic validation still required"
+  },
+  "queries": [
+    "LI.FI advanced/routes allowSwitchChain CHEAPEST",
+    "LI.FI gas feeCosts included approvals",
+    "Relay quote/v2 exact input slippage",
+    "CoW orderbook OpenAPI sellAmountBeforeFee verified protocolFeeBps",
+    "LI.FI SDK missing routes hooks failure",
+    "Relay currencies/token/price"
+  ],
+  "sourceCount": 10,
+  "independentSourceGroups": [
+    "CoW",
+    "Hermes",
+    "LI.FI",
+    "Relay",
+    "Relay_quotes_2026-09-21",
+    "issue_reporter",
+    "local_runs_2026-09-23"
+  ],
+  "claimsAdded": 9,
+  "policyChangesApplied": 0,
+  "automatedWatch": "OFF",
+  "autoPolicyChange": false,
+  "searchStopReason": "Relevant documented mechanisms and counterexamples mapped; controlled local measurements are more useful than more sources."
+}

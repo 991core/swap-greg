@@ -1,0 +1,112 @@
+[
+  {
+    "id": "S01",
+    "title": "LI.FI advanced routes",
+    "source": "https://docs.li.fi/api-reference/advanced/get-a-set-of-routes-for-a-request-that-describes-a-transfer-of-tokens",
+    "sourceType": "official_docs",
+    "accessedAt": "2026-09-23",
+    "publishedAt": null,
+    "independenceGroup": "LI.FI",
+    "interestedParty": true,
+    "limitations": "allows multi-step baseline; no guaranteed global optimum"
+  },
+  {
+    "id": "S02",
+    "title": "LI.FI gas and fee costs",
+    "source": "https://docs.li.fi/guides/gas-and-fee-costs",
+    "sourceType": "official_docs",
+    "accessedAt": "2026-09-23",
+    "publishedAt": null,
+    "independenceGroup": "LI.FI",
+    "interestedParty": true,
+    "limitations": "included fees and aggregate/substep costs must not be counted twice"
+  },
+  {
+    "id": "S03",
+    "title": "Relay exact-input quotes",
+    "source": "https://docs.relay.link/references/api/get-quote-v2",
+    "sourceType": "official_docs",
+    "accessedAt": "2026-09-23",
+    "publishedAt": null,
+    "independenceGroup": "Relay",
+    "interestedParty": true,
+    "limitations": "provider and asset support remain quote-time conditions"
+  },
+  {
+    "id": "S04",
+    "title": "Relay cost structure",
+    "source": "https://docs.relay.link/references/api/api_core_concepts/fees",
+    "sourceType": "official_docs",
+    "accessedAt": "2026-09-23",
+    "publishedAt": null,
+    "independenceGroup": "Relay",
+    "interestedParty": true,
+    "limitations": "fees vary with pair and route; do not hardcode standard rates as executed costs"
+  },
+  {
+    "id": "S05",
+    "title": "CoW API schema",
+    "source": "https://github.com/cowprotocol/services/blob/main/crates/orderbook/openapi.yml",
+    "sourceType": "source_code",
+    "accessedAt": "2026-09-23",
+    "publishedAt": null,
+    "independenceGroup": "CoW",
+    "interestedParty": true,
+    "limitations": "main is mutable; accessed on the cycle date; verified and protocolFeeBps require attention"
+  },
+  {
+    "id": "S06",
+    "title": "Relay token valuation",
+    "source": "https://docs.relay.link/references/api/get-token-price",
+    "sourceType": "official_docs",
+    "accessedAt": "2026-09-23",
+    "publishedAt": null,
+    "independenceGroup": "Relay",
+    "interestedParty": true,
+    "limitations": "valuation is not an executable swap rate"
+  },
+  {
+    "id": "S07",
+    "title": "LI.FI missing hook-pool route report #383",
+    "source": "https://github.com/lifinance/sdk/issues/383",
+    "sourceType": "first_hand_issue",
+    "accessedAt": "2026-09-23",
+    "publishedAt": "2026-05-14",
+    "independenceGroup": "issue_reporter",
+    "interestedParty": false,
+    "limitations": "reported Base v4 hook-pool case, not independently reproduced here"
+  },
+  {
+    "id": "S08",
+    "title": "Hermes audited routing implementation",
+    "source": "https://github.com/991core/swap-greg/tree/550d8bb/swap-aggregator/lib/routing",
+    "sourceType": "repository_snapshot",
+    "accessedAt": "2026-09-23",
+    "publishedAt": null,
+    "independenceGroup": "Hermes",
+    "interestedParty": false,
+    "limitations": "only this repository snapshot; tests do not establish economic savings"
+  },
+  {
+    "id": "S09",
+    "title": "User-provided Relay quote archive, 2026-09-21",
+    "source": "sha256:dbb529947ce0876de34d04dc3db5441402b8cf7f1c991bd7847668bbbbe53953",
+    "sourceType": "provided_raw_quotes",
+    "accessedAt": "2026-09-23",
+    "publishedAt": null,
+    "independenceGroup": "Relay_quotes_2026-09-21",
+    "interestedParty": false,
+    "limitations": "three rounds; USDT Ethereum to EURe Gnosis; no LI.FI or CoW quotes"
+  },
+  {
+    "id": "S10",
+    "title": "Supervised local live quote runs",
+    "source": "validation.json",
+    "sourceType": "local_measurement",
+    "accessedAt": "2026-09-23",
+    "publishedAt": null,
+    "independenceGroup": "local_runs_2026-09-23",
+    "interestedParty": false,
+    "limitations": "one run per case, test address, unmeasured approvals; no transaction executed"
+  }
+]

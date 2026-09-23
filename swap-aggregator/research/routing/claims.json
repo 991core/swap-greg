@@ -1,0 +1,165 @@
+[
+  {
+    "claimId": "H01",
+    "claim": "Des chemins composés peuvent dépasser une référence LI.FI sur certaines paires et quantités.",
+    "evidenceLabel": "HYPOTHESIS",
+    "sources": [
+      "S01",
+      "S03",
+      "S05",
+      "S10"
+    ],
+    "sourceCount": 4,
+    "status": "TEST_LOCALLY",
+    "falsificationResult": "UNRESOLVED",
+    "confidence": "limited",
+    "versionScope": "REST API documentation and responses accessed 2026-09-23; initial repo 550d8bb",
+    "environmentScope": "Quote-only EVM exact-input prototype; no cross-pair generalization",
+    "localTestNeeded": "Comparer devis complets aux mêmes contrats/montants/instants, approbations et frais inclus ; répéter les candidats non dominés.",
+    "policyImpact": "No production routing change",
+    "acceptedLocalRule": false
+  },
+  {
+    "claimId": "H02",
+    "claim": "Séparer bridge et swap est toujours moins cher.",
+    "evidenceLabel": "OBSERVATION_EXTERNAL",
+    "sources": [
+      "S09"
+    ],
+    "sourceCount": 1,
+    "status": "REJECT",
+    "falsificationResult": "FALSIFIED",
+    "confidence": "high_in_stated_scope",
+    "versionScope": "REST API documentation and responses accessed 2026-09-23; initial repo 550d8bb",
+    "environmentScope": "Quote-only EVM exact-input prototype; no cross-pair generalization",
+    "localTestNeeded": "Le round 1 fourni produit moins d’EURe via deux devis Relay que via Relay direct ; aucune généralisation à CoW.",
+    "policyImpact": "No production routing change",
+    "acceptedLocalRule": false
+  },
+  {
+    "claimId": "H03",
+    "claim": "LI.FI ne peut pas proposer un parcours en plusieurs étapes.",
+    "evidenceLabel": "FACT_DOCUMENTED",
+    "sources": [
+      "S01"
+    ],
+    "sourceCount": 1,
+    "status": "REJECT",
+    "falsificationResult": "FALSIFIED",
+    "confidence": "high_in_stated_scope",
+    "versionScope": "REST API documentation and responses accessed 2026-09-23; initial repo 550d8bb",
+    "environmentScope": "Quote-only EVM exact-input prototype; no cross-pair generalization",
+    "localTestNeeded": "Utiliser allowSwitchChain=true dans le contrôle LI.FI, puis vérifier les étapes effectivement renvoyées.",
+    "policyImpact": "No production routing change",
+    "acceptedLocalRule": false
+  },
+  {
+    "claimId": "H04",
+    "claim": "Le maximum de sortie brute peut ne pas être le maximum après gaz externe.",
+    "evidenceLabel": "INFERENCE",
+    "sources": [
+      "S02",
+      "S04"
+    ],
+    "sourceCount": 2,
+    "status": "CANDIDATE_RULE",
+    "falsificationResult": "SURVIVES",
+    "confidence": "limited",
+    "versionScope": "REST API documentation and responses accessed 2026-09-23; initial repo 550d8bb",
+    "environmentScope": "Quote-only EVM exact-input prototype; no cross-pair generalization",
+    "localTestNeeded": "Test synthétique : plus forte sortie brute mais gaz supérieur ; vérifier ensuite les coûts réels du portefeuille.",
+    "policyImpact": "No production routing change",
+    "acceptedLocalRule": false
+  },
+  {
+    "claimId": "H05",
+    "claim": "Les versions de tokens ou chaînes partageant un symbole peuvent être fusionnées dans le graphe.",
+    "evidenceLabel": "INFERENCE",
+    "sources": [
+      "S08",
+      "S10"
+    ],
+    "sourceCount": 2,
+    "status": "REJECT",
+    "falsificationResult": "FALSIFIED",
+    "confidence": "high_in_stated_scope",
+    "versionScope": "REST API documentation and responses accessed 2026-09-23; initial repo 550d8bb",
+    "environmentScope": "Quote-only EVM exact-input prototype; no cross-pair generalization",
+    "localTestNeeded": "Tests de contrats homonymes, décimales incompatibles et découverte de deux USDC sur Gnosis.",
+    "policyImpact": "No production routing change",
+    "acceptedLocalRule": false
+  },
+  {
+    "claimId": "H06",
+    "claim": "Un unique taux ou meilleur pivot est suffisant pour tous les montants.",
+    "evidenceLabel": "HYPOTHESIS",
+    "sources": [
+      "S01",
+      "S03",
+      "S05"
+    ],
+    "sourceCount": 3,
+    "status": "REJECT",
+    "falsificationResult": "UNRESOLVED",
+    "confidence": "limited",
+    "versionScope": "REST API documentation and responses accessed 2026-09-23; initial repo 550d8bb",
+    "environmentScope": "Quote-only EVM exact-input prototype; no cross-pair generalization",
+    "localTestNeeded": "Les entrées sont cotées individuellement ; mesurer plusieurs montants, ne pas prétendre à l’optimalité d’un beam borné.",
+    "policyImpact": "No production routing change",
+    "acceptedLocalRule": false
+  },
+  {
+    "claimId": "H07",
+    "claim": "Les minima locaux cotés à la sortie attendue forment un minimum global garanti.",
+    "evidenceLabel": "INFERENCE",
+    "sources": [
+      "S01",
+      "S03"
+    ],
+    "sourceCount": 2,
+    "status": "REJECT",
+    "falsificationResult": "FALSIFIED",
+    "confidence": "high_in_stated_scope",
+    "versionScope": "REST API documentation and responses accessed 2026-09-23; initial repo 550d8bb",
+    "environmentScope": "Quote-only EVM exact-input prototype; no cross-pair generalization",
+    "localTestNeeded": "Test d’une seconde entrée dépendante ; sortie minimale globale laissée nulle et actualisation exigée après réception.",
+    "policyImpact": "No production routing change",
+    "acceptedLocalRule": false
+  },
+  {
+    "claimId": "H08",
+    "claim": "La présence d’un token au catalogue garantit un chemin exécutable.",
+    "evidenceLabel": "OBSERVATION_EXTERNAL",
+    "sources": [
+      "S07"
+    ],
+    "sourceCount": 1,
+    "status": "REJECT",
+    "falsificationResult": "WEAKENED",
+    "confidence": "limited",
+    "versionScope": "REST API documentation and responses accessed 2026-09-23; initial repo 550d8bb",
+    "environmentScope": "Quote-only EVM exact-input prototype; no cross-pair generalization",
+    "localTestNeeded": "Interroger les devis ; valider l’exécution séparément. L’issue externe ne vaut que pour les hooks concernés.",
+    "policyImpact": "No production routing change",
+    "acceptedLocalRule": false
+  },
+  {
+    "claimId": "H09",
+    "claim": "Un devis avec coûts ou vérification manquants peut être déclaré gagnant économique.",
+    "evidenceLabel": "INFERENCE",
+    "sources": [
+      "S02",
+      "S05",
+      "S10"
+    ],
+    "sourceCount": 3,
+    "status": "REJECT",
+    "falsificationResult": "FALSIFIED",
+    "confidence": "high_in_stated_scope",
+    "versionScope": "REST API documentation and responses accessed 2026-09-23; initial repo 550d8bb",
+    "environmentScope": "Quote-only EVM exact-input prototype; no cross-pair generalization",
+    "localTestNeeded": "Tests de frais absents, allowances non lues et simulation CoW non vérifiée ; résultat UNRESOLVED.",
+    "policyImpact": "No production routing change",
+    "acceptedLocalRule": false
+  }
+]

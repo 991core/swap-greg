@@ -62,3 +62,22 @@ lib/
 ## Hors scope MVP
 
 Socket/Rango, score de fiabilité, ranking market cap live, Solana wallet natif.
+
+## Recherche de routes composées
+
+Un moteur de recherche générique EVM compare les devis LI.FI, Relay et CoW,
+ainsi que leurs combinaisons via des actifs intermédiaires. Il s'utilise en CLI
+pour mesurer les résultats avant une intégration à l'interface.
+
+Voir [le guide et les commandes](research/routing/README.md),
+[le cycle de recherche](research/routing/cycle-001.md) et
+[le registre des hypothèses](research/routing/claims.json).
+
+```bash
+npm run research:test
+npm run research:typecheck
+npm run research:routes -- --case research/routing/cases/polygon-gnosis.json --wallet 0xVOTRE_ADRESSE
+```
+
+Le CLI nécessite Node 22.18+ et ne signe aucune transaction. Il accepte d'autres
+chaînes et contrats EVM ; les deux fichiers d'exemple ne limitent pas son univers.

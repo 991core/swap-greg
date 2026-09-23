@@ -1,0 +1,10 @@
+{
+  "name": "USDC Base vers WETH Arbitrum — autre actif cible et autre paire de chaînes",
+  "from": { "chainId": 8453, "address": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", "decimals": 6, "symbol": "USDC" },
+  "to": { "chainId": 42161, "address": "0x82af49447d8a07e3bd95bd0d56f35241523fbab1", "decimals": 18, "symbol": "WETH" },
+  "amount": "200000000",
+  "slippageBps": 50,
+  "providers": ["lifi", "relay", "cow"],
+  "discover": true,
+  "options": { "pivots": [], "maxLegs": 3, "maxRequests": 60 }
+}

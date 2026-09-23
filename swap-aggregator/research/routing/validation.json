@@ -1,0 +1,369 @@
+{
+  "date": "2026-09-23",
+  "repoBase": "550d8bb",
+  "runtime": "Node 24.19.0",
+  "wallet": "public burn address, no signing authority",
+  "executionPerformed": false,
+  "acceptedEconomicRules": 0,
+  "liveRuns": [
+    {
+      "id": "smoke-polygon-gnosis",
+      "request": {
+        "from": {
+          "chainId": 137,
+          "address": "0x3c499c542cef5e3811e1192ce70d8cc03d5c3359",
+          "decimals": 6,
+          "symbol": "USDC"
+        },
+        "to": {
+          "chainId": 100,
+          "address": "0x420ca0f9b9b604ce0fd9c18ef134c705e5fa3430",
+          "decimals": 18,
+          "symbol": "EURe"
+        },
+        "amount": "200000000",
+        "slippageBps": 50
+      },
+      "startedAt": "2026-09-23T13:25:40.593000+00:00",
+      "durationSeconds": 30.0,
+      "requestsMade": 24,
+      "routes": 8,
+      "stopReasons": [
+        "beam_pruning",
+        "request_budget",
+        "deadline"
+      ],
+      "comparison": {
+        "status": "UNRESOLVED",
+        "baselineId": null,
+        "candidateId": null,
+        "gainRaw": null,
+        "reason": "Need a fresh LI.FI baseline and an alternative with complete external costs and a common valuation."
+      },
+      "valuation": {
+        "usdPerToken": "1.14",
+        "observedAt": 1790169940592,
+        "expiresAt": 1790170000592,
+        "source": "https://api.relay.link/currencies/token/price?chainId=100&address=0x420ca0f9b9b604ce0fd9c18ef134c705e5fa3430"
+      },
+      "outputQuotes": [
+        {
+          "id": "route-8",
+          "providers": [
+            "relay",
+            "cow"
+          ],
+          "amountOutRaw": "173982513740429632217",
+          "reportedExternalCostUsd": "0.004302",
+          "economics": "INCOMPLETE_COSTS",
+          "missingCosts": [
+            "CoW additional protocol fee treatment requires verification",
+            "CoW quote simulation not verified",
+            "CoW vault-relayer approval gas not measured",
+            "ERC-20 approval gas not measured",
+            "Relay additional transaction gas coverage unverified"
+          ]
+        },
+        {
+          "id": "route-2",
+          "providers": [
+            "relay"
+          ],
+          "amountOutRaw": "173817193217081909028",
+          "reportedExternalCostUsd": "0.004302",
+          "economics": "INCOMPLETE_COSTS",
+          "missingCosts": [
+            "ERC-20 approval gas not measured",
+            "Relay additional transaction gas coverage unverified"
+          ]
+        },
+        {
+          "id": "route-3",
+          "providers": [
+            "relay",
+            "lifi"
+          ],
+          "amountOutRaw": "173552443476230218075",
+          "reportedExternalCostUsd": "0.004702",
+          "economics": "INCOMPLETE_COSTS",
+          "missingCosts": [
+            "ERC-20 approval gas not measured",
+            "Relay additional transaction gas coverage unverified"
+          ]
+        },
+        {
+          "id": "route-4",
+          "providers": [
+            "relay",
+            "lifi"
+          ],
+          "amountOutRaw": "173521970786005160160",
+          "reportedExternalCostUsd": "0.004402",
+          "economics": "INCOMPLETE_COSTS",
+          "missingCosts": [
+            "ERC-20 approval gas not measured",
+            "Relay additional transaction gas coverage unverified"
+          ]
+        },
+        {
+          "id": "route-5",
+          "providers": [
+            "relay",
+            "lifi"
+          ],
+          "amountOutRaw": "173423859331879913579",
+          "reportedExternalCostUsd": "0.004702",
+          "economics": "INCOMPLETE_COSTS",
+          "missingCosts": [
+            "ERC-20 approval gas not measured",
+            "Relay additional transaction gas coverage unverified"
+          ]
+        },
+        {
+          "id": "route-1",
+          "providers": [
+            "lifi"
+          ],
+          "amountOutRaw": "173382611583243031148",
+          "reportedExternalCostUsd": "0.0075",
+          "economics": "INCOMPLETE_COSTS",
+          "missingCosts": [
+            "ERC-20 approval gas not measured"
+          ]
+        },
+        {
+          "id": "route-7",
+          "providers": [
+            "relay",
+            "relay"
+          ],
+          "amountOutRaw": "173278850223245414989",
+          "reportedExternalCostUsd": "0.004302",
+          "economics": "INCOMPLETE_COSTS",
+          "missingCosts": [
+            "ERC-20 approval gas not measured",
+            "Relay additional transaction gas coverage unverified"
+          ]
+        },
+        {
+          "id": "route-6",
+          "providers": [
+            "relay",
+            "lifi"
+          ],
+          "amountOutRaw": "173105325998761601433",
+          "reportedExternalCostUsd": "0.004402",
+          "economics": "INCOMPLETE_COSTS",
+          "missingCosts": [
+            "ERC-20 approval gas not measured",
+            "Relay additional transaction gas coverage unverified"
+          ]
+        }
+      ],
+      "rawReportSha256": "c348173269086deb47f4af06d06d48e72b0e3ef8d21be968d382409c8d843c57"
+    },
+    {
+      "id": "smoke-base-arbitrum",
+      "request": {
+        "from": {
+          "chainId": 8453,
+          "address": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+          "decimals": 6,
+          "symbol": "USDC"
+        },
+        "to": {
+          "chainId": 42161,
+          "address": "0x82af49447d8a07e3bd95bd0d56f35241523fbab1",
+          "decimals": 18,
+          "symbol": "WETH"
+        },
+        "amount": "200000000",
+        "slippageBps": 50
+      },
+      "startedAt": "2026-09-23T13:27:13.615000+00:00",
+      "durationSeconds": 26.721,
+      "requestsMade": 20,
+      "routes": 10,
+      "stopReasons": [
+        "quotes_per_request",
+        "beam_pruning",
+        "request_budget"
+      ],
+      "comparison": {
+        "status": "UNRESOLVED",
+        "baselineId": null,
+        "candidateId": null,
+        "gainRaw": null,
+        "reason": "Need a fresh LI.FI baseline and an alternative with complete external costs and a common valuation."
+      },
+      "valuation": {
+        "usdPerToken": "2714.170285",
+        "observedAt": 1790170033614,
+        "expiresAt": 1790170093614,
+        "source": "https://api.relay.link/currencies/token/price?chainId=42161&address=0x82af49447d8a07e3bd95bd0d56f35241523fbab1"
+      },
+      "outputQuotes": [
+        {
+          "id": "route-10",
+          "providers": [
+            "relay",
+            "relay"
+          ],
+          "amountOutRaw": "73568571510392992",
+          "reportedExternalCostUsd": "0.429939",
+          "economics": "INCOMPLETE_COSTS",
+          "missingCosts": [
+            "ERC-20 approval gas not measured",
+            "Relay additional transaction gas coverage unverified"
+          ]
+        },
+        {
+          "id": "route-5",
+          "providers": [
+            "relay"
+          ],
+          "amountOutRaw": "73456379505633088",
+          "reportedExternalCostUsd": "0.021743",
+          "economics": "INCOMPLETE_COSTS",
+          "missingCosts": [
+            "ERC-20 approval gas not measured",
+            "Relay additional transaction gas coverage unverified"
+          ]
+        },
+        {
+          "id": "route-6",
+          "providers": [
+            "relay",
+            "lifi"
+          ],
+          "amountOutRaw": "73398458264745930",
+          "reportedExternalCostUsd": "0.424194",
+          "economics": "INCOMPLETE_COSTS",
+          "missingCosts": [
+            "ERC-20 approval gas not measured",
+            "Relay additional transaction gas coverage unverified"
+          ]
+        },
+        {
+          "id": "route-7",
+          "providers": [
+            "relay",
+            "lifi"
+          ],
+          "amountOutRaw": "73395911118122939",
+          "reportedExternalCostUsd": "0.426994",
+          "economics": "INCOMPLETE_COSTS",
+          "missingCosts": [
+            "ERC-20 approval gas not measured",
+            "Relay additional transaction gas coverage unverified"
+          ]
+        },
+        {
+          "id": "route-9",
+          "providers": [
+            "relay",
+            "lifi"
+          ],
+          "amountOutRaw": "73395000000000000",
+          "reportedExternalCostUsd": "0.510594",
+          "economics": "INCOMPLETE_COSTS",
+          "missingCosts": [
+            "ERC-20 approval gas not measured",
+            "Relay additional transaction gas coverage unverified"
+          ]
+        },
+        {
+          "id": "route-8",
+          "providers": [
+            "relay",
+            "lifi"
+          ],
+          "amountOutRaw": "73384627322884956",
+          "reportedExternalCostUsd": "0.422894",
+          "economics": "INCOMPLETE_COSTS",
+          "missingCosts": [
+            "ERC-20 approval gas not measured",
+            "Relay additional transaction gas coverage unverified"
+          ]
+        },
+        {
+          "id": "route-1",
+          "providers": [
+            "lifi"
+          ],
+          "amountOutRaw": "73347061927499000",
+          "reportedExternalCostUsd": "0.0070",
+          "economics": "INCOMPLETE_COSTS",
+          "missingCosts": [
+            "ERC-20 approval gas not measured"
+          ]
+        },
+        {
+          "id": "route-2",
+          "providers": [
+            "lifi"
+          ],
+          "amountOutRaw": "73336403086186000",
+          "reportedExternalCostUsd": "0.0070",
+          "economics": "INCOMPLETE_COSTS",
+          "missingCosts": [
+            "ERC-20 approval gas not measured"
+          ]
+        },
+        {
+          "id": "route-3",
+          "providers": [
+            "lifi"
+          ],
+          "amountOutRaw": "73272534356241191",
+          "reportedExternalCostUsd": "0.0035",
+          "economics": "INCOMPLETE_COSTS",
+          "missingCosts": [
+            "ERC-20 approval gas not measured"
+          ]
+        },
+        {
+          "id": "route-4",
+          "providers": [
+            "lifi"
+          ],
+          "amountOutRaw": "72692654691696700",
+          "reportedExternalCostUsd": "0.0070",
+          "economics": "INCOMPLETE_COSTS",
+          "missingCosts": [
+            "ERC-20 approval gas not measured"
+          ]
+        }
+      ],
+      "rawReportSha256": "1d84eda188f93281a7c88f4465202607043421d07ba8ae773a90c76d8ce75701"
+    }
+  ],
+  "checks": {
+    "researchTests": {
+      "command": "npm run research:test",
+      "status": "PASS",
+      "passed": 22,
+      "failed": 0
+    },
+    "researchTypecheck": {
+      "command": "npm run research:typecheck",
+      "status": "PASS"
+    },
+    "projectTypecheck": {
+      "command": "npx tsc --noEmit",
+      "status": "PASS"
+    },
+    "patchWhitespace": {
+      "command": "git diff --check",
+      "status": "PASS"
+    }
+  },
+  "replay": {
+    "networkUsed": false,
+    "liveRouteCount": 8,
+    "replayRouteCount": 8,
+    "sameOutputMultiset": true,
+    "sameEconomicConclusion": true,
+    "limitation": "Concurrent wall-time scheduling is not replayed exactly; request counts can differ."
+  }
+}

@@ -1,0 +1,238 @@
+{
+  "lifi": {
+    "capturedAt": 1790169940593,
+    "endpoint": "https://li.quest/v1/advanced/routes",
+    "response": {
+      "routes": [
+        {
+          "id": "5c55d187-1683-41f8-ac4a-ec36ee544444",
+          "fromChainId": 137,
+          "toChainId": 100,
+          "fromAmount": "200000000",
+          "fromToken": {
+            "chainId": 137,
+            "address": "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359",
+            "decimals": 6,
+            "symbol": "USDC"
+          },
+          "toToken": {
+            "chainId": 100,
+            "address": "0x420CA0f9B9b604cE0fd9C18EF134C705e5Fa3430",
+            "decimals": 18,
+            "symbol": "EURe"
+          },
+          "toAmount": "173382611583243031148",
+          "toAmountMin": "172515698525326815992",
+          "steps": [
+            {
+              "action": {
+                "fromToken": {
+                  "chainId": 137,
+                  "address": "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359",
+                  "decimals": 6,
+                  "symbol": "USDC"
+                }
+              },
+              "estimate": {
+                "gasCosts": [
+                  {
+                    "type": "SEND",
+                    "price": "325683038813",
+                    "estimate": "216000",
+                    "limit": "459000",
+                    "amount": "70347536383608000",
+                    "amountUSD": "0.0075",
+                    "token": {
+                      "address": "0x0000000000000000000000000000000000000000",
+                      "chainId": 137,
+                      "symbol": "POL",
+                      "decimals": 18,
+                      "name": "Polygon Ecosystem Token",
+                      "coinKey": "POL",
+                      "logoURI": "https://static.debank.com/image/matic_token/logo_url/matic/6f5a6b6f0732a7a235131bd7804d357c.png",
+                      "priceUSD": "0.10672099940964",
+                      "tags": [],
+                      "verificationStatus": "verified",
+                      "verificationStatusBreakdown": [
+                        {
+                          "provider": "hypernative",
+                          "result": "verified",
+                          "providerResult": "accept"
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "feeCosts": [
+                  {
+                    "name": "LIFI Fixed Fee",
+                    "description": "Fixed LIFI fee, independent of any other fee",
+                    "token": {
+                      "address": "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359",
+                      "chainId": 137,
+                      "symbol": "USDC",
+                      "decimals": 6,
+                      "name": "USD Coin",
+                      "coinKey": "USDC",
+                      "logoURI": "https://static.debank.com/image/coin/logo_url/usdc/e87790bfe0b3f2ea855dc29069b38818.png",
+                      "priceUSD": "1.0005971435",
+                      "tags": [
+                        "stablecoin"
+                      ],
+                      "verificationStatus": "verified",
+                      "verificationStatusBreakdown": [
+                        {
+                          "provider": "hypernative",
+                          "result": "verified",
+                          "providerResult": "accept"
+                        }
+                      ]
+                    },
+                    "amount": "500000",
+                    "amountUSD": "0.5003",
+                    "percentage": "0.0025",
+                    "included": true,
+                    "feeSplit": {
+                      "lifiFee": "500000",
+                      "integratorFee": "0",
+                      "recipients": [
+                        {
+                          "name": "lifi",
+                          "type": "FIXED",
+                          "fee": "500000"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "name": "Relayer Service fee",
+                    "description": "Relay bridge service fee",
+                    "token": {
+                      "address": "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359",
+                      "chainId": 137,
+                      "symbol": "USDC",
+                      "decimals": 6,
+                      "name": "USD Coin",
+                      "coinKey": "USDC",
+                      "logoURI": "https://static.debank.com/image/coin/logo_url/usdc/e87790bfe0b3f2ea855dc29069b38818.png",
+                      "priceUSD": "1.0005971435",
+                      "tags": [
+                        "stablecoin"
+                      ],
+                      "verificationStatus": "verified",
+                      "verificationStatusBreakdown": [
+                        {
+                          "provider": "hypernative",
+                          "result": "verified",
+                          "providerResult": "accept"
+                        }
+                      ]
+                    },
+                    "amount": "1536201",
+                    "amountUSD": "1.5371",
+                    "percentage": "0.0077",
+                    "included": true
+                  }
+                ],
+                "executionDuration": 3
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "projectionOnly": true
+  },
+  "relay": {
+    "capturedAt": 1790169940595,
+    "endpoint": "https://api.relay.link/quote/v2",
+    "response": {
+      "steps": [
+        {
+          "id": "approve",
+          "kind": "transaction"
+        },
+        {
+          "id": "deposit",
+          "kind": "transaction"
+        }
+      ],
+      "fees": {
+        "gas": {
+          "currency": {
+            "chainId": 137,
+            "address": "0x0000000000000000000000000000000000000000",
+            "symbol": "POL",
+            "name": "POL",
+            "decimals": 18,
+            "metadata": {
+              "logoURI": "https://assets.coingecko.com/coins/images/4713/thumb/matic-token-icon.png?1624446912",
+              "verified": true
+            }
+          },
+          "amount": "40346058253532850",
+          "amountFormatted": "0.04034605825353285",
+          "amountUsd": "0.004302",
+          "minimumAmount": "40346058253532850"
+        }
+      },
+      "details": {
+        "currencyIn": {
+          "currency": {
+            "chainId": 137,
+            "address": "0x3c499c542cef5e3811e1192ce70d8cc03d5c3359",
+            "symbol": "USDC",
+            "name": "USD Coin",
+            "decimals": 6,
+            "metadata": {
+              "logoURI": "https://ethereum-optimism.github.io/data/USDC/logo.png",
+              "verified": true
+            }
+          },
+          "amount": "200000000",
+          "amountFormatted": "200.0",
+          "amountUsd": "199.963400",
+          "minimumAmount": "200000000"
+        },
+        "currencyOut": {
+          "currency": {
+            "chainId": 100,
+            "address": "0x420ca0f9b9b604ce0fd9c18ef134c705e5fa3430",
+            "symbol": "EURe",
+            "name": "Monerium EURe",
+            "decimals": 18,
+            "metadata": {
+              "logoURI": "https://coin-images.coingecko.com/coins/images/54303/large/eure.jpg?1739167959",
+              "verified": true
+            }
+          },
+          "amount": "173817193217081909028",
+          "amountFormatted": "173.817193217081909028",
+          "amountUsd": "198.151600",
+          "minimumAmount": "172948107250996499482"
+        },
+        "timeEstimate": 3
+      }
+    },
+    "projectionOnly": true
+  },
+  "cow": {
+    "capturedAt": 1790169958088,
+    "endpoint": "https://api.cow.fi/xdai/api/v1/quote",
+    "response": {
+      "id": 209214705,
+      "verified": false,
+      "expiration": "2026-09-23T13:28:07.507084977Z",
+      "protocolFeeBps": "0.3",
+      "quote": {
+        "sellToken": "0xe91d153e0b41518a2ce8dd3d7944fa863463a97d",
+        "buyToken": "0x420ca0f9b9b604ce0fd9c18ef134c705e5fa3430",
+        "sellAmount": "198447628797331509572",
+        "feeAmount": "50000000000",
+        "buyAmount": "173982513740429632217",
+        "kind": "sell"
+      }
+    },
+    "projectionOnly": true
+  }
+}

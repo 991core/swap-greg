@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "research:routes": "node --experimental-strip-types scripts/route-research.ts",
+    "research:test": "node --experimental-strip-types --test tests/routing-research/*.test.ts",
+    "research:typecheck": "tsc -p tsconfig.research.json"
   },
   "dependencies": {
     "@lifi/sdk": "^4.3.0",
