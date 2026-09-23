@@ -9,10 +9,9 @@ soumet aucune transaction.
 ## Installation et commandes
 
 Node **22.18 ou plus récent** est nécessaire pour exécuter les fichiers TypeScript
-directement. Node 24 a été utilisé pour la validation. Les dépendances de l'app
-restent celles du lockfile. Sur le snapshot initial, `npm ci` rencontre un conflit
-de peer dependencies React / React Native ; `npm ci --legacy-peer-deps` permet
-d'installer ce lockfile. Le CLI lui-même n'ajoute aucune dépendance d'exécution.
+directement. Node 24 a été utilisé pour la validation. Installez les dépendances
+avec `npm install` (ou `npm ci` pour une installation conforme au lockfile).
+Le CLI lui-même n'ajoute aucune dépendance d'exécution.
 
 Depuis `swap-aggregator/` :
 
