@@ -74,6 +74,11 @@ n'a été obtenue ; 0 indique des devis obtenus, pas un gain économique démont
    entre les deux chaînes, sans boucle. Chaque arête reçoit un devis au montant
    exact annoncé par la précédente. Le moteur peut explorer swap → bridge,
    bridge → swap, swap → bridge → swap et des routes locales.
+   À chaque profondeur, les appels vers la cible passent avant les détours.
+   Ils alternent entre les intermédiaires avant de tester leur deuxième montant
+   retenu. Un budget insuffisant peut encore limiter cette couverture :
+   `pivotCoverage` et le tableau Markdown indiquent les tentatives et les succès
+   vers la cible pour chaque actif. Aucun appel ne signifie pas « aucune route ».
 5. Conservation par actif des états avec la meilleure sortie et, si connu, un
    état aux coûts externes plus faibles. La largeur, le nombre d'intermédiaires,
    la durée et les appels API sont bornés. Les coupures sont consignées.
@@ -106,6 +111,27 @@ les `gasCosts` des étapes principales et les `feeCosts` avec `included: false`
 s'ajoutent. Les `includedSteps` ne sont pas additionnés une seconde fois. Pour Relay,
 `fees.gas` n'est reconnu comme coût externe que si sa devise est le natif source.
 Pour CoW, `sellAmountBeforeFee = sellAmount + feeAmount` est vérifié.
+
+Pour Relay, lorsque chaque transaction à effectuer possède un gas et un prix
+sur la chaîne source, le coût est reconstruit avec `gas × maxFeePerGas`
+(ou `gas × gasPrice`). L'approbation reconnue du token d'entrée est comprise.
+Le récapitulatif `fees.gas` sert alors uniquement à convertir les unités natives
+en USD par proportion, avec arrondi vers le haut à 18 décimales ; il n'est pas
+ajouté au total. Ce sont des estimations de l'API utilisant son prix USD arrondi,
+pas une simulation Hermes ni une garantie du coût réellement payé. Une
+transaction sur une autre chaîne ou sans paramètres suffisants maintient les
+coûts incomplets. Le benchmark `--assume-preapproved` exclut les approbations.
+
+Le rapport affiche les chemins, les montants décimaux, les estimations de gas et
+les frais explicitement retournés, y compris les destinataires LI.FI. Les frais
+`included: true` restent informatifs. `options.fee: 0` demande zéro frais Hermes ;
+cela ne garantit pas l'absence de frais propres à LI.FI. Les frais Relay
+`relayer` et `app` sont affichés ; les sous-totaux `relayerService` et `relayerGas`
+ne sont pas additionnés une deuxième fois au montant `relayer`.
+
+Un replay reste strictement hors ligne. Après un changement d'exploration, les
+nouveaux appels absents de l'enregistrement produisent une erreur explicite,
+jamais un devis inventé. Relancer une recherche réelle pour tester ces chemins.
 
 | Statut | Interprétation |
 |---|---|

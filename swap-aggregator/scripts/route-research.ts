@@ -1,6 +1,7 @@
 import { parseArgs } from "node:util";
 import { appendFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve, join, dirname } from "node:path";
+import { renderReport } from "../lib/routing/research/report.ts";
 import { searchRoutes } from "../lib/routing/research/engine.ts";
 import { rawAmount, validateAsset } from "../lib/routing/research/amounts.ts";
 import { createJsonHttp, createReplayHttp } from "../lib/routing/research/http.ts";
@@ -8,7 +9,7 @@ import type { HttpEvidence } from "../lib/routing/research/http.ts";
 import { createProviders } from "../lib/routing/research/providers.ts";
 import { discoverPivots, fetchValuation } from "../lib/routing/research/catalog.ts";
 import type { DiscoveryResult } from "../lib/routing/research/catalog.ts";
-import type { QuoteRequest, SearchOptions, SearchReport } from "../lib/routing/research/types.ts";
+import type { QuoteRequest, SearchOptions } from "../lib/routing/research/types.ts";
 
 interface CaseFile extends Omit<QuoteRequest, "wallet"> {
   name?: string;
@@ -52,19 +53,6 @@ separately. Missing cost data leaves the economic comparison UNRESOLVED.
 
 function save(path: string, data: unknown): void {
   writeFileSync(path, JSON.stringify(data, null, 2) + "\n", { flag: "wx" });
-}
-
-function render(report: SearchReport): string {
-  const lines = ["# Hermes — comparaison de devis", "", `Fenêtre : ${new Date(report.startedAt).toISOString()} → ${new Date(report.finishedAt).toISOString()}`,
-    `Appels : ${report.requestsMade}. Cache : ${report.cacheHits}. Recherche bornée : ${report.truncated ? report.stopReasons.join(", ") : "aucune limite atteinte"}.`, "",
-    "Tous les montants ci-dessous sont des entiers dans les unités minimales du token cible.", "",
-    "| Route | Fournisseurs | Sortie | Coûts externes rapportés USD | Net après ces coûts | Statut |",
-    "|---|---|---:|---:|---:|---|",
-    ...report.routes.map((r) => `| ${r.id} | ${r.legs.map((q) => q.provider).join(" → ")} | ${r.amountOut} | ${r.reportedExternalCostUsd ?? "inconnu"} | ${r.netAfterReportedCosts ?? "inconnu"} | ${r.economics} |`),
-    "", `Comparaison : **${report.comparison.status}**. Gain estimé en unités brutes : ${report.comparison.gainRaw ?? "non établi"}.`,
-    report.comparison.reason, "", "## Hypothèses", "", ...report.assumptions.map((s) => `- ${s}`), "", "## Limites par route", "",
-    ...report.routes.flatMap((r) => r.warnings.map((s) => `- ${r.id}: ${s}`)), "", "Les réponses, erreurs et horodatages sont dans evidence.jsonl. Aucune exécution n'a été validée.", ""];
-  return lines.join("\n");
 }
 
 async function main(): Promise<void> {
@@ -136,7 +124,7 @@ async function main(): Promise<void> {
       { ...options, ...(recorded ? { now: () => clock.now } : {}) });
     anyQuotes ||= report.routes.length > 0;
     save(join(dir, "report.json"), report);
-    writeFileSync(join(dir, "report.md"), render(report), { flag: "wx" });
+    writeFileSync(join(dir, "report.md"), renderReport(report), { flag: "wx" });
     console.log(`${report.routes.length} route(s), ${report.requestsMade} calls, comparison=${report.comparison.status}. ${dir}/report.md`);
   }
   if (!anyQuotes) process.exitCode = 2;

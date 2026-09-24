@@ -1,7 +1,7 @@
-import { NATIVE, assetKey, rawAmount, sumUsd, validateAsset, validDecimal } from "./amounts.ts";
+import { NATIVE, assetKey, proportionalUsdCeil, rawAmount, sumUsd, validateAsset, validDecimal } from "./amounts.ts";
 import { list, object, text } from "./http.ts";
 import type { JsonHttp } from "./http.ts";
-import type { Asset, Quote, QuoteProvider, QuoteRequest } from "./types.ts";
+import type { Asset, GasEstimate, Quote, QuoteFee, QuoteProvider, QuoteRequest } from "./types.ts";
 
 export interface ProviderOptions {
   lifiApiKey?: string;
@@ -23,6 +23,25 @@ function assertAsset(actual: Asset, expected: Asset): void {
   if (assetKey(actual) !== assetKey(expected) || actual.decimals !== expected.decimals) throw new Error("Provider returned a different token or decimals");
 }
 
+function optionalRaw(value: unknown): string | null {
+  try { return rawAmount(value as string, true).toString(); } catch { return null; }
+}
+
+function feeDescription(value: unknown): QuoteFee {
+  const fee = object(value);
+  let token: Asset | undefined;
+  try { token = readAsset(fee.token ?? fee.currency); validateAsset(token); } catch { token = undefined; }
+  const split = fee.feeSplit && typeof fee.feeSplit === "object" ? object(fee.feeSplit) : {};
+  const recipients = Array.isArray(split.recipients) ? split.recipients.flatMap((r) => {
+    const recipient = object(r);
+    const amountRaw = optionalRaw(recipient.fee);
+    return typeof recipient.name === "string" && amountRaw !== null ? [{ name: recipient.name, amountRaw }] : [];
+  }) : [];
+  return { name: typeof fee.name === "string" ? fee.name : "Provider fee", token,
+    amountRaw: optionalRaw(fee.amount), amountUsd: validDecimal(fee.amountUSD ?? fee.amountUsd) ? (fee.amountUSD ?? fee.amountUsd) as string : null,
+    included: typeof fee.included === "boolean" ? fee.included : null, recipients };
+}
+
 function base(provider: string, req: QuoteRequest, startedAt: number, opts: ProviderOptions): Omit<Quote, "id" | "amountOut" | "minimumOut" | "externalCostUsd" | "missingCosts" | "durationSeconds"> {
   return { provider, from: req.from, to: req.to, amountIn: req.amount, quotedAt: startedAt,
     expiresAt: startedAt + (opts.quoteTtlMs ?? 60000),
@@ -38,6 +57,7 @@ export function normalizeLifi(body: unknown, req: QuoteRequest, startedAt: numbe
       throw new Error("LI.FI response does not match exact input or chain ids");
     }
     const costs: string[] = [];
+    const fees: QuoteFee[] = [];
     const missing: string[] = [];
     let duration = 0;
     let durationKnown = true;
@@ -57,6 +77,7 @@ export function normalizeLifi(body: unknown, req: QuoteRequest, startedAt: numbe
       if (!Array.isArray(estimate.feeCosts)) missing.push("LI.FI external fee coverage unavailable");
       else for (const f of estimate.feeCosts) {
         const fee = object(f);
+        fees.push(feeDescription(fee));
         if (fee.included === true) continue;
         if (fee.included === false && validDecimal(fee.amountUSD)) costs.push(fee.amountUSD);
         else missing.push("LI.FI fee inclusion or USD valuation unknown");
@@ -70,6 +91,7 @@ export function normalizeLifi(body: unknown, req: QuoteRequest, startedAt: numbe
     if (!gasKnown) missing.push("LI.FI source execution gas unavailable");
     return { ...base("lifi", req, startedAt, opts), id: text(route.id), amountOut: text(route.toAmount),
       minimumOut: typeof route.toAmountMin === "string" ? route.toAmountMin : null,
+      fees, gasAccounting: "provider_summary",
       externalCostUsd: gasKnown ? sumUsd(costs) : null, missingCosts: [...new Set(missing)], durationSeconds: durationKnown ? duration : null };
   });
 }
@@ -89,14 +111,67 @@ export function normalizeRelay(body: unknown, req: QuoteRequest, startedAt: numb
     typeof gasToken.address === "string" && gasToken.address.toLowerCase() === NATIVE && validDecimal(gas.amountUsd);
   const missing: string[] = [];
   if (!recognizedGas) missing.push("Relay source gas could not be identified as external native-token gas");
-  if (req.from.address.toLowerCase() !== NATIVE && !opts.assumePreapproved) missing.push("ERC-20 approval gas not measured");
   const steps = list(data.steps);
   if (!steps.length) throw new Error("Relay returned no execution steps");
-  // Even a native input can precede another user transaction: coverage must be explicit.
-  if (steps.filter((s) => object(s).kind === "transaction").length > 1) missing.push("Relay additional transaction gas coverage unverified");
-  return [{ ...base("relay", req, startedAt, opts), id: typeof data.requestId === "string" ? data.requestId : `relay-${startedAt}-${req.amount}`,
+  const estimates: GasEstimate[] = [];
+  const spenders = new Set<string>();
+  for (const value of steps) {
+    const step = object(value);
+    if (step.kind !== "transaction" || step.id === "approve" || !Array.isArray(step.items)) continue;
+    for (const value of step.items) {
+      const item = object(value);
+      if (!item.data || typeof item.data !== "object" || Array.isArray(item.data)) continue;
+      const tx = object(item.data);
+      if (tx.chainId === req.from.chainId && typeof tx.to === "string") spenders.add(tx.to.toLowerCase());
+    }
+  }
+  let complete = recognizedGas;
+  let approvalCovered = false;
+  const reference = optionalRaw(gas.amount);
+  const positiveUsd = recognizedGas && /[1-9]/.test(text(gas.amountUsd));
+  for (const value of steps) {
+    const step = object(value);
+    if (step.kind === "signature") continue;
+    if (step.kind !== "transaction" || !Array.isArray(step.items) || !step.items.length) { complete = false; continue; }
+    for (const value of step.items) {
+      const item = object(value);
+      if (item.status === "complete") continue;
+      if (step.id === "approve" && opts.assumePreapproved) continue;
+      try {
+        const tx = object(item.data);
+        if (tx.chainId !== req.from.chainId || !recognizedGas || !positiveUsd || reference === null || BigInt(reference) === BigInt(0)) {
+          throw new Error("No native gas valuation for this transaction chain");
+        }
+        const units = rawAmount(tx.gas as string);
+        const cap = tx.maxFeePerGas !== undefined;
+        const price = rawAmount((cap ? tx.maxFeePerGas : tx.gasPrice) as string);
+        const amount = units * price;
+        estimates.push({ step: typeof step.id === "string" ? step.id : "transaction", chainId: tx.chainId as number,
+          gas: units.toString(), priceWei: price.toString(), basis: cap ? "gas_times_max_fee" : "gas_times_gas_price",
+          amountRaw: amount.toString(), amountUsd: proportionalUsdCeil(text(gas.amountUsd), amount, BigInt(reference)) });
+        // Recognize only an approval of the actual input token for a sufficient amount.
+        const calldata = typeof tx.data === "string" ? tx.data : "";
+        if (step.id === "approve" && typeof tx.to === "string" && tx.to.toLowerCase() === req.from.address.toLowerCase() &&
+            typeof tx.from === "string" && tx.from.toLowerCase() === req.wallet.toLowerCase() &&
+            /^0x095ea7b3[0-9a-f]{128}$/i.test(calldata) &&
+            spenders.has(`0x${calldata.slice(34, 74)}`.toLowerCase()) &&
+            BigInt(`0x${calldata.slice(74)}`) >= rawAmount(req.amount)) approvalCovered = true;
+      } catch { complete = false; }
+    }
+  }
+  // The fee summary is a valuation reference, never an additional charge on top of item estimates.
+  const useTransactions = complete && estimates.length > 0;
+  if (!useTransactions) missing.push("Relay transaction gas coverage unverified");
+  if (req.from.address.toLowerCase() !== NATIVE && !opts.assumePreapproved && !(useTransactions && approvalCovered)) missing.push("ERC-20 approval gas not measured");
+  const common = base("relay", req, startedAt, opts);
+  const embeddedFees = ["relayer", "app"].flatMap((key) => fees[key] ? [feeDescription({ ...object(fees[key]),
+    name: key === "relayer" ? "Relay relayer (API aggregate)" : "Relay app fee", included: true })] : []);
+  return [{ ...common, id: typeof data.requestId === "string" ? data.requestId : `relay-${startedAt}-${req.amount}`,
     amountOut: text(output.amount), minimumOut: typeof output.minimumAmount === "string" ? output.minimumAmount : null,
-    externalCostUsd: recognizedGas ? text(gas.amountUsd) : null, missingCosts: missing,
+    externalCostUsd: useTransactions ? sumUsd(estimates.map((e) => e.amountUsd)) : recognizedGas ? text(gas.amountUsd) : null,
+    gasEstimates: useTransactions ? estimates : [], gasAccounting: useTransactions ? "transactions" : "provider_summary",
+    fees: embeddedFees, missingCosts: missing,
+    warnings: [...common.warnings, ...(useTransactions ? ["Gas estimated from API transaction gas and fee fields; USD conversion uses the rounded provider gas valuation. Hermes has not simulated execution."] : [])],
     durationSeconds: typeof details.timeEstimate === "number" && details.timeEstimate >= 0 ? details.timeEstimate : null }];
 }
 

@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { assetKey, rawAmount, sumUsd, usdToRawCeil } from "../../lib/routing/research/amounts.ts";
+import { renderReport } from "../../lib/routing/research/report.ts";
 import { searchRoutes } from "../../lib/routing/research/engine.ts";
 import type { Asset, Quote, QuoteProvider, QuoteRequest, SearchOptions } from "../../lib/routing/research/types.ts";
 
@@ -181,4 +182,41 @@ test("money calculations are exact and external cost rounds up", () => {
   assert.throws(() => rawAmount("-1"));
   assert.throws(() => rawAmount((BigInt(2) ** BigInt(256)).toString()));
   assert.throws(() => usdToRawCeil("1", "0", 18));
+});
+
+test("finishes paths via every pivot before detours consume a tight budget", async () => {
+  const pivots = Array.from({ length: 6 }, (_, i): Asset => ({ chainId: 100,
+    address: "0x" + (i === 5 ? "0" : String(i + 4)).repeat(40), decimals: 18, symbol: i === 5 ? "xDAI" : `P${i}` }));
+  const seen: QuoteRequest[] = [];
+  const providers = ["lifi", "relay"].map((id) => provider(id, (r) => {
+    seen.push(r);
+    return [makeQuote(id, r, "2000000"), makeQuote(id, r, "1000000")];
+  }));
+  // 14 initial calls, then 12 calls to finish the best retained state of all 6 pivots.
+  const result = await searchRoutes(request, providers, { ...defaults, pivots, maxRequests: 26, concurrency: 4 });
+  assert.equal(result.requestsMade, 26);
+  assert.ok(result.pivotCoverage.every((p) => p.reached && p.targetAttempts === 2 && p.targetSuccesses === 2));
+  for (const pivot of pivots) assert.ok(result.routes.some((r) => r.legs.length === 2 && assetKey(r.legs[0].to) === assetKey(pivot)));
+  assert.ok(seen.filter((r) => assetKey(r.from) !== assetKey(A)).every((r) => assetKey(r.to) === assetKey(B)));
+  assert.ok(result.stopReasons.includes("request_budget"));
+});
+
+test("an insufficient budget explicitly leaves reached pivots untested", async () => {
+  const p = provider("lifi", (r) => [makeQuote("lifi", r, "1000000")]);
+  const result = await searchRoutes(request, [p], { ...defaults, pivots: [X, S], maxRequests: 3 });
+  assert.equal(result.pivotCoverage.length, 2);
+  assert.ok(result.pivotCoverage.every((p) => p.reached && p.targetAttempts === 0 && p.targetSuccesses === 0));
+});
+
+
+test("report shows decimal amounts, pivot coverage and included fee recipients", async () => {
+  const result = await searchRoutes(request, fixture(), defaults);
+  result.routes[0].legs[0].fees = [{ name: "LIFI Fixed Fee", token: A, amountRaw: "500000", amountUsd: "0.5001",
+    included: true, recipients: [{ name: "lifi", amountRaw: "500000" }] }];
+  const markdown = renderReport(result);
+  assert.ok(markdown.includes("97.99"));
+  assert.ok(markdown.includes("USDC@100"));
+  assert.ok(markdown.includes("Couverture des intermédiaires"));
+  assert.ok(markdown.includes("0.5 USDC ; 0.5001 USD ; inclus dans la sortie ; destinataires : lifi : 0.5"));
+  assert.equal(result.routes[0].netAfterReportedCosts, "97990000000000000000");
 });

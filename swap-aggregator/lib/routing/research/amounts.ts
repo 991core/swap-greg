@@ -60,3 +60,21 @@ export function usdToRawCeil(usd: string, usdPerToken: string, decimals: number)
 export function compareRawDescending(a: string, b: string): number {
   return BigInt(a) === BigInt(b) ? 0 : BigInt(a) > BigInt(b) ? -1 : 1;
 }
+
+export function formatRaw(value: string, decimals: number): string {
+  const n = BigInt(value);
+  const sign = n < BigInt(0) ? "-" : "";
+  const digits = (n < BigInt(0) ? -n : n).toString().padStart(decimals + 1, "0");
+  if (!decimals) return sign + digits;
+  const fraction = digits.slice(-decimals).replace(/0+$/, "");
+  return sign + digits.slice(0, -decimals) + (fraction ? `.${fraction}` : "");
+}
+
+/** Scale a quoted USD valuation by a native-unit ratio, rounding up at 18 decimals. */
+export function proportionalUsdCeil(usd: string, amount: bigint, reference: bigint): string {
+  if (amount < BigInt(0) || reference <= BigInt(0)) throw new Error("Invalid gas valuation ratio");
+  const parts = decimalParts(usd);
+  const numerator = parts.raw * amount * BigInt(10) ** BigInt(18);
+  const denominator = reference * BigInt(10) ** BigInt(parts.scale);
+  return formatRaw(((numerator + denominator - BigInt(1)) / denominator).toString(), 18);
+}

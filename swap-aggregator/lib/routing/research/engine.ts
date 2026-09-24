@@ -104,17 +104,28 @@ export async function searchRoutes(request: QuoteRequest, providers: QuoteProvid
   }
 
   const completed: State[] = [];
+  const reached = new Set<string>();
   let frontier: State[] = [{ asset: request.from, amount: request.amount, legs: [], visited: [assetKey(request.from)], crossed: false }];
   for (let depth = 0; depth < maxLegs && frontier.length; depth++) {
     const tasks: Array<() => Promise<State[]>> = [];
+    const byAsset = new Map<string, State[]>();
     for (const state of frontier) {
-      // Destination first: always spend the first calls on fair, direct baselines.
-      for (const destination of assets.values()) {
-        if (state.visited.includes(assetKey(destination))) continue;
-        if (depth === maxLegs - 1 && assetKey(destination) !== assetKey(request.to)) continue;
-        const cross = state.asset.chainId !== destination.chainId;
-        if (cross && (state.crossed || destination.chainId !== request.to.chainId)) continue;
-        for (const provider of providers) {
+      const key = assetKey(state.asset);
+      byAsset.set(key, [...(byAsset.get(key) ?? []), state]);
+    }
+    // Complete paths from EVERY pivot before spending calls on further detours.
+    // Rotate across assets before trying the second retained amount for an asset.
+    const lanes = [...byAsset.values()];
+    const ranks = Math.max(...lanes.map((lane) => lane.length));
+    for (const destination of assets.values()) {
+      for (let rank = 0; rank < ranks; rank++) {
+        for (const provider of providers) for (const lane of lanes) {
+          const state = lane[rank];
+          if (!state) continue;
+          if (state.visited.includes(assetKey(destination))) continue;
+          if (depth === maxLegs - 1 && assetKey(destination) !== assetKey(request.to)) continue;
+          const cross = state.asset.chainId !== destination.chainId;
+          if (cross && (state.crossed || destination.chainId !== request.to.chainId)) continue;
           if (!provider.supports(state.asset, destination)) continue;
           tasks.push(async () => (await quote(provider, { ...request, from: state.asset, to: destination, amount: state.amount }))
             .map((q) => ({ asset: destination, amount: q.amountOut, legs: [...state.legs, q], visited: [...state.visited, assetKey(destination)], crossed: state.crossed || cross })));
@@ -128,6 +139,7 @@ export async function searchRoutes(request: QuoteRequest, providers: QuoteProvid
     }));
     const groups = new Map<string, State[]>();
     for (const state of slots.flat()) {
+      reached.add(assetKey(state.asset));
       if (assetKey(state.asset) === assetKey(request.to)) { completed.push(state); continue; }
       const key = assetKey(state.asset);
       groups.set(key, [...(groups.get(key) ?? []), state]);
@@ -188,6 +200,12 @@ export async function searchRoutes(request: QuoteRequest, providers: QuoteProvid
   return {
     schemaVersion: 1, request, startedAt, finishedAt, routes, diagnostics, requestsMade, cacheHits,
     truncated: stopReasons.size > 0, stopReasons: [...stopReasons],
+    pivotCoverage: [...assets.values()].filter((asset) => ![assetKey(request.from), assetKey(request.to)].includes(assetKey(asset)))
+      .map((asset) => {
+        const attempts = diagnostics.filter((d) => d.from === assetKey(asset) && d.to === assetKey(request.to) && d.status !== "invalid_quote");
+        return { asset, reached: reached.has(assetKey(asset)), targetAttempts: attempts.length,
+          targetSuccesses: attempts.filter((d) => d.status === "ok").length };
+      }),
     comparison: baseline && candidate ? {
       status: "QUOTED_ONLY", baselineId: baseline.id, candidateId: candidate.id,
       gainRaw: (BigInt(candidate.netAfterReportedCosts!) - BigInt(baseline.netAfterReportedCosts!)).toString(),

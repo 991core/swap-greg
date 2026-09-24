@@ -106,3 +106,66 @@ test("normalizers accept projected real API responses while preserving cost unce
   assert.equal(normalized.amountOut, cow.buyAmount);
   assert.ok(normalized.missingCosts.includes("CoW additional protocol fee treatment requires verification"));
 });
+
+// Transaction gas parameters projected from the supplied 2026-09-23 capture.
+// Synthetic wallet, tokens and approval calldata keep user details out of fixtures.
+function relayTransactions() {
+  const tx = { from: req.wallet, to: "0x" + "4".repeat(40), chainId: 137,
+    gas: "115321", maxFeePerGas: "353628538606", value: "0", data: "0x1234" };
+  return { steps: [
+    { id: "approve", kind: "transaction", items: [{ status: "incomplete", data: { ...tx, to: from.address, gas: "100804",
+      data: "0x095ea7b3" + "4".repeat(40).padStart(64, "0") + BigInt(req.amount).toString(16).padStart(64, "0") } }] },
+    { id: "deposit", kind: "transaction", items: [{ status: "incomplete", data: tx }] },
+  ], fees: { gas: { amount: "40780796700582526", amountUsd: "0.004093", currency: { chainId: 137, address: NATIVE, decimals: 18, symbol: "POL" } } },
+  details: { currencyIn: { currency: from, amount: req.amount }, currencyOut: { currency: to, amount: "99000000000000000000" } } };
+}
+
+test("Relay counts approval and deposit gas once using exact native-unit ratios", () => {
+  const [q] = normalizeRelay(relayTransactions(), req, now);
+  assert.equal(q.externalCostUsd, "0.007670759228588029");
+  assert.equal(q.gasAccounting, "transactions");
+  assert.equal(q.gasEstimates?.length, 2);
+  assert.equal(q.gasEstimates?.[0].amountRaw, "35647171205639224");
+  assert.equal(q.gasEstimates?.[1].amountUsd, "0.004093");
+  assert.deepEqual(q.missingCosts, []);
+  assert.equal(q.amountOut, "99000000000000000000");
+  assert.equal(normalizeRelay(relayTransactions(), req, now, { assumePreapproved: true })[0].externalCostUsd, "0.004093");
+});
+
+test("Relay keeps missing or mismatched transaction gas unresolved", () => {
+  for (const mutation of [
+    (b: ReturnType<typeof relayTransactions>) => { b.steps[0].items[0].data.gas = ""; },
+    (b: ReturnType<typeof relayTransactions>) => { b.steps[1].items[0].data.chainId = 100; },
+    (b: ReturnType<typeof relayTransactions>) => { b.fees.gas.amount = "0"; },
+    (b: ReturnType<typeof relayTransactions>) => { b.fees.gas.amountUsd = "0"; },
+  ]) {
+    const body = relayTransactions(); mutation(body);
+    const [q] = normalizeRelay(body, req, now);
+    assert.equal(q.gasAccounting, "provider_summary");
+    assert.ok(q.missingCosts.includes("Relay transaction gas coverage unverified"));
+    assert.ok(q.missingCosts.includes("ERC-20 approval gas not measured"));
+  }
+  const wrongSpender = relayTransactions();
+  wrongSpender.steps[0].items[0].data.data = wrongSpender.steps[0].items[0].data.data.replace("4".repeat(40), "5".repeat(40));
+  assert.ok(normalizeRelay(wrongSpender, req, now)[0].missingCosts.includes("ERC-20 approval gas not measured"));
+  const otherToken = relayTransactions(); otherToken.steps[0].items[0].data.to = to.address;
+  assert.ok(normalizeRelay(otherToken, req, now)[0].missingCosts.includes("ERC-20 approval gas not measured"));
+});
+
+test("Relay accounts for multiple items within one transaction step", () => {
+  const body = relayTransactions();
+  body.steps[1].items.push(structuredClone(body.steps[1].items[0]));
+  assert.equal(normalizeRelay(body, req, now)[0].externalCostUsd, "0.011763759228588029");
+});
+
+test("LI.FI exposes its fee recipient without subtracting included fees or nested duplicates", () => {
+  const body = lifiFixture();
+  Object.assign(body.routes[0].steps[0].estimate.feeCosts[0], { name: "LIFI Fixed Fee", token: { ...from, symbol: "USDC" },
+    amount: "500000", amountUSD: "0.5001", feeSplit: { lifiFee: "500000", integratorFee: "0", recipients: [{ name: "lifi", fee: "500000" }] } });
+  const [q] = normalizeLifi(body, req, now);
+  assert.equal(q.externalCostUsd, "1.2");
+  assert.equal(q.fees?.length, 2);
+  assert.deepEqual(q.fees?.[0].recipients, [{ name: "lifi", amountRaw: "500000" }]);
+  assert.equal(q.fees?.[0].included, true);
+  assert.equal(q.fees?.[0].amountUsd, "0.5001");
+});

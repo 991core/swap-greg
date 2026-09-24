@@ -31,6 +31,29 @@ export interface Quote {
   missingCosts: string[];
   durationSeconds: number | null;
   warnings: string[];
+  /** Informational breakdown; included fees are already reflected in amountOut. */
+  fees?: QuoteFee[];
+  gasEstimates?: GasEstimate[];
+  gasAccounting?: "transactions" | "provider_summary";
+}
+
+export interface QuoteFee {
+  name: string;
+  amountRaw: string | null;
+  amountUsd: string | null;
+  token?: Asset;
+  included: boolean | null;
+  recipients: Array<{ name: string; amountRaw: string }>;
+}
+
+export interface GasEstimate {
+  step: string;
+  chainId: number;
+  gas: string;
+  priceWei: string;
+  basis: "gas_times_max_fee" | "gas_times_gas_price";
+  amountRaw: string;
+  amountUsd: string;
 }
 
 export interface QuoteContext {
@@ -103,6 +126,12 @@ export interface SearchReport {
   cacheHits: number;
   truncated: boolean;
   stopReasons: string[];
+  pivotCoverage: Array<{
+    asset: Asset;
+    reached: boolean;
+    targetAttempts: number;
+    targetSuccesses: number;
+  }>;
   comparison: {
     status: "QUOTED_ONLY" | "UNRESOLVED";
     baselineId: string | null;
