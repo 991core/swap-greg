@@ -43,6 +43,12 @@ type TranslationKey =
   | "cta_searching"
   | "cta_executing"
   | "cta_no_route"
+  | "oneclick_confirm"
+  | "oneclick_minimum"
+  | "oneclick_status"
+  | "oneclick_explorer"
+  | "oneclick_source_tx"
+  | "oneclick_unavailable_route"
   | "send_label"
   | "receive_label"
   | "max_label"
@@ -90,6 +96,12 @@ const translations: Record<Lang, Record<TranslationKey, string>> = {
     cta_searching: "Searching routes…",
     cta_executing: "Executing…",
     cta_no_route: "Select a route",
+    oneclick_confirm: "Send {amount} {from} through 1Click? Minimum received: {minimum} {to}. Your wallet will sign an ERC20 transfer; network gas is extra. Continue?",
+    oneclick_minimum: "1Click minimum: {amount} {token}. Source network gas is extra. A fresh quote is checked before signing.",
+    oneclick_status: "1Click swap: {status}. Deposit and source transaction:",
+    oneclick_explorer: "Destination transaction",
+    oneclick_source_tx: "Source transaction",
+    oneclick_unavailable_route: "Execution unavailable for this provider",
     connect_to_continue: "Connect a wallet to continue.",
     swap_failed: "Swap execution failed. Check your wallet, network, and funds. Detail: {detail}",
     swap_cta: "Swap",
@@ -145,6 +157,12 @@ const translations: Record<Lang, Record<TranslationKey, string>> = {
     cta_searching: "Recherche de routes…",
     cta_executing: "Exécution…",
     cta_no_route: "Sélectionne une route",
+    oneclick_confirm: "Envoyer {amount} {from} via 1Click ? Minimum reçu : {minimum} {to}. Le portefeuille signera un transfert ERC20 ; le gaz réseau est en supplément. Continuer ?",
+    oneclick_minimum: "Minimum 1Click : {amount} {token}. Gaz du réseau source en supplément. Un nouveau devis sera vérifié avant signature.",
+    oneclick_status: "Swap 1Click : {status}. Dépôt et transaction source :",
+    oneclick_explorer: "Transaction de destination",
+    oneclick_source_tx: "Transaction source",
+    oneclick_unavailable_route: "Exécution indisponible pour ce fournisseur",
     connect_to_continue: "Connecte un wallet pour continuer.",
     swap_failed:
       "L'exécution du swap a échoué. Vérifie le wallet, le réseau et les fonds. Détail : {detail}",

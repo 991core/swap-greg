@@ -1,4 +1,4 @@
-export type ProviderName = "lifi" | "socket" | "rango";
+export type ProviderName = "lifi" | "socket" | "rango" | "oneclick";
 
 export type ProviderSelection = Record<ProviderName, boolean>;
 

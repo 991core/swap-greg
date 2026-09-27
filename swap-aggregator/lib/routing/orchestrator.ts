@@ -1,5 +1,6 @@
 import { fetchRoutes as fetchLifiRoutes } from "../aggregators/lifi/routes";
 import { fetchRangoRoutes, normalizeRangoRoute } from "../aggregators/rango/routes";
+import { fetchOneClickRoute } from "../aggregators/oneclick/client";
 import type { NormalizedRoute, ProviderSelection } from "../types/normalized-route";
 
 export type RouteSelectionParams = {
@@ -9,6 +10,8 @@ export type RouteSelectionParams = {
   toTokenAddress: string;
   fromAmount: string;
   fromAddress: string;
+  fromTokenDecimals: number;
+  toTokenDecimals: number;
   providers?: ProviderSelection;
 };
 
@@ -43,32 +46,22 @@ function normalizeLifiRoute(route: unknown, params: RouteSelectionParams): Norma
 }
 
 export async function getRoutesForSelection(params: RouteSelectionParams): Promise<NormalizedRoute[]> {
-  const providers = params.providers ?? { lifi: true, socket: false, rango: true };
-  const requests: Promise<unknown>[] = [];
-
-  if (providers.lifi) {
-    requests.push(fetchLifiRoutes(params));
-  }
-
-  if (providers.rango) {
-    requests.push(fetchRangoRoutes(params));
-  }
-
-  const results = await Promise.all(requests);
+  const providers = params.providers ?? { lifi: true, socket: false, rango: true, oneclick: true };
+  const [lifiResult, rangoResult, oneclickResult] = await Promise.allSettled([
+    providers.lifi ? fetchLifiRoutes(params) : Promise.resolve([]),
+    providers.rango ? fetchRangoRoutes(params) : Promise.resolve([]),
+    providers.oneclick ? fetchOneClickRoute(params) : Promise.resolve([]),
+  ]);
 
   const normalized: NormalizedRoute[] = [];
 
-  if (providers.lifi && results[0]) {
-    normalized.push(...(results[0] as Awaited<ReturnType<typeof fetchLifiRoutes>>).map((route) => normalizeLifiRoute(route, params)));
+  if (lifiResult.status === "fulfilled") {
+    normalized.push(...lifiResult.value.map((route) => normalizeLifiRoute(route, params)));
   }
-
-  if (providers.rango) {
-    const rangoIndex = providers.lifi ? 1 : 0;
-    const rangoRoutes = results[rangoIndex] as Awaited<ReturnType<typeof fetchRangoRoutes>> | undefined;
-    if (rangoRoutes) {
-      normalized.push(...rangoRoutes.map((route) => normalizeRangoRoute(route, params)));
-    }
+  if (rangoResult.status === "fulfilled") {
+    normalized.push(...rangoResult.value.map((route) => normalizeRangoRoute(route, params)));
   }
+  if (oneclickResult.status === "fulfilled") normalized.push(...oneclickResult.value);
 
   return normalized.sort((a, b) => {
     const aNet = BigInt(a.toAmount);

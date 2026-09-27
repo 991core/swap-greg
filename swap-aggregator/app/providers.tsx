@@ -9,6 +9,7 @@ import {
   avalanche,
   base,
   bsc,
+  gnosis,
   mainnet,
   optimism,
   polygon,
@@ -19,7 +20,7 @@ const config = getDefaultConfig({
   projectId:
     process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID ||
     "12345678901234567890123456789012",
-  chains: [mainnet, base, arbitrum, optimism, polygon, bsc, avalanche],
+  chains: [mainnet, base, arbitrum, optimism, polygon, gnosis, bsc, avalanche],
   ssr: true,
 });
 

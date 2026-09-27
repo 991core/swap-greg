@@ -2,8 +2,9 @@
 
 import type { ExtendedChain, Route } from "@lifi/sdk";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useAccount, useBalance, useReadContract, useSwitchChain, useWalletClient } from "wagmi";
-import { erc20Abi, formatUnits, type Address } from "viem";
+import { useAccount, useBalance, useConfig, useReadContract, useSwitchChain, useWalletClient } from "wagmi";
+import { waitForTransactionReceipt, writeContract } from "wagmi/actions";
+import { erc20Abi, formatUnits, isAddress, type Address } from "viem";
 import { RouteList } from "@/components/RouteList";
 import TokenSelectModal from "@/components/TokenSelectModal";
 import { CHAIN_LABELS } from "@/lib/chains";
@@ -19,9 +20,18 @@ import {
 } from "@/lib/lifi";
 import { formatCurrencyValue, fetchTokenPriceUsd, getPriceLookupKey } from "@/lib/pricing";
 import type { NormalizedRoute, ProviderName, ProviderSelection } from "@/lib/types/normalized-route";
+import { fetchOneClickQuote, fetchOneClickTokens } from "@/lib/aggregators/oneclick/client";
 import { useI18n } from "@/lib/i18n";
 
 type Side = "from" | "to";
+type PendingOneClick = { wallet: Address; fromChainId: number; depositAddress: Address; hash: `0x${string}`; status: string; destinationUrl?: string };
+const PENDING_KEY = "hermes:oneclick:latest";
+const EXPLORERS: Record<number, string> = {
+  1: "https://etherscan.io/tx/", 8453: "https://basescan.org/tx/",
+  42161: "https://arbiscan.io/tx/", 10: "https://optimistic.etherscan.io/tx/",
+  137: "https://polygonscan.com/tx/", 100: "https://gnosisscan.io/tx/",
+  56: "https://bscscan.com/tx/", 43114: "https://snowtrace.io/tx/",
+};
 
 function formatQuickAmount(raw: string, decimals: number) {
   const numeric = Number(raw);
@@ -81,6 +91,7 @@ export function SwapCard() {
   const { address, isConnected, chainId: walletChainId } = useAccount();
   const { data: walletClient } = useWalletClient();
   const { switchChainAsync } = useSwitchChain();
+  const wagmiConfig = useConfig();
   const { translate } = useI18n();
 
   const [chains, setChains] = useState<ExtendedChain[]>([]);
@@ -99,8 +110,9 @@ export function SwapCard() {
   const [loadingRoutes, setLoadingRoutes] = useState(false);
   const [priceLookup, setPriceLookup] = useState<Record<string, number>>({});
   const [currency, setCurrency] = useState<"USD" | "EUR">("USD");
-  const [providers, setProviders] = useState<ProviderSelection>({ lifi: true, socket: false, rango: true });
+  const [providers, setProviders] = useState<ProviderSelection>({ lifi: true, socket: false, rango: true, oneclick: true });
   const [swapping, setSwapping] = useState(false);
+  const [pendingOneClick, setPendingOneClick] = useState<PendingOneClick | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const [modalSide, setModalSide] = useState<Side | null>(null);
@@ -115,6 +127,7 @@ export function SwapCard() {
   });
   const erc20Balance = useReadContract({
     address: (fromToken?.address as Address | undefined) ?? undefined,
+    chainId: fromChainId,
     abi: erc20Abi,
     functionName: "balanceOf",
     args: address ? [address] : undefined,
@@ -124,6 +137,40 @@ export function SwapCard() {
   useEffect(() => {
     setLifiWalletClient(walletClient ?? null);
   }, [walletClient]);
+
+  useEffect(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem(PENDING_KEY) ?? "null") as PendingOneClick | null;
+      if (stored && address?.toLowerCase() === stored.wallet?.toLowerCase() &&
+          isAddress(stored.depositAddress) && /^0x[0-9a-fA-F]{64}$/.test(stored.hash)) {
+        setPendingOneClick(stored);
+      } else {
+        setPendingOneClick(null);
+      }
+    } catch { setPendingOneClick(null); }
+  }, [address]);
+
+  useEffect(() => {
+    if (!pendingOneClick || ["SUCCESS", "REFUNDED", "FAILED"].includes(pendingOneClick.status)) return;
+    let cancelled = false;
+    const poll = async () => {
+      try {
+        const response = await fetch(`/api/oneclick/status?depositAddress=${encodeURIComponent(pendingOneClick.depositAddress)}`, { cache: "no-store" });
+        if (!response.ok || cancelled) return;
+        const result = await response.json() as { status?: string; destinationUrl?: string };
+        if (!result.status || cancelled) return;
+        setPendingOneClick((previous) => {
+          if (!previous || previous.depositAddress !== pendingOneClick.depositAddress) return previous;
+          const updated = { ...previous, status: result.status!, destinationUrl: result.destinationUrl };
+          localStorage.setItem(PENDING_KEY, JSON.stringify(updated));
+          return updated;
+        });
+      } catch { /* Retain the deposit record and retry on the next poll. */ }
+    };
+    void poll();
+    const interval = setInterval(() => { void poll(); }, 8000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [pendingOneClick?.depositAddress, pendingOneClick?.status]);
 
   useEffect(() => {
     let cancelled = false;
@@ -163,6 +210,17 @@ export function SwapCard() {
         if (cancelled) return;
 
         let mergedTokens = { ...tokens };
+        try {
+          const oneClickTokens = await fetchOneClickTokens();
+          if (cancelled) return;
+          for (const chainId of ids) {
+            const known = mergedTokens[chainId] ?? [];
+            const extra = (oneClickTokens[chainId] ?? []).filter((token) =>
+              !known.some((item) => item.address.toLowerCase() === token.address.toLowerCase()),
+            );
+            mergedTokens[chainId] = [...known, ...extra];
+          }
+        } catch { /* LI.FI tokens remain available if 1Click is offline. */ }
         if (Object.keys(tokens).length === 0) {
           const fallbackChain1: AppToken[] = [
             { address: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", chainId: 1, decimals: 18, logoURI: "https://ethereum-optimism.github.io/data/ETH/eth-logo.svg", name: "Wrapped Ether", symbol: "WETH", topSymbol: "WETH", priceUSD: "3000" },
@@ -221,6 +279,8 @@ export function SwapCard() {
         toTokenAddress: toToken.address,
         fromAmount: parsed,
         fromAddress: address,
+        fromTokenDecimals: fromToken.decimals,
+        toTokenDecimals: toToken.decimals,
         providers,
       });
       if (id !== requestId.current) return;
@@ -229,7 +289,7 @@ export function SwapCard() {
     } catch (error) {
       if (id !== requestId.current) return;
       const message = error instanceof Error ? error.message : translate("routes_fetch_failed");
-      setError(translate("lifi_error", { message }));
+      setError(message);
     } finally {
       if (id === requestId.current) setLoadingRoutes(false);
     }
@@ -304,13 +364,52 @@ export function SwapCard() {
 
   async function handleSwap() {
     if (!selectedRoute || !walletClient || !fromToken) return;
-    const rawRoute = selectedRoute.raw as Route | null;
-    if (!rawRoute) { setError(translate("route_no_payload")); return; }
+    if (selectedRoute.provider !== "lifi" && selectedRoute.provider !== "oneclick") return;
     setSwapping(true); setError(null);
     try {
       if (walletChainId !== fromChainId && switchChainAsync) {
         await switchChainAsync({ chainId: fromChainId });
       }
+      if (selectedRoute.provider === "oneclick") {
+        if (!address || !toToken || !isAddress(fromToken.address)) throw new Error("Connect an EVM wallet and select an ERC20 token.");
+        const params = {
+          fromChainId, toChainId, fromTokenAddress: fromToken.address, toTokenAddress: toToken.address,
+          fromAmount: selectedRoute.fromAmount, fromAddress: address,
+          fromTokenDecimals: fromToken.decimals, toTokenDecimals: toToken.decimals,
+        };
+        const currentAmount = parseTokenAmount(amount, fromToken.decimals);
+        if (currentAmount !== selectedRoute.fromAmount ||
+            fromToken.address.toLowerCase() !== selectedRoute.fromTokenAddress.toLowerCase() ||
+            toToken.address.toLowerCase() !== selectedRoute.toTokenAddress.toLowerCase()) {
+          throw new Error("The selected route changed. Refresh the quote before swapping.");
+        }
+        const quote = await fetchOneClickQuote(params, false);
+        if (!quote.depositAddress || !isAddress(quote.depositAddress) || quote.amountIn !== selectedRoute.fromAmount ||
+            !quote.deadline || Date.parse(quote.deadline) <= Date.now() + 30_000) {
+          throw new Error("The executable 1Click quote is invalid or expired.");
+        }
+        const minimum = formatTokenAmount(quote.minAmountOut, toToken.decimals);
+        if (!window.confirm(translate("oneclick_confirm", {
+          amount: formatTokenAmount(quote.amountIn, fromToken.decimals),
+          from: fromToken.symbol, minimum, to: toToken.symbol,
+        }))) return;
+        const hash = await writeContract(wagmiConfig, {
+          account: address,
+          chainId: fromChainId,
+          address: fromToken.address as Address,
+          abi: erc20Abi,
+          functionName: "transfer",
+          args: [quote.depositAddress, BigInt(quote.amountIn)],
+        });
+        const pending: PendingOneClick = { wallet: address, fromChainId, depositAddress: quote.depositAddress, hash, status: "PENDING_DEPOSIT" };
+        localStorage.setItem(PENDING_KEY, JSON.stringify(pending));
+        setPendingOneClick(pending);
+        const receipt = await waitForTransactionReceipt(wagmiConfig, { hash, chainId: fromChainId });
+        if (receipt.status !== "success") throw new Error("The token transfer reverted on the source chain.");
+        return;
+      }
+      const rawRoute = selectedRoute.raw as Route | null;
+      if (!rawRoute) throw new Error(translate("route_no_payload"));
       await executeLifiRoute(rawRoute, {
         updateRouteHook: (updated) => {
           setSelectedRoute((prev) => prev ? { ...prev, raw: updated, toAmount: updated.toAmount ?? prev.toAmount, durationSeconds: updated.steps?.reduce((a, s) => a + (s.estimate?.executionDuration ?? 0), 0) ?? prev.durationSeconds } : prev);
@@ -319,7 +418,7 @@ export function SwapCard() {
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : translate("swap_exec_error");
-      setError(translate("lifi_error", { message }));
+      setError(message);
     } finally { setSwapping(false); }
   }
 
@@ -341,12 +440,17 @@ export function SwapCard() {
     );
   }
 
-  const ctaDisabled = !isConnected || !selectedRoute || swapping || loadingRoutes || !fromToken || !toToken;
+  const activeOneClick = pendingOneClick && !["SUCCESS", "REFUNDED", "FAILED"].includes(pendingOneClick.status);
+  const ctaDisabled = !isConnected || !selectedRoute || swapping || loadingRoutes || !fromToken || !toToken ||
+    (activeOneClick && selectedRoute.provider === "oneclick") ||
+    (selectedRoute.provider !== "lifi" && selectedRoute.provider !== "oneclick");
   let ctaLabel = translate("cta_swap");
   if (!isConnected) ctaLabel = translate("cta_connect_wallet");
   else if (loadingRoutes) ctaLabel = translate("cta_searching");
   else if (swapping) ctaLabel = translate("cta_executing");
   else if (!selectedRoute) ctaLabel = translate("cta_no_route");
+  else if (activeOneClick && selectedRoute.provider === "oneclick") ctaLabel = translate("oneclick_status", { status: pendingOneClick.status });
+  else if (ctaDisabled && selectedRoute.provider !== "lifi" && selectedRoute.provider !== "oneclick") ctaLabel = translate("oneclick_unavailable_route");
 
   return (
     <>
@@ -439,8 +543,8 @@ export function SwapCard() {
         <div className="jumper-providers">
           <span className="jumper-providers-label">{translate("providers_label")}</span>
           <div className="jumper-providers-row">
-            {(["lifi", "rango", "socket"] as ProviderName[]).map((p) => {
-              const label = p === "lifi" ? "LI.FI" : p === "rango" ? "Rango" : "Socket";
+            {(["lifi", "oneclick", "rango", "socket"] as ProviderName[]).map((p) => {
+              const label = p === "lifi" ? "LI.FI" : p === "oneclick" ? "1Click" : p === "rango" ? "Rango" : "Socket";
               return (
                 <button key={p} type="button" className={providers[p] ? "jumper-prov active" : "jumper-prov"} onClick={() => toggleProvider(p)}>
                   <span className={`jumper-prov-dot ${providers[p] ? "on" : ""}`} />
@@ -481,6 +585,27 @@ export function SwapCard() {
             ctaLabel
           )}
         </button>
+
+        {selectedRoute?.provider === "oneclick" && toToken && (
+          <p className="jumper-hint">{translate("oneclick_minimum", {
+            amount: formatTokenAmount((selectedRoute.raw as { minAmountOut: string }).minAmountOut, toToken.decimals),
+            token: toToken.symbol,
+          })}</p>
+        )}
+        {pendingOneClick && (
+          <p className="jumper-hint" role="status">
+            {translate("oneclick_status", { status: pendingOneClick.status })}{" "}
+            <span title={pendingOneClick.depositAddress}>{pendingOneClick.depositAddress.slice(0, 10)}…</span>{" "}
+            {EXPLORERS[pendingOneClick.fromChainId] ? (
+              <a href={`${EXPLORERS[pendingOneClick.fromChainId]}${pendingOneClick.hash}`} target="_blank" rel="noopener noreferrer">
+                {translate("oneclick_source_tx")}
+              </a>
+            ) : <span title={pendingOneClick.hash}>{pendingOneClick.hash.slice(0, 10)}…</span>}{" "}
+            {pendingOneClick.destinationUrl?.startsWith("https://") && (
+              <a href={pendingOneClick.destinationUrl} target="_blank" rel="noopener noreferrer">{translate("oneclick_explorer")}</a>
+            )}
+          </p>
+        )}
 
         {!isConnected && <p className="jumper-hint jumper-hint-warn">Connecte un wallet pour continuer.</p>}
         {error && <p className="jumper-error">{error}</p>}
