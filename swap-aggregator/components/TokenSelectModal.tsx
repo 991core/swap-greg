@@ -49,7 +49,13 @@ export default function TokenSelectModal({
   const [isResolving, setIsResolving] = useState(false);
   const [chainFilter, setChainFilter] = useState<number | null>(null);
 
+  const activeChainId = chainFilter ?? selectedChainId;
+
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!open) { setChainFilter(null); setQuery(""); }
+  }, [open]);
 
   useEffect(() => {
     if (open && inputRef.current) inputRef.current.focus();
@@ -58,12 +64,13 @@ export default function TokenSelectModal({
   useEffect(() => {
     if (!open) { setContractToken(null); setIsResolving(false); return; }
     const trimmed = query.trim();
-    if (!looksLikeAddress(trimmed)) { setContractToken(null); return; }
+    if (!looksLikeAddress(trimmed)) { setContractToken(null); setIsResolving(false); return; }
     let cancelled = false;
+    setContractToken(null);
     setIsResolving(true);
     (async () => {
       try {
-        const resolved = await resolveTokenByAddress(selectedChainId, trimmed);
+        const resolved = await resolveTokenByAddress(activeChainId, trimmed);
         if (!cancelled && resolved) {
           setContractToken({
             address: resolved.address, chainId: resolved.chainId,
@@ -72,18 +79,18 @@ export default function TokenSelectModal({
             priceUSD: resolved.priceUSD || "0",
             logoURI: resolved.logoURI || "",
           });
-        } else { setContractToken(null); }
+        } else if (!cancelled) { setContractToken(null); }
       } catch { if (!cancelled) setContractToken(null); }
       finally { if (!cancelled) setIsResolving(false); }
     })();
     return () => { cancelled = true; };
-  }, [query, open, selectedChainId]);
+  }, [query, open, activeChainId]);
 
   const availableTokens = useMemo(() => {
     const list: AppToken[] = [];
-    if (tokensByChain && selectedChainId) list.push(...(tokensByChain[selectedChainId] ?? []));
+    if (tokensByChain && activeChainId) list.push(...(tokensByChain[activeChainId] ?? []));
     return list;
-  }, [tokensByChain, selectedChainId]);
+  }, [tokensByChain, activeChainId]);
 
   const filteredTokens = useMemo(() => {
     if (!query.trim()) return availableTokens;
@@ -107,39 +114,25 @@ export default function TokenSelectModal({
 
   return (
     <>
-      <style>{`
-        @keyframes jumperModal_fadeIn {
-          from { opacity: 0; transform: scale(0.94) translateY(8px); }
-          to   { opacity: 1; transform: scale(1) translateY(0); }
-        }
-      `}</style>
-
       <div
         role="presentation"
-        aria-hidden
-        className="fixed inset-0 z-[9999] flex items-start justify-center p-4 pt-[10vh] sm:pt-16"
+        className="jumper-modal-overlay"
         onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
         onKeyDown={(e) => { if (e.key === "Escape") onClose(); }}
-        style={{ animation: "jumperModal_fadeIn 0.2s ease-out" }}
       >
-        {/* Dim overlay */}
-        <div className="fixed inset-0 bg-jumper-overlay" />
-
         {/* Modal card */}
         <div
-          className="relative z-[10000] flex w-full max-w-lg flex-col overflow-hidden rounded-xl border border-jumper-border bg-jumper-card shadow-2xl"
+          className="jumper-modal-card"
           role="dialog"
           aria-modal="true"
           aria-label={title}
-          onKeyDown={(e) => { if (e.key === "Escape") onClose(); }}
-          style={{ animation: "jumperModal_fadeIn 0.2s ease-out" }}
         >
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-jumper-border px-5 py-3">
-            <h2 className="text-sm font-semibold text-jumper-fg">{title}</h2>
+          <div className="jumper-modal-header">
+            <h2 className="jumper-modal-title">{title}</h2>
             <button
               onClick={onClose}
-              className="flex h-7 w-7 items-center justify-center rounded-lg text-jumper-muted transition-colors hover:bg-jumper-card-hover hover:text-jumper-fg"
+              className="jumper-modal-close"
               aria-label="Close"
             >
               ✕
@@ -147,15 +140,15 @@ export default function TokenSelectModal({
           </div>
 
           {/* Content */}
-          <div className="flex flex-col" style={{ maxHeight: "70vh" }}>
+          <div className="jumper-modal-content" style={{ maxHeight: "70vh" }}>
             {/* Chain + Search */}
-            <div className="flex flex-col gap-3 px-4 pt-4">
+            <div className="jumper-modal-controls">
               {/* Chain selector */}
               <div className="jumper-chain-select-row">
                 <label className="jumper-hint" htmlFor="jumper-chain-select">Chain</label>
                 <select
                   id="jumper-chain-select"
-                  value={selectedChainId}
+                  value={activeChainId}
                   onChange={(e) => setChainFilter(Number(e.target.value))}
                   className="jumper-chain-select"
                 >
@@ -207,9 +200,9 @@ export default function TokenSelectModal({
             </div>
 
             {/* Token list */}
-            <div className="flex-1 overflow-y-auto px-2 pb-2">
+            <div className="jumper-token-scroll">
               {filteredTokens.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="jumper-modal-empty">
                   <span className="jumper-empty-icon">🪙</span>
                   <p className="jumper-hint">No tokens found</p>
                   <p className="jumper-hint" style={{ marginTop: 4, fontSize: 11 }}>Try a different search term</p>
@@ -256,7 +249,7 @@ export default function TokenSelectModal({
             </div>
 
             {/* Footer */}
-            <div className="border-t border-jumper-border/60 px-4 py-2.5">
+            <div className="jumper-modal-footer">
               <p className="jumper-footer-hint">Paste a contract address to auto-resolve</p>
             </div>
           </div>

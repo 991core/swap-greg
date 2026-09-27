@@ -425,7 +425,7 @@ export function SwapCard() {
   // ── States ───────────────────────────────
   if (bootLoading) {
     return (
-      <div className="jumper-widget-card">
+      <div className="jumper-loading-state">
         <div className="jumper-skeleton" style={{ height: 300 }} />
         <p className="jumper-hint">{translate("boot_loading")}</p>
       </div>
@@ -434,7 +434,7 @@ export function SwapCard() {
 
   if (bootError && !fromToken) {
     return (
-      <div className="jumper-widget-card">
+      <div className="jumper-loading-state">
         <p className="jumper-error">{bootError}</p>
       </div>
     );
