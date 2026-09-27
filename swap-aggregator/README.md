@@ -11,7 +11,7 @@ ou 1Click sur chaque chaîne, avec EURe Gnosis comme destination ajoutée.
 ## Installation
 
 ```bash
-npm ci --legacy-peer-deps
+npm ci
 cp .env.example .env.local
 ```
 
