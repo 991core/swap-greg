@@ -3,81 +3,37 @@
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { SwapCard } from "@/components/SwapCard";
 import { useI18n, LANGUAGES, type Lang } from "@/lib/i18n";
-import { useState } from "react";
 
 export default function Home() {
   const { translate, lang, setLang } = useI18n();
-  const [activeNav, setActiveNav] = useState("swap");
-
-  const navItems = [
-    { id: "swap", label: translate("nav_swap"), icon: "⇅" },
-  ];
-
-  return (
+  return <ConnectButton.Custom>{({ account, chain, mounted, openAccountModal, openChainModal, openConnectModal }) => (
     <div className="jumper-app">
-      {/* Header */}
       <header className="jumper-header">
-        <div className="jumper-brand">
-          <span className="jumper-logo">⚡</span>
-          <span className="jumper-name">SwapAggregator</span>
-          <span className="jumper-tag">Aggregator</span>
-        </div>
-
-        <nav className="jumper-nav">
-          {navItems.map((item) => (
-            <button
-              key={item.id}
-              className={`jumper-nav-btn ${activeNav === item.id ? "active" : ""}`}
-              onClick={() => setActiveNav(item.id)}
-            >
-              <span className="jumper-nav-icon">{item.icon}</span>
-              <span className="jumper-nav-label">{item.label}</span>
-            </button>
-          ))}
-        </nav>
-
+        <a className="jumper-brand" href="#main" aria-label="Hermes">
+          <svg className="jumper-logo" viewBox="0 0 64 40" fill="none" aria-hidden="true">
+            <path d="M2 9h27l-4 6H8zm7 11h14l-4 6h-4zM35 4h9l-5 13h10l5-13h9L50 36h-9l5-12H36l-5 12h-9z" fill="currentColor" />
+          </svg>
+          <span className="jumper-name">HERMES</span>
+        </a>
         <div className="jumper-header-right">
-          <div className="jumper-lang-switcher">
-            {Object.entries(LANGUAGES).map(([code, label]) => (
-              <button
-                key={code}
-                className={`jumper-lang-btn ${lang === code ? "active" : ""}`}
-                onClick={() => setLang(code as Lang)}
-              >
-                {label}
-              </button>
-            ))}
+          <div id="hermes-currency-slot" />
+          <div className="jumper-lang-switcher" role="group" aria-label={lang === "fr" ? "Langue" : "Language"}>
+            {Object.entries(LANGUAGES).map(([code, name]) => <button key={code} type="button" className="jumper-lang-btn"
+              aria-label={name} aria-pressed={lang === code} onClick={() => setLang(code as Lang)}>{code.toUpperCase()}</button>)}
           </div>
-
-          <ConnectButton />
+          <button type="button" className="jumper-wallet-button" disabled={!mounted}
+            onClick={!account ? openConnectModal : chain?.unsupported ? openChainModal : openAccountModal}>
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 8V5H5a2 2 0 0 0 0 4h16v11H5a2 2 0 0 1-2-2V7m18 6h-5v4h5" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" /></svg>
+            <span>{!mounted || !account ? translate("cta_connect_wallet") : chain?.unsupported ? translate("wallet_network") : account.displayName}</span>
+            {account && <span aria-hidden="true">⌄</span>}
+          </button>
         </div>
       </header>
-
-      {/* Main */}
-      <main className="jumper-main">
-        {/* Welcome / Hero */}
-        {activeNav === "swap" && (
-          <div className="jumper-welcome">
-            <div className="jumper-glow"></div>
-            <h1 className="jumper-hero-title">{translate("hero_title")}</h1>
-            <p className="jumper-hero-subtitle">{translate("hero_subtitle")}</p>
-          </div>
-        )}
-
-        {/* Widget wrapper */}
-        {activeNav === "swap" && (
-          <div className="jumper-widget-wrapper">
-            <div className="jumper-widget-card">
-              <SwapCard />
-            </div>
-          </div>
-        )}
+      <main id="main" className="jumper-main">
+        <h1 className="jumper-sr-only">Hermes · {translate("swap_title")}</h1>
+        <div className="jumper-widget-wrapper"><div className="jumper-widget-card"><SwapCard onConnect={mounted ? openConnectModal : undefined} /></div></div>
       </main>
-
-      {/* Footer */}
-      <footer className="jumper-footer">
-        © 2025 SwapAggregator · Powered by LI.FI, Rango & Socket
-      </footer>
+      <footer className="jumper-footer"><span>Hermes · Cross-chain swaps</span><span>LI.FI + 1Click + Rango</span></footer>
     </div>
-  );
+  )}</ConnectButton.Custom>;
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
 
 export type Lang = "en" | "fr";
 
@@ -18,6 +18,29 @@ function detectBrowserLang(): Lang {
 }
 
 type TranslationKey =
+  | "destination_token"
+  | "source_token"
+  | "route_estimates"
+  | "route_sort_hint"
+  | "hermes_fee_short"
+  | "platform_fee"
+  | "fx_unavailable"
+  | "no_routes_hint"
+  | "network_fee"
+  | "route_amount_exact"
+  | "minimum_received"
+  | "route_gas"
+  | "route_duration"
+  | "route_details"
+  | "refresh_quotes"
+  | "choose_provider"
+  | "routes_empty_description"
+  | "routes_short"
+  | "balance_label"
+  | "destination_network"
+  | "source_network"
+  | "swap_title"
+  | "wallet_network"
   | "hero_tagline"
   | "boot_loading"
   | "boot_no_chains"
@@ -80,6 +103,29 @@ type TranslationKey =
 
 const translations: Record<Lang, Record<TranslationKey, string>> = {
   en: {
+    destination_token: "Select destination token",
+    source_token: "Select source token",
+    route_estimates: "Amounts, fees and arrival times are estimates.",
+    route_sort_hint: "Sorted by tokens received. Network fees are extra.",
+    hermes_fee_short: "Hermes fee",
+    platform_fee: "Hermes fee (included in quote)",
+    fx_unavailable: "EUR conversion unavailable. Amounts remain in USD.",
+    no_routes_hint: "No routes for this pair and amount. Try another pair or refresh.",
+    network_fee: "Estimated network fees (additional)",
+    route_amount_exact: "Quoted amount",
+    minimum_received: "Minimum received",
+    route_gas: "Network fees · extra",
+    route_duration: "Estimated time",
+    route_details: "Route details",
+    refresh_quotes: "Refresh quotes",
+    choose_provider: "Select at least one provider to find routes.",
+    routes_empty_description: "Choose your tokens and enter an amount to compare the available routes.",
+    routes_short: "Routes",
+    balance_label: "Balance",
+    destination_network: "Destination network",
+    source_network: "Source network",
+    swap_title: "Swap tokens",
+    wallet_network: "Change network",
     hero_tagline: "Top 20 market cap · transparent routes · fees included in net amount.",
     boot_loading: "Loading chains and top 20…",
     boot_no_chains: "LI.FI is not returning any supported chains. Try again later.",
@@ -140,6 +186,29 @@ const translations: Record<Lang, Record<TranslationKey, string>> = {
     hero_subtitle: "Compare routes from top DEXs in one click.",
   },
   fr: {
+    destination_token: "Choisir le token de destination",
+    source_token: "Choisir le token source",
+    route_estimates: "Les montants, frais et délais restent estimatifs.",
+    route_sort_hint: "Classées par montant reçu. Les frais réseau s’ajoutent.",
+    hermes_fee_short: "Frais Hermes",
+    platform_fee: "Frais Hermes (inclus dans le devis)",
+    fx_unavailable: "Conversion EUR indisponible. Les montants restent en USD.",
+    no_routes_hint: "Aucune route pour cette paire et ce montant. Change la paire ou actualise.",
+    network_fee: "Frais réseau estimés (en supplément)",
+    route_amount_exact: "Montant coté",
+    minimum_received: "Minimum reçu",
+    route_gas: "Frais réseau · en plus",
+    route_duration: "Durée estimée",
+    route_details: "Détails de la route",
+    refresh_quotes: "Actualiser les cotations",
+    choose_provider: "Active au moins un provider pour rechercher des routes.",
+    routes_empty_description: "Choisis tes cryptos et saisis un montant pour comparer les routes disponibles.",
+    routes_short: "Routes",
+    balance_label: "Solde",
+    destination_network: "Réseau d’arrivée",
+    source_network: "Réseau de départ",
+    swap_title: "Échanger",
+    wallet_network: "Changer de réseau",
     hero_tagline:
       "Top 20 market cap · routes transparentes · frais inclus dans le montant net.",
     boot_loading: "Chargement des chaînes et du top 20…",
@@ -236,7 +305,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const translate = (key: TranslationKey, params?: Record<string, string>) => {
+  const translate = useCallback((key: TranslationKey, params?: Record<string, string>) => {
     let result = t(key, lang);
     if (params) {
       Object.entries(params).forEach(([k, v]) => {
@@ -244,7 +313,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
       });
     }
     return result;
-  };
+  }, [lang]);
 
   return (
     <I18nContext.Provider value={{ lang, setLang, translate, detectBrowserLang }}>

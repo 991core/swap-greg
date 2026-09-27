@@ -2,12 +2,17 @@
 
 import type { ExtendedChain, Route } from "@lifi/sdk";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { ChainSelect } from "./ChainSelect";
+import { CurrencySwitch } from "./CurrencySwitch";
+import { TokenIcon } from "./TokenIcon";
+import { ProviderBadge } from "./ProviderBadge";
 import { useAccount, useBalance, useConfig, useReadContract, useSwitchChain, useWalletClient } from "wagmi";
 import { waitForTransactionReceipt, writeContract } from "wagmi/actions";
 import { erc20Abi, formatUnits, isAddress, type Address } from "viem";
 import { RouteList } from "@/components/RouteList";
 import TokenSelectModal from "@/components/TokenSelectModal";
-import { CHAIN_LABELS } from "@/lib/chains";
+
 import {
   type AppToken,
   executeLifiRoute,
@@ -44,50 +49,20 @@ function formatQuickAmount(raw: string, decimals: number) {
 // Small helpers
 // ──────────────────────────────────────────────
 
-function ChainBadge({ chainId }: { chainId: number }) {
-  return (
-    <span className="jumper-chain-badge">
-      {CHAIN_LABELS[chainId] ?? `Chain ${chainId}`}
-    </span>
-  );
-}
-
-function TokenSelector({
-  token,
-  chainId,
-  onClick,
-  onChainClick,
-}: {
-  token: AppToken | null;
-  chainId: number;
-  onClick: () => void;
-  onChainClick: () => void;
-}) {
-  return (
-    <button type="button" className="jumper-token-select" onClick={onClick}>
-      {token?.logoURI ? (
-        <img className="jumper-token-logo" src={token.logoURI} alt="" />
-      ) : (
-        <span className="jumper-token-logo placeholder">
-          {(token?.symbol ?? "?").slice(0, 2)}
-        </span>
-      )}
-      <span className="jumper-token-info">
-        <span className="jumper-token-symbol">{token?.symbol ?? "Select"}</span>
-        <span className="jumper-token-meta">
-          <ChainBadge chainId={chainId} />
-        </span>
-      </span>
-      <span className="jumper-chevron">▾</span>
-    </button>
-  );
+function TokenSelector({ token, onClick }: { token: AppToken | null; onClick: () => void }) {
+  const { translate } = useI18n();
+  return <button type="button" className="jumper-token-select" onClick={onClick}>
+    <TokenIcon token={token} />
+    <span className="jumper-token-info"><span className="jumper-token-symbol">{token?.symbol ?? translate("modal_title")}</span><span className="jumper-token-name">{token?.name}</span></span>
+    <span className="jumper-chevron" aria-hidden="true">⌄</span>
+  </button>;
 }
 
 // ──────────────────────────────────────────────
 // Main SwapCard
 // ──────────────────────────────────────────────
 
-export function SwapCard() {
+export function SwapCard({ onConnect }: { onConnect?: () => void } = {}) {
   const { address, isConnected, chainId: walletChainId } = useAccount();
   const { data: walletClient } = useWalletClient();
   const { switchChainAsync } = useSwitchChain();
@@ -109,6 +84,8 @@ export function SwapCard() {
   const [selectedRoute, setSelectedRoute] = useState<NormalizedRoute | null>(null);
   const [loadingRoutes, setLoadingRoutes] = useState(false);
   const [priceLookup, setPriceLookup] = useState<Record<string, number>>({});
+  const [currencySlot, setCurrencySlot] = useState<HTMLElement | null>(null);
+  useEffect(() => { setCurrencySlot(document.getElementById("hermes-currency-slot")); }, []);
   const [currency, setCurrency] = useState<"USD" | "EUR">("USD");
   const [providers, setProviders] = useState<ProviderSelection>({ lifi: true, socket: false, rango: true, oneclick: true });
   const [swapping, setSwapping] = useState(false);
@@ -245,12 +222,12 @@ export function SwapCard() {
 
   useEffect(() => {
     if (fromToken || Object.keys(tokensByChain).length === 0) return;
-    const baseTokens = tokensByChain[8453] ?? [];
+    const baseTokens = tokensByChain[fromChainId] ?? [];
     const defaultToken = baseTokens.find(
       (t) => t.topSymbol === "ETH" || t.symbol?.toUpperCase() === "ETH" || t.symbol?.toUpperCase() === "WETH",
     );
     if (defaultToken) setFromToken(defaultToken);
-  }, [fromToken, tokensByChain]);
+  }, [fromToken, fromChainId, tokensByChain]);
 
   // ── fetch routes ─────────────────────────
   const loadRoutes = useCallback(async () => {
@@ -293,7 +270,7 @@ export function SwapCard() {
     } finally {
       if (id === requestId.current) setLoadingRoutes(false);
     }
-  }, [address, amount, fromChainId, providers, toChainId, fromToken, toToken, translate]);
+  }, [address, isConnected, amount, fromChainId, providers, toChainId, fromToken, toToken, translate]);
 
   useEffect(() => {
     if (!fromToken || !toToken) { setRoutes([]); setSelectedRoute(null); return; }
@@ -425,7 +402,7 @@ export function SwapCard() {
   // ── States ───────────────────────────────
   if (bootLoading) {
     return (
-      <div className="jumper-loading-state">
+      <div className="jumper-state">
         <div className="jumper-skeleton" style={{ height: 300 }} />
         <p className="jumper-hint">{translate("boot_loading")}</p>
       </div>
@@ -434,7 +411,7 @@ export function SwapCard() {
 
   if (bootError && !fromToken) {
     return (
-      <div className="jumper-loading-state">
+      <div className="jumper-state">
         <p className="jumper-error">{bootError}</p>
       </div>
     );
@@ -452,140 +429,63 @@ export function SwapCard() {
   else if (activeOneClick && selectedRoute.provider === "oneclick") ctaLabel = translate("oneclick_status", { status: pendingOneClick.status });
   else if (ctaDisabled && selectedRoute.provider !== "lifi" && selectedRoute.provider !== "oneclick") ctaLabel = translate("oneclick_unavailable_route");
 
-  return (
-    <>
-      {/* ── Main swap form ── */}
-      <div className="jumper-swap-widget">
+  function changeChain(side: Side, chainId: number) {
+    const token = tokensByChain[chainId]?.[0] ?? null;
+    if (side === "from") { setFromChainId(chainId); setFromToken(token); setAmount(""); }
+    else { setToChainId(chainId); setToToken(token); }
+    setRoutes([]); setSelectedRoute(null);
+  }
 
-        {/* Send panel */}
+  return <>
+    {currencySlot && createPortal(<CurrencySwitch value={currency} onChange={setCurrency} eurAvailable />, currencySlot)}
+    <div className="jumper-swap-widget">
+      <div className="jumper-swap-toolbar">
+        <div className="jumper-swap-title"><h2>{translate("swap_title")}</h2>
+          <div className="jumper-providers"><span className="jumper-hint">{translate("providers_label")}</span>
+            {(["lifi", "oneclick", "rango", "socket"] as ProviderName[]).map((provider) => (
+              <button key={provider} type="button" className={`jumper-prov${providers[provider] ? " active" : ""}`} aria-pressed={providers[provider]} disabled={swapping} onClick={() => toggleProvider(provider)}>
+                <ProviderBadge provider={provider} /><span aria-hidden="true">{providers[provider] ? "✓" : "+"}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+        {!currencySlot && <CurrencySwitch value={currency} onChange={setCurrency} eurAvailable />}
+      </div>
+      <fieldset disabled={swapping} className="jumper-form">
         <div className="jumper-panel">
-          <div className="jumper-panel-header">
-            <span className="jumper-panel-label">{translate("send_label")}</span>
-            {sourceBalanceLabel && (
-              <span className="jumper-balance-pill">
-                <span className="jumper-balance-value">{sourceBalanceLabel}</span>
-                {fromTokenUsdValue != null && (
-                  <span className="jumper-balance-usd">≈ {formatCurrencyValue(fromTokenUsdValue, currency)}</span>
-                )}
-              </span>
-            )}
+          <div className="jumper-panel-header"><label htmlFor="swap-amount">{translate("send_label")}</label>
+            <ChainSelect chainId={fromChainId} chains={chains} onChange={(id) => changeChain("from", id)} label={translate("source_network")} />
           </div>
-
-          <div className="jumper-panel-input">
-            <input
-              className="jumper-amount-input"
-              type="text"
-              inputMode="decimal"
-              placeholder="0.0"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-            />
-            <div className="jumper-panel-picker">
-              <TokenSelector
-                token={fromToken}
-                chainId={fromChainId}
-                onClick={() => setModalSide("from")}
-                onChainClick={() => setModalSide("from")}
-              />
-            </div>
-          </div>
-
-          {/* Quick percentage buttons */}
-          {fromToken && sourceBalance && (
-            <div className="jumper-quick-row">
-              {[25, 50, 75, 100].map((pct) => (
-                <button key={pct} type="button" className="jumper-pct-btn" onClick={() => applyQuickAmount(pct)}>
-                  {pct}%
-                </button>
-              ))}
-            </div>
-          )}
+          <div className="jumper-panel-input"><input id="swap-amount" className="jumper-amount-input" type="text" inputMode="decimal" placeholder="0.0" value={amount} onChange={(e) => setAmount(e.target.value)} />
+            <TokenSelector token={fromToken} onClick={() => setModalSide("from")} /></div>
+          <div className="jumper-panel-foot"><span>{formatCurrencyValue(fromTokenUsdValue, currency) ?? "—"}</span>
+            {sourceBalanceLabel && <span className="jumper-balance-pill">{translate("balance_label")}: {sourceBalanceLabel}</span>}</div>
+          {fromToken && sourceBalance && <div className="jumper-quick-row">{[25, 50, 75, 100].map((pct) => <button key={pct} type="button" className="jumper-pct-btn" onClick={() => applyQuickAmount(pct)}>{pct}%</button>)}</div>}
         </div>
-
-        {/* Swap invert */}
-        <div className="jumper-swap-invert-wrap">
-          <button type="button" className="jumper-swap-invert" onClick={invert} aria-label={translate("invert_label")}>
-            <span className="jumper-swap-invert-icon">⇅</span>
-          </button>
-        </div>
-
-        {/* Receive panel */}
+        <button type="button" className="jumper-swap-invert" onClick={invert} aria-label={translate("invert_label")}>⇅</button>
         <div className="jumper-panel">
-          <div className="jumper-panel-header">
-            <span className="jumper-panel-label">{translate("receive_label")}</span>
-            {receiveUsdValue != null && (
-              <span className="jumper-panel-subtitle">
-                {translate("received_value_prefix")} {formatCurrencyValue(receiveUsdValue, currency)}
-              </span>
-            )}
-          </div>
-
-          <div className="jumper-panel-input">
-            <input
-              className="jumper-amount-input jumper-amount-receive"
-              type="text"
-              disabled
-              value={receivePreview ?? ""}
-              placeholder="—"
-            />
-            <div className="jumper-panel-picker">
-              <TokenSelector
-                token={toToken}
-                chainId={toChainId}
-                onClick={() => setModalSide("to")}
-                onChainClick={() => setModalSide("to")}
-              />
-            </div>
-          </div>
+          <div className="jumper-panel-header"><label htmlFor="receive-amount">{translate("receive_label")}</label>
+            <ChainSelect chainId={toChainId} chains={chains} onChange={(id) => changeChain("to", id)} label={translate("destination_network")} /></div>
+          <div className="jumper-panel-input"><input id="receive-amount" className="jumper-amount-input" readOnly value={receivePreview ?? ""} placeholder="—" />
+            <TokenSelector token={toToken} onClick={() => setModalSide("to")} /></div>
+          <p className="jumper-hint">{formatCurrencyValue(receiveUsdValue, currency) ?? "—"}</p>
         </div>
-
-        {/* Provider toggles */}
-        <div className="jumper-providers">
-          <span className="jumper-providers-label">{translate("providers_label")}</span>
-          <div className="jumper-providers-row">
-            {(["lifi", "oneclick", "rango", "socket"] as ProviderName[]).map((p) => {
-              const label = p === "lifi" ? "LI.FI" : p === "oneclick" ? "1Click" : p === "rango" ? "Rango" : "Socket";
-              return (
-                <button key={p} type="button" className={providers[p] ? "jumper-prov active" : "jumper-prov"} onClick={() => toggleProvider(p)}>
-                  <span className={`jumper-prov-dot ${providers[p] ? "on" : ""}`} />
-                  {label}
-                </button>
-              );
-            })}
-          </div>
+      </fieldset>
+      {!Object.values(providers).some(Boolean) && <p className="jumper-warning">{translate("choose_provider")}</p>}
+      <aside className="jumper-routes-panel" aria-label={translate("route_list_title")}>
+        <div className="jumper-routes-heading"><h2>{translate("routes_short")} {routes.length > 0 && <span className="jumper-route-count">{routes.length}</span>}</h2>
+          {isConnected && fromToken && toToken && amount && <button type="button" className="jumper-refresh-icon" aria-label={translate("refresh_quotes")} disabled={swapping || loadingRoutes} onClick={() => void loadRoutes()}>↻</button>}
         </div>
-
-        {/* Currency toggle */}
-        <div className="jumper-currency-row">
-          <span className="jumper-hint">
-            {translate("currency_label")}: {currency}
-          </span>
-          <button
-            type="button"
-            className="jumper-currency-btn"
-            onClick={() => setCurrency((c) => (c === "USD" ? "EUR" : "USD"))}
-          >
-            {currency === "USD" ? translate("currency_toggle", { from: "USD", to: "EUR" }) : translate("currency_toggle", { from: "EUR", to: "USD" })}
-          </button>
-        </div>
-
-        {/* CTA */}
-        <button
-          type="button"
-          className={`jumper-cta ${ctaDisabled ? "jumper-cta-disabled" : "jumper-cta-active"}`}
-          disabled={ctaDisabled}
-          onClick={() => void handleSwap()}
-        >
-          {swapping ? (
-            <>
-              <span className="jumper-spinner" />
-              {ctaLabel}
-            </>
-          ) : (
-            ctaLabel
-          )}
-        </button>
-
+        {!routes.length && !loadingRoutes && <div className="jumper-routes-empty"><span aria-hidden="true">⇄</span><p>{translate(isConnected && amount && fromToken && toToken ? "no_routes_hint" : "routes_empty_description")}</p></div>}
+        {loadingRoutes && <div role="status" className="jumper-route-loading"><span>{translate("searching_routes")}</span><div className="jumper-route-skeleton" aria-hidden="true"><i /><i /><i /></div></div>}
+        <RouteList routes={routes} selectedId={selectedRoute?.id ?? null} onSelect={setSelectedRoute} toDecimals={toToken?.decimals ?? 18} toSymbol={toToken?.symbol ?? ""} currency={currency}
+          priceUsd={toToken ? (priceLookup[getPriceLookupKey(toToken)] ?? Number(toToken.priceUSD ?? "0")) : null} disabled={swapping || loadingRoutes} />
+      </aside>
+      <div className="jumper-swap-footer">
+        <details className="jumper-settings"><summary><span aria-hidden="true">⚙</span><span>{translate("hermes_fee_short")} {Number(process.env.NEXT_PUBLIC_PLATFORM_FEE_PERCENT ?? "0")}%</span><span className="jumper-settings-chevron" aria-hidden="true">⌄</span></summary>
+          <p className="jumper-hint">{translate("route_sort_hint")} {translate("route_estimates")}</p>
+        </details>
+        <button type="button" className="jumper-cta" disabled={isConnected ? Boolean(ctaDisabled) : !onConnect} onClick={() => isConnected ? void handleSwap() : onConnect?.()}>{ctaLabel}</button>
         {selectedRoute?.provider === "oneclick" && toToken && (
           <p className="jumper-hint">{translate("oneclick_minimum", {
             amount: formatTokenAmount((selectedRoute.raw as { minAmountOut: string }).minAmountOut, toToken.decimals),
@@ -607,35 +507,16 @@ export function SwapCard() {
           </p>
         )}
 
-        {!isConnected && <p className="jumper-hint jumper-hint-warn">Connecte un wallet pour continuer.</p>}
-        {error && <p className="jumper-error">{error}</p>}
-        {bootError && fromToken && <p className="jumper-hint">{bootError}</p>}
-      </div>
 
-      {/* ── Route list sidebar ── */}
-      <div className="jumper-routes-panel">
-        <RouteList
-          routes={routes}
-          selectedId={selectedRoute?.id ?? null}
-          onSelect={setSelectedRoute}
-          toDecimals={toToken?.decimals ?? 18}
-          toSymbol={toToken?.symbol ?? ""}
-          currency={currency}
-          priceUsd={toToken ? (priceLookup[getPriceLookupKey(toToken)] ?? Number(toToken.priceUSD ?? "0")) : null}
-        />
+        <div aria-live="polite">
+          {!isConnected && <p className="jumper-hint">{translate("connect_to_continue")}</p>}
+          {error && <p className="jumper-error">{error}</p>}
+          {bootError && fromToken && <p className="jumper-hint">{bootError}</p>}
+        </div>
       </div>
-
-      {/* ── Token select modal ── */}
-      <TokenSelectModal
-        open={modalSide !== null}
-        onClose={() => setModalSide(null)}
-        chains={chains}
-        tokensByChain={tokensByChain}
-        selectedChainId={modalSide === "to" ? toChainId : fromChainId}
-        selectedToken={modalSide === "to" ? toToken : fromToken}
-        onSelect={(chainId, token) => handleSelect(modalSide ?? "from", chainId, token)}
-        title={modalSide === "from" ? "Select source token" : "Select destination token"}
-      />
-    </>
-  );
+    </div>
+    <TokenSelectModal open={modalSide !== null && !swapping} onClose={() => setModalSide(null)} chains={chains} tokensByChain={tokensByChain}
+      selectedChainId={modalSide === "to" ? toChainId : fromChainId} selectedToken={modalSide === "to" ? toToken : fromToken}
+      onSelect={(chainId, token) => handleSelect(modalSide ?? "from", chainId, token)} title={translate(modalSide === "from" ? "source_token" : "destination_token")} />
+  </>;
 }

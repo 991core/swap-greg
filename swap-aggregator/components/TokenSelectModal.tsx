@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useAccount } from "wagmi";
+import { createPortal } from "react-dom";
+import { ChainSelect } from "./ChainSelect";
+import { TokenIcon } from "./TokenIcon";
+import { useI18n } from "@/lib/i18n";
 import type { ExtendedChain } from "@lifi/sdk";
 import type { AppToken } from "@/lib/lifi";
 import { looksLikeAddress, resolveTokenByAddress } from "@/lib/contractTokenResolver";
@@ -42,7 +45,7 @@ export default function TokenSelectModal({
   onSelect,
   title,
 }: TokenSelectModalProps) {
-  const { address } = useAccount();
+  const { translate } = useI18n();
 
   const [query, setQuery] = useState("");
   const [contractToken, setContractToken] = useState<AppToken | null>(null);
@@ -112,149 +115,31 @@ export default function TokenSelectModal({
 
   if (!open) return null;
 
-  return (
-    <>
-      <div
-        role="presentation"
-        className="jumper-modal-overlay"
-        onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-        onKeyDown={(e) => { if (e.key === "Escape") onClose(); }}
-      >
-        {/* Modal card */}
-        <div
-          className="jumper-modal-card"
-          role="dialog"
-          aria-modal="true"
-          aria-label={title}
-        >
-          {/* Header */}
-          <div className="jumper-modal-header">
-            <h2 className="jumper-modal-title">{title}</h2>
-            <button
-              onClick={onClose}
-              className="jumper-modal-close"
-              aria-label="Close"
-            >
-              ✕
-            </button>
-          </div>
-
-          {/* Content */}
-          <div className="jumper-modal-content" style={{ maxHeight: "70vh" }}>
-            {/* Chain + Search */}
-            <div className="jumper-modal-controls">
-              {/* Chain selector */}
-              <div className="jumper-chain-select-row">
-                <label className="jumper-hint" htmlFor="jumper-chain-select">Chain</label>
-                <select
-                  id="jumper-chain-select"
-                  value={activeChainId}
-                  onChange={(e) => setChainFilter(Number(e.target.value))}
-                  className="jumper-chain-select"
-                >
-                  {chains.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Search */}
-              <div className="jumper-search-wrap">
-                <span className="jumper-search-icon">🔍</span>
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search name, symbol, or paste address…"
-                  className="jumper-search-input"
-                  autoComplete="off"
-                  spellCheck={false}
-                />
-                {isResolving && (
-                  <span className="jumper-search-loading" aria-hidden>⋯</span>
-                )}
-              </div>
-
-              {/* Contract resolution result */}
-              {contractToken && (
-                <div className="jumper-resolved-block">
-                  <p className="jumper-resolved-label">✓ Contract resolved</p>
-                  <p className="jumper-resolved-info">
-                    {contractToken.symbol} — {contractToken.name}
-                  </p>
-                  <p className="jumper-resolved-addr">
-                    {contractToken.address}
-                  </p>
-                  <button
-                    onClick={() => {
-                      onSelect(contractToken.chainId, contractToken);
-                      setQuery(""); onClose();
-                    }}
-                    className="jumper-resolved-btn"
-                  >
-                    Select {contractToken.symbol}
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Token list */}
-            <div className="jumper-token-scroll">
-              {filteredTokens.length === 0 ? (
-                <div className="jumper-modal-empty">
-                  <span className="jumper-empty-icon">🪙</span>
-                  <p className="jumper-hint">No tokens found</p>
-                  <p className="jumper-hint" style={{ marginTop: 4, fontSize: 11 }}>Try a different search term</p>
-                </div>
-              ) : (
-                <div className="jumper-token-list">
-                  {filteredTokens.map((token) => {
-                    const chain = chainsByMap.get(token.chainId);
-                    return (
-                      <button
-                        key={token.address}
-                        onClick={() => {
-                          onSelect(token.chainId, token);
-                          setQuery(""); setContractToken(null); onClose();
-                        }}
-                        className="jumper-token-row"
-                      >
-                        {/* Logo */}
-                        <img
-                          src={token.logoURI}
-                          alt={token.symbol}
-                          className="jumper-token-row-logo"
-                          loading="lazy"
-                          referrerPolicy="no-referrer"
-                        />
-                        {/* Info */}
-                        <div className="jumper-token-row-info">
-                          <span className="jumper-token-row-symbol">{token.symbol}</span>
-                          <span className="jumper-token-row-name">{token.name}</span>
-                        </div>
-                        {/* Right side */}
-                        <div className="jumper-token-row-right">
-                          {chain && <span className="jumper-chain-badge">{chain.name}</span>}
-                          {token.priceUSD && formatUsd(token.priceUSD) !== "—" && (
-                            <span className="jumper-token-price">{formatUsd(token.priceUSD)}</span>
-                          )}
-                          <span className="jumper-token-row-arrow">›</span>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* Footer */}
-            <div className="jumper-modal-footer">
-              <p className="jumper-footer-hint">Paste a contract address to auto-resolve</p>
-            </div>
-          </div>
-        </div>
+  return createPortal(<div className="jumper-modal-overlay" onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+    <div className="jumper-modal-card" role="dialog" aria-modal="true" aria-label={title}
+      onKeyDown={(event) => { if (event.key === "Escape") { event.stopPropagation(); onClose(); } }}>
+      <header className="jumper-modal-header"><h2>{title}</h2><button className="jumper-modal-close" type="button" aria-label={translate("modal_close")} onClick={onClose}>×</button></header>
+      <div className="jumper-modal-search"><span>{translate("chains_label")}</span>
+        <ChainSelect chainId={activeChainId} chains={chains} label={translate("chains_label")} onChange={(id) => { setChainFilter(id); setQuery(""); setContractToken(null); }} />
+        <input ref={inputRef} aria-label={translate("search_placeholder")} placeholder={translate("search_placeholder")} value={query} onChange={(event) => setQuery(event.target.value)} maxLength={100} autoComplete="off" spellCheck={false} />
       </div>
-    </>
-  );
+      <div className="jumper-token-list" aria-busy={isResolving}>
+        {contractToken && <section className="jumper-resolved-block">
+          <div className="jumper-token-review-title"><TokenIcon token={contractToken} network /><strong>{contractToken.symbol} · {contractToken.name}</strong></div>
+          <p className="jumper-hint">{translate("contract_resolved")}</p><code>{contractToken.address}</code>
+          <button type="button" className="jumper-refresh" onClick={() => { onSelect(contractToken.chainId, contractToken); setQuery(""); onClose(); }}>{contractToken.symbol} →</button>
+        </section>}
+        {filteredTokens.map((token) => {
+          const selected = selectedToken?.chainId === token.chainId && selectedToken.address.toLowerCase() === token.address.toLowerCase();
+          return <button key={token.address} type="button" className="jumper-token-row" aria-pressed={selected} onClick={() => { onSelect(token.chainId, token); setQuery(""); setContractToken(null); onClose(); }}>
+            <TokenIcon token={token} network />
+            <span className="jumper-token-row-info"><strong>{token.symbol}</strong><span>{token.name}</span><code title={token.address}>{token.address}</code></span>
+            <span className="jumper-token-row-end"><span className="jumper-chain-badge">{chainsByMap.get(token.chainId)?.name}</span><span>{formatUsd(token.priceUSD)}</span><span aria-hidden="true">{selected ? "✓" : "↗"}</span></span>
+          </button>;
+        })}
+        {!filteredTokens.length && !isResolving && <p className="jumper-hint">{translate("no_tokens_for_chain")}</p>}
+        {isResolving && <p role="status" className="jumper-hint">{translate("searching_routes")}</p>}
+      </div>
+    </div>
+  </div>, document.body);
 }

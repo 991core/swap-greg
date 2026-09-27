@@ -1,8 +1,9 @@
 "use client";
 
 import "@rainbow-me/rainbowkit/styles.css";
-import { getDefaultConfig, RainbowKitProvider, darkTheme } from "@rainbow-me/rainbowkit";
+import { getDefaultConfig, RainbowKitProvider } from "@rainbow-me/rainbowkit";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { hermesWalletTheme } from "@/lib/wallet-theme";
 import { WagmiProvider } from "wagmi";
 import {
   arbitrum,
@@ -31,11 +32,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
         <RainbowKitProvider
-          theme={darkTheme({
-            accentColor: "#3ecf8e",
-            accentColorForeground: "#062015",
-            borderRadius: "medium",
-          })}
+          theme={hermesWalletTheme}
         >
           {children}
         </RainbowKitProvider>
