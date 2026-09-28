@@ -44,6 +44,7 @@ export type OneClickQuote = {
 };
 
 export async function fetchOneClickQuote(params: RouteSelectionParams, dry: boolean): Promise<OneClickQuote> {
+  if (!dry && !params.fromAddress) throw new Error("Connect a wallet before requesting an executable quote.");
   const response = await fetch("/api/oneclick/quote", {
     method: "POST",
     headers: { "Content-Type": "application/json" },

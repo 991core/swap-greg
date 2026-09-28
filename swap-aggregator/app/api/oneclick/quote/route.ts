@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { isAddress } from "viem";
+import { isAddress, zeroAddress } from "viem";
 import { findOneClickToken, getOneClickTokens, oneClickRequest, ONECLICK_CHAINS } from "@/lib/aggregators/oneclick/server";
 
 export const runtime = "nodejs";
@@ -10,12 +10,16 @@ export async function POST(request: Request) {
     const { fromChainId, toChainId, fromTokenAddress, toTokenAddress, fromTokenDecimals, toTokenDecimals, fromAmount, wallet, dry } = body ?? {};
     if (!Number.isInteger(fromChainId) || !Number.isInteger(toChainId) ||
         !ONECLICK_CHAINS[fromChainId] || !ONECLICK_CHAINS[toChainId] ||
-        !isAddress(fromTokenAddress) || !isAddress(toTokenAddress) || !isAddress(wallet) ||
+        !isAddress(fromTokenAddress) || !isAddress(toTokenAddress) ||
+        (wallet != null && !isAddress(wallet)) || (!dry && (!isAddress(wallet) || wallet.toLowerCase() === zeroAddress)) ||
         !Number.isInteger(fromTokenDecimals) || !Number.isInteger(toTokenDecimals) ||
         typeof fromAmount !== "string" || !/^[1-9]\d{0,77}$/.test(fromAmount) ||
         typeof dry !== "boolean") {
       return NextResponse.json({ error: "Invalid 1Click quote parameters" }, { status: 400 });
     }
+    // 1Click requires recipient/refund fields even for a dry quote.
+    // The placeholder is only allowed for previews and never produces deposit instructions.
+    const recipient = wallet ?? zeroAddress;
     const tokens = await getOneClickTokens();
     const origin = findOneClickToken(tokens, fromChainId, fromTokenAddress);
     const destination = findOneClickToken(tokens, toChainId, toTokenAddress);
@@ -32,9 +36,9 @@ export async function POST(request: Request) {
         destinationAsset: destination.assetId,
         amount: fromAmount,
         depositType: "ORIGIN_CHAIN",
-        refundTo: wallet,
+        refundTo: recipient,
         refundType: "ORIGIN_CHAIN",
-        recipient: wallet,
+        recipient,
         recipientType: "DESTINATION_CHAIN",
         deadline: new Date(Date.now() + 20 * 60_000).toISOString(),
       }),

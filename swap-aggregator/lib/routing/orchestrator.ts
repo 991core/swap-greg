@@ -9,7 +9,7 @@ export type RouteSelectionParams = {
   fromTokenAddress: string;
   toTokenAddress: string;
   fromAmount: string;
-  fromAddress: string;
+  fromAddress?: string;
   fromTokenDecimals: number;
   toTokenDecimals: number;
   providers?: ProviderSelection;

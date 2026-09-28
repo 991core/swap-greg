@@ -279,3 +279,14 @@ button, input, select, a, summary { outline-offset: 4px; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
+
+/* Search stays reachable while the network options scroll. */
+.jumper-chain-search { position: sticky; top: 0; z-index: 1; display: block; width: 100%; margin-bottom: 6px; font-size: 12px; background: #291838; }
+.jumper-swap-main { min-width: 0; }
+@media (min-width: 960px) {
+  .jumper-widget-wrapper { width: min(1040px, 100%); }
+  .jumper-swap-widget { display: grid; grid-template-columns: minmax(0, 470px) minmax(0, 1fr); align-items: start; gap: 24px; padding: 20px; }
+  .jumper-routes-panel { padding: 0 0 0 24px; border-left: 1px solid var(--border); align-self: stretch; }
+  .jumper-routes-heading { min-height: 36px; margin-bottom: 12px; }
+  .jumper-routes-list { max-height: min(640px, 70vh); }
+}

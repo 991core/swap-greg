@@ -333,7 +333,7 @@ export type SwapParams = {
   fromTokenAddress: string;
   toTokenAddress: string;
   fromAmount: string;
-  fromAddress: string;
+  fromAddress?: string;
 };
 
 export type AppToken = Token & {

@@ -18,6 +18,7 @@ function detectBrowserLang(): Lang {
 }
 
 type TranslationKey =
+  | "chain_search" | "chain_no_results" | "quote_without_wallet"
   | "destination_token"
   | "source_token"
   | "route_estimates"
@@ -103,6 +104,9 @@ type TranslationKey =
 
 const translations: Record<Lang, Record<TranslationKey, string>> = {
   en: {
+    chain_search: "Search networks…",
+    chain_no_results: "No matching network.",
+    quote_without_wallet: "Compare quotes freely. Connect your wallet to swap.",
     destination_token: "Select destination token",
     source_token: "Select source token",
     route_estimates: "Amounts, fees and arrival times are estimates.",
@@ -186,6 +190,9 @@ const translations: Record<Lang, Record<TranslationKey, string>> = {
     hero_subtitle: "Compare routes from top DEXs in one click.",
   },
   fr: {
+    chain_search: "Rechercher un réseau…",
+    chain_no_results: "Aucun réseau correspondant.",
+    quote_without_wallet: "Compare les devis librement. Connecte ton wallet pour lancer le swap.",
     destination_token: "Choisir le token de destination",
     source_token: "Choisir le token source",
     route_estimates: "Les montants, frais et délais restent estimatifs.",
