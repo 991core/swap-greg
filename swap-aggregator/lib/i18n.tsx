@@ -33,7 +33,7 @@ type TranslationKey =
   | "route_gas"
   | "route_duration"
   | "route_details"
-  | "refresh_quotes"
+  | "refresh_quotes" | "quote_refresh_countdown"
   | "choose_provider"
   | "routes_empty_description"
   | "routes_short"
@@ -122,6 +122,7 @@ const translations: Record<Lang, Record<TranslationKey, string>> = {
     route_duration: "Estimated time",
     route_details: "Route details",
     refresh_quotes: "Refresh quotes",
+    quote_refresh_countdown: "Refresh quotes in {seconds} seconds",
     choose_provider: "Select at least one provider to find routes.",
     routes_empty_description: "Choose your tokens and enter an amount to compare the available routes.",
     routes_short: "Routes",
@@ -208,6 +209,7 @@ const translations: Record<Lang, Record<TranslationKey, string>> = {
     route_duration: "Durée estimée",
     route_details: "Détails de la route",
     refresh_quotes: "Actualiser les cotations",
+    quote_refresh_countdown: "Actualisation des cotations dans {seconds} secondes",
     choose_provider: "Active au moins un provider pour rechercher des routes.",
     routes_empty_description: "Choisis tes cryptos et saisis un montant pour comparer les routes disponibles.",
     routes_short: "Routes",

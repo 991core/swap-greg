@@ -86,6 +86,8 @@ export function SwapCard({ onConnect }: { onConnect?: () => void } = {}) {
   const [quotedFor, setQuotedFor] = useState<string | null>(null);
   const walletQuoteReady = Boolean(isConnected && address && quotedFor === address.toLowerCase());
   const [loadingRoutes, setLoadingRoutes] = useState(false);
+  const [refreshAt, setRefreshAt] = useState<number | null>(null);
+  const [refreshSeconds, setRefreshSeconds] = useState(30);
   const [priceLookup, setPriceLookup] = useState<Record<string, number>>({});
   const [currencySlot, setCurrencySlot] = useState<HTMLElement | null>(null);
   useEffect(() => { setCurrencySlot(document.getElementById("hermes-currency-slot")); }, []);
@@ -237,7 +239,10 @@ export function SwapCard({ onConnect }: { onConnect?: () => void } = {}) {
 
   // ── fetch routes ─────────────────────────
   const loadRoutes = useCallback(async () => {
+    if (swapping) return;
     const id = ++requestId.current;
+    setRefreshAt(null);
+    setRefreshSeconds(30);
     if (!fromToken || !toToken) {
       setRoutes([]);
       setSelectedRoute(null);
@@ -275,15 +280,34 @@ export function SwapCard({ onConnect }: { onConnect?: () => void } = {}) {
       const message = error instanceof Error ? error.message : translate("routes_fetch_failed");
       setError(message);
     } finally {
-      if (id === requestId.current) setLoadingRoutes(false);
+      if (id === requestId.current) {
+        setLoadingRoutes(false);
+        setRefreshAt(Date.now() + 30_000);
+      }
     }
-  }, [address, isConnected, amount, fromChainId, providers, toChainId, fromToken, toToken, translate]);
+  }, [address, isConnected, amount, fromChainId, providers, toChainId, fromToken, toToken, translate, swapping]);
 
   useEffect(() => {
+    if (swapping) return;
     setRoutes([]); setSelectedRoute(null); setQuotedFor(null); setLoadingRoutes(false);
+    setRefreshAt(null); setRefreshSeconds(30);
     const t = setTimeout(() => { void loadRoutes(); }, 500);
     return () => { clearTimeout(t); requestId.current += 1; };
-  }, [isConnected, fromToken, toToken, loadRoutes]);
+  }, [isConnected, fromToken, toToken, loadRoutes, swapping]);
+
+  useEffect(() => {
+    if (refreshAt === null || loadingRoutes || swapping) return;
+    const tick = () => {
+      const remaining = Math.max(0, Math.ceil((refreshAt - Date.now()) / 1000));
+      setRefreshSeconds(remaining);
+      if (remaining === 0) {
+        clearInterval(timer);
+        void loadRoutes();
+      }
+    };
+    const timer = setInterval(tick, 250);
+    return () => clearInterval(timer);
+  }, [refreshAt, loadingRoutes, swapping, loadRoutes]);
 
   // ── derived values ───────────────────────
   const receivePreview = useMemo(() => {
@@ -330,10 +354,9 @@ export function SwapCard({ onConnect }: { onConnect?: () => void } = {}) {
   }
 
   function invert() {
-    const nextAmount = receivePreview ?? amount;
+    if (swapping) return;
     setFromChainId(toChainId); setToChainId(fromChainId);
     setFromToken(toToken); setToToken(fromToken);
-    setAmount(nextAmount);
     setRoutes([]); setSelectedRoute(null); setError(null);
   }
 
@@ -472,7 +495,7 @@ export function SwapCard({ onConnect }: { onConnect?: () => void } = {}) {
               {sourceBalanceLabel && <span className="jumper-balance-pill">{translate("balance_label")}: {sourceBalanceLabel}</span>}</div>
             {fromToken && sourceBalance && <div className="jumper-quick-row">{[25, 50, 75, 100].map((pct) => <button key={pct} type="button" className="jumper-pct-btn" onClick={() => applyQuickAmount(pct)}>{pct}%</button>)}</div>}
           </div>
-          <button type="button" className="jumper-swap-invert" onClick={invert} aria-label={translate("invert_label")}>⇅</button>
+          <button type="button" className="jumper-swap-invert" disabled={swapping} onClick={invert} aria-label={translate("invert_label")}>⇅</button>
           <div className="jumper-panel">
             <div className="jumper-panel-header"><label htmlFor="receive-amount">{translate("receive_label")}</label>
               <ChainSelect chainId={toChainId} chains={chains} onChange={(id) => changeChain("to", id)} label={translate("destination_network")} /></div>
@@ -519,7 +542,16 @@ export function SwapCard({ onConnect }: { onConnect?: () => void } = {}) {
       </div>
       <aside className="jumper-routes-panel" aria-label={translate("route_list_title")}>
         <div className="jumper-routes-heading"><h2>{translate("routes_short")} {routes.length > 0 && <span className="jumper-route-count">{routes.length}</span>}</h2>
-          {fromToken && toToken && amount && <button type="button" className="jumper-refresh-icon" aria-label={translate("refresh_quotes")} disabled={swapping || loadingRoutes} onClick={() => void loadRoutes()}>↻</button>}
+          {fromToken && toToken && amount && <div className={`jumper-quote-clock${loadingRoutes ? " is-refreshing" : ""}`}>
+            {(refreshAt !== null || loadingRoutes) && !swapping && <span title={translate("refresh_quotes")}>
+              <svg viewBox="0 0 36 36" role="img" aria-label={translate("quote_refresh_countdown", { seconds: String(refreshSeconds) })}>
+                <circle className="jumper-clock-track" cx="18" cy="18" r="15" />
+                <circle className="jumper-clock-progress" cx="18" cy="18" r="15" pathLength="100" strokeDasharray="100" strokeDashoffset={100 - refreshSeconds / 30 * 100} />
+                <text x="18" y="23" textAnchor="middle">{loadingRoutes ? "↻" : refreshSeconds}</text>
+              </svg>
+            </span>}
+            <button type="button" className="jumper-refresh-icon" aria-label={translate("refresh_quotes")} disabled={swapping || loadingRoutes} onClick={() => void loadRoutes()}>↻</button>
+          </div>}
         </div>
         {!routes.length && !loadingRoutes && <div className="jumper-routes-empty"><span aria-hidden="true">⇄</span><p>{translate(amount && fromToken && toToken ? "no_routes_hint" : "routes_empty_description")}</p></div>}
         {loadingRoutes && <div role="status" className="jumper-route-loading"><span>{translate("searching_routes")}</span><div className="jumper-route-skeleton" aria-hidden="true"><i /><i /><i /></div></div>}
