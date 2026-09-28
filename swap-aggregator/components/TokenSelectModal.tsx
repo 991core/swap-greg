@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ChainSelect } from "./ChainSelect";
 import { TokenIcon } from "./TokenIcon";
+import { findTokenOnChain } from "@/lib/token-continuity";
 import { useI18n } from "@/lib/i18n";
 import type { ExtendedChain } from "@lifi/sdk";
 import type { AppToken } from "@/lib/lifi";
@@ -120,7 +121,12 @@ export default function TokenSelectModal({
       onKeyDown={(event) => { if (event.key === "Escape") { event.stopPropagation(); onClose(); } }}>
       <header className="jumper-modal-header"><h2>{title}</h2><button className="jumper-modal-close" type="button" aria-label={translate("modal_close")} onClick={onClose}>×</button></header>
       <div className="jumper-modal-search"><span>{translate("chains_label")}</span>
-        <ChainSelect chainId={activeChainId} chains={chains} label={translate("chains_label")} onChange={(id) => { setChainFilter(id); setQuery(""); setContractToken(null); }} />
+        <ChainSelect chainId={activeChainId} chains={chains} label={translate("chains_label")} onChange={(id) => {
+          if (id === activeChainId) return;
+          const token = findTokenOnChain(selectedToken, id, tokensByChain[id] ?? []);
+          setChainFilter(id); setQuery(""); setContractToken(null);
+          if (token) { onSelect(id, token); onClose(); }
+        }} />
         <input ref={inputRef} aria-label={translate("search_placeholder")} placeholder={translate("search_placeholder")} value={query} onChange={(event) => setQuery(event.target.value)} maxLength={100} autoComplete="off" spellCheck={false} />
       </div>
       <div className="jumper-token-list" aria-busy={isResolving}>

@@ -26,6 +26,7 @@ import {
 import { formatCurrencyValue, fetchTokenPriceUsd, getPriceLookupKey } from "@/lib/pricing";
 import type { NormalizedRoute, ProviderName, ProviderSelection } from "@/lib/types/normalized-route";
 import { fetchOneClickQuote, fetchOneClickTokens } from "@/lib/aggregators/oneclick/client";
+import { findTokenOnChain } from "@/lib/token-continuity";
 import { useI18n } from "@/lib/i18n";
 
 type Side = "from" | "to";
@@ -96,6 +97,7 @@ export function SwapCard({ onConnect }: { onConnect?: () => void } = {}) {
 
   const [modalSide, setModalSide] = useState<Side | null>(null);
   const requestId = useRef(0);
+  const initialTokenSelected = useRef(false);
 
   const isNativeFromToken =
     fromToken !== null && (!fromToken.address || fromToken.address === "0x0000000000000000000000000000000000000000");
@@ -223,7 +225,9 @@ export function SwapCard({ onConnect }: { onConnect?: () => void } = {}) {
   }, []);
 
   useEffect(() => {
-    if (fromToken || Object.keys(tokensByChain).length === 0) return;
+    if (initialTokenSelected.current || Object.keys(tokensByChain).length === 0) return;
+    initialTokenSelected.current = true;
+    if (fromToken) return;
     const baseTokens = tokensByChain[fromChainId] ?? [];
     const defaultToken = baseTokens.find(
       (t) => t.topSymbol === "ETH" || t.symbol?.toUpperCase() === "ETH" || t.symbol?.toUpperCase() === "WETH",
@@ -433,10 +437,12 @@ export function SwapCard({ onConnect }: { onConnect?: () => void } = {}) {
   else if (ctaDisabled && selectedRoute.provider !== "lifi" && selectedRoute.provider !== "oneclick") ctaLabel = translate("oneclick_unavailable_route");
 
   function changeChain(side: Side, chainId: number) {
-    const token = tokensByChain[chainId]?.[0] ?? null;
-    if (side === "from") { setFromChainId(chainId); setFromToken(token); setAmount(""); }
+    if (swapping || chainId === (side === "from" ? fromChainId : toChainId)) return;
+    const token = findTokenOnChain(side === "from" ? fromToken : toToken, chainId, tokensByChain[chainId] ?? []);
+    if (side === "from") { setFromChainId(chainId); setFromToken(token); if (!token) setAmount(""); }
     else { setToChainId(chainId); setToToken(token); }
-    setRoutes([]); setSelectedRoute(null);
+    setRoutes([]); setSelectedRoute(null); setQuotedFor(null);
+    if (!token) setModalSide(side);
   }
 
   return <>
