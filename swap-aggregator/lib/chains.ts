@@ -8,10 +8,9 @@ import {
   metis,
   optimism,
   polygon,
-  tron,
 } from "viem/chains";
 
-/** Chains with LI.FI coverage for top-20 market-cap tokens. Solana/Tron are non-EVM. */
+/** One EVM chain list shared by discovery, RPC reads and the wallet. */
 export const APP_CHAINS = [
   base,
   mainnet,
@@ -22,7 +21,6 @@ export const APP_CHAINS = [
   avalanche,
   gnosis,
   metis,
-  tron,
 ] as const;
 
 export const APP_CHAIN_IDS = APP_CHAINS.map((c) => c.id);
@@ -39,7 +37,6 @@ export const CHAIN_LABELS: Record<number, string> = {
   [avalanche.id]: "Avalanche",
   [gnosis.id]: "Gnosis",
   [metis.id]: "Metis",
-  [tron.id]: "Tron",
 };
 
 export function isAppChainId(id: number): id is AppChainId {

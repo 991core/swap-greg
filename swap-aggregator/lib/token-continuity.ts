@@ -1,5 +1,5 @@
 import type { AppToken } from "./lifi";
-import { getCatalogToken, NATIVE_ADDRESS } from "./token-icons";
+import { getCatalogToken, NATIVE_ADDRESS } from "./tokens/catalog";
 
 // Deliberately limited to the pinned, popular assets already in the local catalog.
 // New symbols from provider APIs never extend this list automatically.

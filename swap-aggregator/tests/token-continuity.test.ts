@@ -1,17 +1,9 @@
-const assert = require('node:assert/strict');
-const { test } = require('node:test');
-const fs = require('node:fs');
-const ts = require('typescript');
-// Run the pure selection helper with the project's existing TypeScript compiler.
-require.extensions['.ts'] = (module, filename) => {
-  const compiled = ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
-    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 },
-  });
-  module._compile(compiled.outputText, filename);
-};
-const { findTokenOnChain } = require('../lib/token-continuity.ts');
-const { getCatalogToken, NATIVE_ADDRESS } = require('../lib/token-icons.ts');
-const known = (chainId, address) => {
+import assert from "node:assert/strict";
+import { test } from "vitest";
+import type { AppToken } from "../lib/tokens/types";
+import { findTokenOnChain } from "../lib/token-continuity";
+import { getCatalogToken, NATIVE_ADDRESS } from "../lib/tokens/catalog";
+const known = (chainId: number, address: string) => {
   const token = getCatalogToken(chainId, address);
   assert.ok(token, `missing catalog fixture ${chainId}:${address}`);
   return { ...token, topSymbol: token.symbol };
@@ -55,6 +47,6 @@ test('keeps native ETH, WETH and other native assets separate', () => {
 test('requires manual selection for missing or unsupported destinations', () => {
   assert.equal(findTokenOnChain(baseUSDC, 137, []), null);
   assert.equal(findTokenOnChain(null, 137, [polygonUSDC]), null);
-  assert.equal(findTokenOnChain(baseUSDC, 99999, [{ ...polygonUSDC, chainId: 99999 }]), null);
+  assert.equal(findTokenOnChain(baseUSDC, 99999, [{ ...polygonUSDC, chainId: 99999 as AppToken["chainId"] }]), null);
   assert.equal(findTokenOnChain(ethUSDT, 42161, [known(42161, '0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9')]), null);
 });

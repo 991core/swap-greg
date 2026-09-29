@@ -1,6 +1,6 @@
 "use client";
 
-import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { ConnectButton } from "@rainbow-me/rainbowkit/components";
 import { SwapCard } from "@/components/SwapCard";
 import { useI18n, LANGUAGES, type Lang } from "@/lib/i18n";
 

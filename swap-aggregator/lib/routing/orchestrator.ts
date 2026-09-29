@@ -1,72 +1,37 @@
-import { fetchRoutes as fetchLifiRoutes } from "../aggregators/lifi/routes";
-import { fetchRangoRoutes, normalizeRangoRoute } from "../aggregators/rango/routes";
-import { fetchOneClickRoute } from "../aggregators/oneclick/client";
+import { fetchRoutes, type SwapParams } from "../aggregators/lifi/routes";
 import type { NormalizedRoute, ProviderSelection } from "../types/normalized-route";
+import { normalizeLifiRoute } from "./normalize";
+import { sortRoutes } from "./sort";
+import { deduplicateRoutes } from "./deduplicate";
+import { fetchRangoRoutes } from "../aggregators/rango/routes";
 
-export type RouteSelectionParams = {
-  fromChainId: number;
-  toChainId: number;
-  fromTokenAddress: string;
-  toTokenAddress: string;
-  fromAmount: string;
-  fromAddress?: string;
-  fromTokenDecimals: number;
-  toTokenDecimals: number;
-  providers?: ProviderSelection;
-};
-
-function normalizeLifiRoute(route: unknown, params: RouteSelectionParams): NormalizedRoute {
-  const lifiRoute = route as {
-    id?: string;
-    toAmount?: string;
-    steps?: Array<{
-      tool?: string;
-      toolDetails?: { name?: string };
-      estimate?: { executionDuration?: number };
-    }>;
-  };
-
-  const tools = (lifiRoute.steps ?? [])
-    .map((step) => step.toolDetails?.name || step.tool)
-    .filter(Boolean);
-
-  return {
-    id: lifiRoute.id ?? `${params.fromChainId}-${params.toChainId}-${params.fromTokenAddress}-${params.toTokenAddress}`,
-    provider: "lifi",
-    fromChainId: params.fromChainId,
-    toChainId: params.toChainId,
-    fromTokenAddress: params.fromTokenAddress,
-    toTokenAddress: params.toTokenAddress,
-    fromAmount: params.fromAmount,
-    toAmount: lifiRoute.toAmount ?? "0",
-    toolLabel: [...new Set(tools)].join(" → ") || "LI.FI",
-    durationSeconds: (lifiRoute.steps ?? []).reduce((acc, step) => acc + (step.estimate?.executionDuration ?? 0), 0),
-    raw: route,
-  };
-}
-
-export async function getRoutesForSelection(params: RouteSelectionParams): Promise<NormalizedRoute[]> {
-  const providers = params.providers ?? { lifi: true, socket: false, rango: true, oneclick: true };
-  const [lifiResult, rangoResult, oneclickResult] = await Promise.allSettled([
-    providers.lifi ? fetchLifiRoutes(params) : Promise.resolve([]),
-    providers.rango ? fetchRangoRoutes(params) : Promise.resolve([]),
-    providers.oneclick ? fetchOneClickRoute(params) : Promise.resolve([]),
-  ]);
-
-  const normalized: NormalizedRoute[] = [];
-
-  if (lifiResult.status === "fulfilled") {
-    normalized.push(...lifiResult.value.map((route) => normalizeLifiRoute(route, params)));
-  }
-  if (rangoResult.status === "fulfilled") {
-    normalized.push(...rangoResult.value.map((route) => normalizeRangoRoute(route, params)));
-  }
-  if (oneclickResult.status === "fulfilled") normalized.push(...oneclickResult.value);
-
-  return normalized.sort((a, b) => {
-    const aNet = BigInt(a.toAmount);
-    const bNet = BigInt(b.toAmount);
-    if (aNet === bNet) return 0;
-    return aNet > bNet ? -1 : 1;
+import { fetchOneClickRoute } from "../aggregators/oneclick/client";
+import type { AppToken } from "../tokens/types";
+export type RouteSelectionParams = SwapParams & { providers?: ProviderSelection; fromTokenDecimals?: number; toTokenDecimals?: number; fromToken?: AppToken; toToken?: AppToken };
+export type ProviderWarning = { provider: "lifi" | "rango" | "oneclick"; message: string };
+export async function getRoutesForSelection(params: RouteSelectionParams, signal?: AbortSignal, onWarning?: (warning: ProviderWarning) => void, onProgress?: (routes: NormalizedRoute[]) => void): Promise<NormalizedRoute[]> {
+  if (params.providers?.socket) throw new Error("Socket is not available yet.");
+  const selection = params.providers ?? { lifi: true, rango: true, socket: false, oneclick: false };
+  // UI-only provider controls must not leak into either provider's API payload.
+  const request: SwapParams = { fromChainId: params.fromChainId, toChainId: params.toChainId,
+    fromTokenAddress: params.fromTokenAddress, toTokenAddress: params.toTokenAddress,
+    fromAmount: params.fromAmount, fromAddress: params.fromAddress };
+  const jobs: { provider: "lifi" | "rango" | "oneclick"; run: () => Promise<NormalizedRoute[]> }[] = [];
+  if (selection.lifi) jobs.push({ provider: "lifi", run: async () => (await fetchRoutes(request, signal)).map((route) => normalizeLifiRoute(route, request)) });
+  if (selection.rango) jobs.push({ provider: "rango", run: () => fetchRangoRoutes(request, signal) });
+  if (selection.oneclick) jobs.push({ provider: "oneclick", run: () => fetchOneClickRoute(params, signal) });
+  const routes: NormalizedRoute[] = [];
+  const results = await Promise.allSettled(jobs.map(async (job) => {
+    const received = await job.run();
+    if (signal?.aborted) return;
+    routes.push(...received);
+    if (received.length) onProgress?.(sortRoutes(deduplicateRoutes(routes)));
+  }));
+  if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
+  let failures = 0;
+  results.forEach((result, index) => {
+    if (result.status === "rejected") { failures++; onWarning?.({ provider: jobs[index].provider, message: "unavailable" }); }
   });
+  if (jobs.length && failures === jobs.length) throw new Error("No selected provider is available. Retrying automatically.");
+  return sortRoutes(deduplicateRoutes(routes));
 }

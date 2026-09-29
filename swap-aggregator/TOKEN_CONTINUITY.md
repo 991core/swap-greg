@@ -1,11 +1,11 @@
 # Token selection across networks
 
 `lib/token-continuity.ts` preserves a selection only when source and destination
-both match the local chain/address/decimal pins in `lib/token-icons.ts`, and the
+both match the local chain/address/decimal pins in `lib/tokens/catalog.ts`, and the
 asset is in the explicit popular-asset allowlist. Matching symbols alone, or the
-routing layer's normalized `topSymbol`, never authorize a match.
+a normalized symbol, never authorize a match.
 
-The destination must also be present in the currently loaded provider catalog.
+The destination must also be present in the local selection catalog. Route availability is determined separately by enabled providers.
 If missing, unrecognized, ambiguous, or unsupported, the network changes and the
 user chooses a token in the picker. Dismissing it leaves the token unselected;
 no native asset is silently substituted. Source amounts survive a recognized

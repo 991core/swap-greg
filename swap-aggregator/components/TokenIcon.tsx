@@ -1,8 +1,8 @@
 "use client";
 import Image from "next/image";
 import { useState } from "react";
-import type { AppToken } from "@/lib/lifi";
-import { getCatalogToken } from "@/lib/token-icons";
+import type { AppToken } from "@/lib/tokens/types";
+import { getCatalogToken } from "@/lib/tokens/catalog";
 import { ChainIcon } from "./ChainIcon";
 
 const variants: Record<string, string> = { WETH: "W", WBNB: "W", WAVAX: "W", cbBTC: "cb", BTCB: "B", XDAI: "x", USDT0: "0" };

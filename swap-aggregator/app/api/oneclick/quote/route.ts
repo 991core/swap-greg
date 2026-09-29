@@ -2,10 +2,13 @@ import { NextResponse } from "next/server";
 import { isAddress, zeroAddress } from "viem";
 import { findOneClickToken, getOneClickTokens, oneClickRequest, ONECLICK_CHAINS } from "@/lib/aggregators/oneclick/server";
 
+import { SLIPPAGE, PLATFORM_FEE } from "@/lib/routing/config";
+
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
   try {
+    if (PLATFORM_FEE > 0) return NextResponse.json({ error: "1Click platform fees are not configured" }, { status: 503 });
     const body = await request.json();
     const { fromChainId, toChainId, fromTokenAddress, toTokenAddress, fromTokenDecimals, toTokenDecimals, fromAmount, wallet, dry } = body ?? {};
     if (!Number.isInteger(fromChainId) || !Number.isInteger(toChainId) ||
@@ -31,7 +34,7 @@ export async function POST(request: Request) {
       body: JSON.stringify({
         dry,
         swapType: "EXACT_INPUT",
-        slippageTolerance: 100,
+        slippageTolerance: Math.round(SLIPPAGE * 10_000),
         originAsset: origin.assetId,
         destinationAsset: destination.assetId,
         amount: fromAmount,
@@ -53,7 +56,7 @@ export async function POST(request: Request) {
     }
     if (!dry && (result.quoteRequest?.depositMode === "MEMO" || quote.depositMemo ||
         !quote.depositAddress || !isAddress(quote.depositAddress) || !quote.deadline ||
-        Date.parse(quote.deadline) <= Date.now() + 30_000)) {
+        !Number.isFinite(Date.parse(quote.deadline)) || Date.parse(quote.deadline) <= Date.now() + 30_000)) {
       throw new Error("Unsupported 1Click deposit instructions or expired quote");
     }
     return NextResponse.json({
