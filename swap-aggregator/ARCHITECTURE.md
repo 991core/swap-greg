@@ -1,740 +1,308 @@
-# Architecture du projet Swap Aggregator
+# Architecture Hermes
 
-**Stack** : Next.js App Router · React · TypeScript · wagmi v4 · RainbowKit · @lifi/sdk v3 · viem · franc / english i18n
-**Dossier** : `swap-aggregator/` (projet racine)
+Hermes utilise Next.js 14 App Router, React 18, TypeScript, wagmi/viem,
+RainbowKit, le SDK LI.FI 4.7 et son fournisseur d'exécution Ethereum officiel,
+ainsi que les API Basic Rango et 1Click / NEAR Intents pour l'EVM.
+Cette description correspond à la branche `feat/hermes-oneclick` (mise à jour le 30 septembre 2026).
+Les réseaux EVM de `lib/chains.ts` sont la référence commune à la
+découverte, au wallet et aux contrôles des métadonnées.
 
----
+## Recherche de tokens — option B
 
-## 1. Vue d'ensemble
+La modale affiche les tokens principaux de `lib/tokens/catalog.ts` dès son ouverture,
+sans requête API. Les réseaux et la paire initiale sont aussi configurés localement.
+Une saisie filtre ces entrées immédiatement et déclenche une recherche LI.FI après
+300 ms, sauf pour une adresse exacte déjà au catalogue. Le bouton de parcours
+élargi permet aussi de charger la liste distante sans saisir de nom.
+Changer la saisie, le réseau ou fermer la
+modale annule la requête et invalide immédiatement ses résultats et son consentement.
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│                     Next.js App Router                       │
-│  ┌──────────────────┐  ┌───────────────────┐                │
-│  │    layout.tsx    │  │    app/page.tsx   │                │
-│  │  (providers wrap)│  │   SwapPage Client  │                │
-│  └────────┬─────────┘  └────────┬──────────┘                │
-│           │                     │                            │
-│  ┌────────▼─────────────────────▼──────────┐                │
-│  │              SwapCard.tsx               │  ← UI centrale  │
-│  │  ┌──────────┐  ┌───────────────────┐   │                │
-│  │  │ From     │  │    RouteList      │   │                │
-│  │  │ Selector │  │    (routes)       │   │                │
-│  │  └────┬─────┘  └────────┬──────────┘   │                │
-│  │       │                 │              │                │
-│  │  ┌────▼─────────────────▼─────┐        │                │
-│  │  │    TokenSelectModal        │        │                │
-│  │  │  (chains · tokens · search)│        │                │
-│  │  └────────────────────────────┘        │                │
-│  └─────────────────────────────────────────┘                │
-│                                                             │
-│  ┌──────────────────────────────────────────┐               │
-│  │           lib/aggregators/               │  ← Providers  │
-│  │  ┌──────────┐ ┌──────┐ ┌────────┐       │               │
-│  │  │ lifi/    │ │ rango│ │ socket │       │               │
-│  │  │ routes   │ │ routes││ routes │       │               │
-│  │  │ execute  │ │ execute││ execute│       │               │
-│  │  │ client   │ │ client ││ client │       │               │
-│  │  └──────────┘ └──────┘ └────────┘       │               │
-│  └──────────────────────────────────────────┘               │
-│                                                             │
-│  ┌──────────────────────────────────────────┐               │
-│  │  lib/lifi.ts · routes.ts · execute.ts    │               │
-│  │  lib/routing/orchestrator.ts             │               │
-│  │  lib/types/normalized-route.ts           │               │
-│  └──────────────────────────────────────────┘               │
-└──────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+  A[Modale de tokens] --> L[Catalogue local immédiat]
+  A --> B[API Next.js]
+  B --> C{Cache valide ?}
+  C -->|Oui| E[Réponse validée]
+  C -->|Non| D[LI.FI]
+  D --> E
+  E --> A
 ```
 
----
-
-## 2. Fichiers essentiels
-
-| Fichier | Rôle |
-|---------|------|
-| `app/layout.tsx` | Providers (I18nProvider, WagmiConfig, RainbowKit) |
-| `app/page.tsx` | Page client → SwapPage → SwapCard |
-| `components/SwapCard.tsx` | UI principale : from/to selectors, amount, providers toggle, CTA, route list |
-| `components/RouteList.tsx` | Liste des routes (provider, toAmount, duration, fee) |
-| `components/TokenSelectModal.tsx` | Modal : sélection chaîne + tokens, search, owned tokens |
-| `lib/chains.ts` | 7 EVM chains (APP_CHAINS, APP_CHAIN_IDS, CHAIN_LABELS) |
-| `lib/topTokens.ts` | Top 20 market-cap + SYMBOL_ALIASES (WBTC→BTC, WETH→ETH, …) |
-| `lib/lifi.ts` | `buildKnownFallbackTokens()`, `SwapParams`, `AppToken`, `TokenBalanceEntry` |
-| `lib/aggregators/lifi/routes.ts` | `fetchSupportedChains()`, `fetchTopTokensByChain()`, `fetchRoutes()`, `fetchWalletTokenBalances()` |
-| `lib/aggregators/lifi/execute.ts` | `executeSwap()` → `getSwapRoute(client, payload)` → `route.execute()` |
-| `lib/aggregators/lifi/client.ts` | `getLifiSdkClient()` → `createClient({ apiKey, baseUrl })` |
-| `lib/aggregators/rango/routes.ts` | `fetchRangoRoutes()` → `https://api.rango.exchange/basic/quote` (stub) |
-| `lib/aggregators/rango/execute.ts` | Stub : `throw Error("not implemented")` |
-| `lib/aggregators/socket/routes.ts` | Stub : `throw Error("not implemented")` |
-| `lib/aggregators/socket/execute.ts` | Stub : `throw Error("not implemented")` |
-| `lib/aggregators/socket/client.ts` | Stub : `throw Error("not implemented")` |
-| `lib/routing/orchestrator.ts` | `getRoutesForSelection()` → appels Rango + LI.FI + Socket → `normalizeAllRoutes()` → tri par `toAmount` |
-| `lib/types/normalized-route.ts` | `ProviderName = "lifi" \| "socket" \| "rango"`, `NormalizedRoute` |
-| `lib/pricing.ts` | Coingecko price cache (60s TTL), `SYMBOL_ID_MAP`, `ADDRESS_ID_MAP`, `formatCurrencyValue()` |
-| `lib/tokenUtils.ts` | `getNativeAssetMeta()`, `createTokenEntry()`, `buildFallbackEntries()`, `sortTokenEntries()` |
-| `lib/i18n.tsx` | Contexte i18n (`en`/`fr`), détection `navigator.language`, persistance `localStorage`, 62 clés de traduction |
-| `components/i18n.tsx` | Hook `useI18n()` avec `translate()` + `t()` |
-
----
-
-## 3. Dépendances npm
-
-```json
-{
-  "dependencies": {
-    "@lifi/sdk": "^3.0.0",
-    "@rainbow-me/rainbowkit": "^2.0.0",
-    "@tanstack/react-query": "^5.0.0",
-    "next": "^14.0.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "viem": "^2.0.0",
-    "wagmi": "^2.0.0"
-  }
-}
-```
-
----
-
-## 4. Chaînes supportées par LI.FI (7 EVM)
-
-| Chain ID | Name | viem import | Native token |
-|----------|------|-------------|--------------|
-| 1 | Ethereum | `mainnet` | ETH |
-| 137 | Polygon | `polygon` | POL |
-| 56 | BNB Chain | `bsc` | BNB |
-| 42161 | Arbitrum | `arbitrum` | ETH |
-| 10 | Optimism | `optimism` | ETH |
-| 8453 | Base | `base` | ETH |
-| 43114 | Avalanche | `avalanche` | AVAX |
-
-**Code de référence** — `lib/chains.ts` :
-
-```typescript
-import {
-  arbitrum, avalanche, base, bsc,
-  mainnet, optimism, polygon,
-} from "viem/chains";
-
-export const APP_CHAINS = [
-  base, mainnet, arbitrum,
-  optimism, polygon, bsc, avalanche,
-] as const;
-
-export const APP_CHAIN_IDS = APP_CHAINS.map((c) => c.id);
-
-export const CHAIN_LABELS: Record<number, string> = {
-  [mainnet.id]: "Ethereum",
-  [base.id]: "Base",
-  [arbitrum.id]: "Arbitrum",
-  [optimism.id]: "Optimism",
-  [polygon.id]: "Polygon",
-  [bsc.id]: "BNB Chain",
-  [avalanche.id]: "Avalanche",
-};
-```
-
-**Code de référence** — `lib/aggregators/lifi/routes.ts` (lignes 231-247) :
-
-```typescript
-export async function fetchSupportedChains(): Promise<ExtendedChain[]> {
-  const client = getLifiSdkClient();
-  const chains = await getChains(client);
-  const allowed = new Set<number>(APP_CHAIN_IDS);
-  const filtered = chains.filter((chain) => allowed.has(chain.id));
-  if (filtered.length === 0) {
-    return chains.filter((chain) => allowed.has(chain.id));
-  }
-  return filtered.sort(
-    (a, b) =>
-      APP_CHAIN_IDS.indexOf(a.id as (typeof APP_CHAIN_IDS)[number]) -
-      APP_CHAIN_IDS.indexOf(b.id as (typeof APP_CHAIN_IDS)[number]),
-  );
-}
-```
-
----
-
-## 5. Tokens supportés (Top 20 + alias)
-
-| Top Symbol | Aliases LI.FI | Appartenant à |
-|------------|---------------|---------------|
-| BTC | WBTC | Bitcoin |
-| ETH | WETH | Ethereum |
-| USDT | — | Tether |
-| BNB | WBNB | BNB Chain |
-| XRP | — | XRP |
-| SOL | — | Solana (bridged) |
-| USDC | USDC.E | USD Coin |
-| DOGE | — | Dogecoin |
-| ADA | — | Cardano (bridged) |
-| TRX | — | Tron |
-| AVAX | WAVAX | Avalanche |
-| LINK | — | Chainlink |
-| SHIB | — | Shiba Inu |
-| TON | — | Toncoin |
-| DOT | — | Polkadot |
-| POL | MATIC, WMATIC | Polygon |
-| BCH | — | Bitcoin Cash |
-| LTC | — | Litecoin |
-| UNI | — | Uniswap |
-
-**Code de référence** — `lib/topTokens.ts` :
-
-```typescript
-export const TOP_20_SYMBOLS = [
-  "BTC", "ETH", "USDT", "BNB", "XRP", "SOL",
-  "USDC", "DOGE", "ADA", "TRX", "AVAX",
-  "LINK", "SHIB", "TON", "DOT", "WBTC",
-  "POL", "BCH", "LTC", "UNI",
-] as const;
-
-const SYMBOL_ALIASES: Record<string, TopSymbol> = {
-  BTC: "BTC", WBTC: "BTC",
-  ETH: "ETH", WETH: "ETH",
-  USDT: "USDT",
-  BNB: "BNB", WBNB: "BNB",
-  USDC: "USDC", "USDC.E": "USDC",
-  AVAX: "AVAX", WAVAX: "AVAX",
-  POL: "POL", MATIC: "POL", WMATIC: "POL",
-  // … (compléter selon le fichier complet)
-};
-
-export function normalizeToTopSymbol(symbol: string): TopSymbol | null {
-  const upper = symbol.trim().toUpperCase();
-  if (upper === "WBTC" || upper === "BTC") return "BTC";
-  const aliased = SYMBOL_ALIASES[upper];
-  if (aliased && aliased !== "WBTC" && TOP_SET.has(aliased)) return aliased;
-  if (TOP_SET.has(upper)) return upper as TopSymbol;
-  return null;
-}
-```
-
----
-
-## 6. Paires possibles
-
-Avec **7 chaînes** × **20 top symbols** :
-
-- **Pairs intra-chaîne** : 7 (un token vers lui-même, surtout ETH/ETH)
-- **Pairs inter-chaîne** : 7 × 6 = 42 paires de chaînes
-- **Paires de tokens par paire de chaînes** : 20 × 20 = 400 (théoriquement)
-- **Total théorique** : ~ 16 800 combinaisons chaîne1/chaîne2/token1/token2
-
-**En pratique**, LI.FI détermine dynamiquement les paires supportées via `getRoutes()`. Le filtre `TOP_20_SYMBOLS` dans `fetchTopTokensByChain()` (lignes 260-261) réduit le pool UI aux tokens top-20 :
-
-```typescript
-// lib/aggregators/lifi/routes.ts :260-261
-for (const token of list) {
-  if (!isTop20Symbol(token.symbol)) continue;
-  // …
-}
-```
-
----
-
-## 7. Fournisseurs (Providers) — État d'intégration
-
-### 7.1 LI.FI — ✅ Implémenté
-
-| Composant | Fichier | Fonction |
-|-----------|---------|----------|
-| Client | `lib/aggregators/lifi/client.ts` | `createClient({ apiKey, baseUrl })` |
-| Routes | `lib/aggregators/lifi/routes.ts` | `getRoutes(client, { fromChainId, toChainId, fromTokenAddress, toTokenAddress, fromAmount, fromAddress, options })` |
-| Execution | `lib/aggregators/lifi/execute.ts` | `getSwapRoute(client, payload)` → `route.execute()` |
-| Chains | `lib/aggregators/lifi/routes.ts` | `getChains(client)` |
-| Tokens | `lib/aggregators/lifi/routes.ts` | `getTokens(client, { chains })` |
-| Balances | `lib/aggregators/lifi/routes.ts` | `getTokenBalances(client, walletAddress)` |
-
-**Code de référence** — `lib/aggregators/lifi/routes.ts` (lignes 440-470) :
-
-```typescript
-export async function fetchRoutes(params: SwapParams): Promise<Route[]> {
-  if (!params) {
-    throw new Error("Les paramètres de recherche LI.FI sont absents.");
-  }
-
-  const client = getLifiSdkClient();
-  const result = await getRoutes(client, {
-    fromChainId: params.fromChainId,
-    toChainId: params.toChainId,
-    fromTokenAddress: params.fromTokenAddress,
-    toTokenAddress: params.toTokenAddress,
-    fromAmount: params.fromAmount,
-    fromAddress: params.fromAddress,
-    options: {
-      ...(PLATFORM_FEE > 0 ? { fee: PLATFORM_FEE } : {}),
-      maxPriceImpact: 0.4,
-    },
-  });
-
-  const routes = [...(result.routes ?? [])];
-  routes.sort((a, b) => {
-    const aNet = BigInt(a.toAmount);
-    const bNet = BigInt(b.toAmount);
-    if (aNet === bNet) return 0;
-    return aNet > bNet ? -1 : 1;
-  });
-
-  return routes;
-}
-```
-
-**Code de référence** — `lib/aggregators/lifi/execute.ts` :
-
-```typescript
-import type { Route } from "@lifi/sdk";
-
-export async function executeSwap(
-  route: Route,
-  _onProgress?: (progress: number) => void,
-): Promise<void> {
-  const step = route.steps?.[0];
-  if (!step?.estimate) {
-    throw new Error("Pas de payload LI.FI pour cette route.");
-  }
-
-  await route.execute();
-}
-```
-
-### 7.2 Rango — ⚠️ Routes uniquement
-
-| Composant | Fichier | État |
-|-----------|---------|------|
-| Client | `lib/aggregators/rango/client.ts` | `throw Error("not implemented")` |
-| Routes | `lib/aggregators/rango/routes.ts` | ✅ API call à `https://api.rango.exchange/basic/quote` |
-| Execution | `lib/aggregators/rango/execute.ts` | `throw Error("not implemented")` |
-
-La fonction `fetchRangoRoutes()` renvoie `[]` si `NEXT_PUBLIC_RANGO_API_KEY` n'est pas défini. `normalizeRangoRoute()` convertit en `NormalizedRoute`.
-
-**Code de référence** — `lib/aggregators/rango/routes.ts` :
-
-```typescript
-export async function fetchRangoRoutes(params: SwapParams): Promise<RangoRoute[]> {
-  const apiKey = process.env.NEXT_PUBLIC_RANGO_API_KEY;
-  if (!apiKey) return [];
-
-  try {
-    const response = await fetch("https://api.rango.exchange/basic/quote", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "api-key": apiKey },
-      body: JSON.stringify({
-        from: { blockchain: params.fromChainId === 1 ? "ETH" : "ETH", address: params.fromTokenAddress || null },
-        to: { blockchain: params.toChainId === 1 ? "ETH" : "ETH", address: params.toTokenAddress || null },
-        amount: params.fromAmount,
-        fromAddress: params.fromAddress || undefined,
-        toAddress: params.fromAddress || undefined,
-        slippage: 1.5,
-      }),
-    });
-
-    if (!response.ok) return [];
-
-    const data = await response.json();
-    const route = data?.route ?? data;
-    if (!route) return [];
-
-    return [{
-      id: route.id ?? `rango-${params.fromChainId}-${params.toChainId}`,
-      toAmount: route.toAmount ?? route.destinationAmount ?? "0",
-      steps: route.steps ?? [],
-    }];
-  } catch {
-    return [];
-  }
-}
-```
-
-### 7.3 Socket — ❌ Aucun code
-
-Tous les fichiers `client.ts`, `routes.ts`, `execute.ts` contiennent uniquement :
-
-```typescript
-throw Error("not implemented");
-```
-
-### 7.4 Résumé
-
-| Provider | Routes | Execution | État |
-|----------|--------|-----------|------|
-| LI.FI | ✅ | ✅ | **Opérationnel** |
-| Rango | ✅ (stub API) | ❌ | **Preview only** |
-| Socket | ❌ | ❌ | **Non intégré** |
-
----
-
-## 8. Flux de routing complet
-
-```
-┌────────────────────────────────────────────────────────────────┐
-│                         UI : SwapCard                          │
-│  1. Utilisateur sélectionne : fromChain, fromToken            │
-│     toChain, toToken, amount, selectedProviders[]             │
-│                                                                │
-│  2. handleSwap() se déclenche (bouton CTA)                     │
-│     → fetchSwapRoutes(params, selectedProviders)               │
-│                                                                │
-│  3. getRoutesForSelection() → lib/routing/orchestrator.ts      │
-│     ├── fetchRangoRoutes(params)   → normalized routes         │
-│     ├── fetchRoutes(params) (LI.FI) → normalized routes       │
-│     └── fetchSocketRoutes(params)  → throw error (ignored)    │
-│                                                                │
-│  4. normalizeAllRoutes() → NormalizedRoute[]                   │
-│     (provider, from/to addresses, toAmount, toolLabel)         │
-│                                                                │
-│  5. normalized.sort(by BigInt(toAmount)) — meilleur en premier │
-│                                                                │
-│  6. RouteList → affiche chaque route                           │
-│     └── onSelect(route) → set route dans SwapCard state        │
-│                                                                │
-│  7. CTA "Swap" → handleSwap() → executeSwap(route)             │
-│     ├── Provider "lifi" → lib/aggregators/lifi/execute.ts      │
-│     │   → route.execute() → txHash (si exécution réussie)      │
-│     ├── Provider "rango" → throw Error("not implemented")      │
-│     └── Provider "socket" → throw Error("not implemented")     │
-└────────────────────────────────────────────────────────────────┘
-```
-
-### Code de référence — `lib/routing/orchestrator.ts` :
-
-```typescript
-import { fetchRoutes as fetchLifiRoutes } from "../aggregators/lifi/routes";
-import { fetchRangoRoutes } from "../aggregators/rango/routes";
-import { fetchSocketRoutes } from "../aggregators/socket/routes";
-import { normalizeLifiRoute } from "../aggregators/lifi/routes";
-import { normalizeRangoRoute } from "../aggregators/rango/routes";
-import type { NormalizedRoute, ProviderName, ProviderSelection } from "../types/normalized-route";
-
-export async function getRoutesForSelection(
-  params: SwapParams,
-  selectedProviders: ProviderSelection,
-): Promise<NormalizedRoute[]> {
-  const results: Promise<NormalizedRoute[]>[] = [];
-
-  if (selectedProviders.rango) {
-    const rangoRoutes = fetchRangoRoutes(params);
-    results.push(rangoRoutes.then((raw) => raw.map((r) => normalizeRangoRoute(r, params))));
-  }
-
-  if (selectedProviders.lifi) {
-    const lifiRoutes = fetchLifiRoutes(params);
-    results.push(lifiRoutes.then((raw) => raw.map((r) => normalizeLifiRoute(r, params))));
-  }
-
-  // Socket : provider défini mais pas implémenté
-  // if (selectedProviders.socket) { ... }
-
-  const allResults = await Promise.all(results);
-  const normalized = allResults.flat();
-
-  normalized.sort((a, b) => {
-    const aAmt = BigInt(a.toAmount);
-    const bAmt = BigInt(b.toAmount);
-    if (aAmt === bAmt) return 0;
-    return aAmt > bAmt ? -1 : 1;
-  });
-
-  return normalized;
-}
-```
-
----
-
-## 9. Orchestration côté client — SwapCard
-
-### 9.1 Initialisation des états
-
-**Code de référence** — `components/SwapCard.tsx` (lignes 70-90 approx.) :
-
-```typescript
-const [fromChainId, setFromChainId] = useState<number>(mainnet.id);
-const [toChainId, setToChainId] = useState<number>(base.id);
-const [fromToken, setFromToken] = useState<AppToken | null>(null);
-const [toToken, setToToken] = useState<AppToken | null>(null);
-const [fromAmount, setFromAmount] = useState("");
-const [selectedRoute, setSelectedRoute] = useState<NormalizedRoute | null>(null);
-const [providers, setProviders] = useState<ProviderSelection>({
-  lifi: true,
-  socket: false,
-  rango: true,
-});
-const [routes, setRoutes] = useState<NormalizedRoute[]>([]);
-```
-
-### 9.2 Sélection de providers toggle
-
-**Code de référence** — `components/SwapCard.tsx` (lignes 495-510) :
-
-```tsx
-<div className="provider-toggles">
-  {providerButtons.map((provider) => {
-    const { id, label } = provider;
-    const active = providers[id as ProviderName] ?? false;
-    return (
-      <button
-        key={id}
-        className={active ? "amount-balance-pill" : "amount-quick-btn"}
-        onClick={() => toggleProvider(provider)}
-      >
-        {active ? "●" : "○"} {label}
-      </button>
-    );
-  })}
-</div>
-```
-
-### 9.3 Appels de routing
-
-**Code de référence** — `components/SwapCard.tsx` (ligne ~130, dans `handleSwap`) :
-
-```typescript
-async function handleSwap() {
-  const params = {
-    fromChainId, toChainId,
-    fromTokenAddress: fromToken?.address ?? "",
-    toTokenAddress: toToken?.address ?? "",
-    fromAmount, fromAddress: address,
-  };
-
-  if (!routeSelected) {
-    const fetchedRoutes = await getRoutesForSelection(params, providers);
-    setRoutes(fetchedRoutes);
-    return;
-  }
-
-  // Execute selected route
-  if (selectedRoute?.provider === "lifi") {
-    await executeSwap(selectedRoute.raw as Route);
-  }
-}
-```
-
----
-
-## 10. Pipeline de données tokens
-
-```
-LI.FI SDK getTokens({ chains: [1, 137, 56, 42161, 10, 8453, 43114] })
-  ↓
-  tokens[chainId] → pour chaque chaîne
-  ↓
-  Filtrer isTop20Symbol(token.symbol) — ligne 261 de routes.ts
-  ↓
-  normalizeToTopSymbol(symbol) — lignes 65-72 de topTokens.ts
-  ↓
-  bestByTop.get(topSymbol) — un seul entry par symbol (exact match preferred)
-  ↓
-  sort(topSymbolRank) — ordre stable : BTC > ETH > USDT > … > UNI
-  ↓
-  KnownTokensByChain = { 1: [...], 137: [...], 56: [...], … }
-  ↓
-  buildKnownFallbackTokens(chainId) — fallback si LI.FI ne retourne rien
-  → native token + USDC + USDT/WETH/DAI selon chaîne (lignes 41-206 de routes.ts)
-```
-
-### Exemple : Tokens par chaîne (fallbacks)
-
-| Chaîne | Fallback tokens (hardcoded) |
-|--------|---------------------------|
-| Ethereum (1) | ETH, USDC, USDT, WETH |
-| Base (8453) | ETH, USDC, DAI, WETH |
-| Arbitrum (42161) | ETH, USDC, USDT |
-| Optimism (10) | ETH, USDC |
-| Polygon (137) | POL, USDC |
-| BSC (56) | BNB (fallback only) |
-| Avalanche (43114) | AVAX (fallback only) |
-
----
-
-## 11. i18n
-
-### Contexte
-
-**Code de référence** — `lib/i18n.tsx` :
-
-```typescript
-type Lang = "en" | "fr";
-
-function detectBrowserLang(): Lang {
-  if (typeof navigator !== "undefined" && navigator.language) {
-    const code = navigator.language.slice(0, 2).toLowerCase();
-    if (code === "fr") return "fr";
-  }
-  return "en";
-}
-
-export function I18nProvider({ children }: { children: React.ReactNode }) {
-  const [lang, setLangState] = useState<Lang>("en");
-
-  useEffect(() => {
-    const saved = localStorage.getItem("hermes-lang");
-    if (saved === "en" || saved === "fr") {
-      setLangState(saved);
-    } else {
-      setLangState(detectBrowserLang());
-    }
-  }, []);
-
-  const setLang = (newLang: Lang) => {
-    setLangState(newLang);
-    localStorage.setItem("hermes-lang", newLang);
-  };
-
-  const translate = (key: TranslationKey, params?: Record<string, string>) => {
-    let result = t(key, lang);
-    if (params) {
-      Object.entries(params).forEach(([k, v]) => {
-        result = result.replace(`{${k}}`, v);
-      });
-    }
-    return result;
-  };
-
-  return (
-    <I18nContext.Provider value={{ lang, setLang, translate }}>
-      {children}
-    </I18nContext.Provider>
-  );
-}
-```
-
-**62 clés de traduction** couvrant : labels UI, états de boot, messages d'erreur, modale, routes, CTA.
-Fallback strict : `en` si `localStorage` est vide ou corrompu.
-
----
-
-## 12. Prix & conversion devise
-
-### Pricing
-
-**Code de référence** — `lib/pricing.ts` :
-
-```typescript
-const COINGECKO_PRICE_URL = "https://api.coingecko.com/api/v3/simple/price";
-const CACHE_TTL_MS = 60_000; // 1 minute
-
-const SYMBOL_ID_MAP: Record<string, string> = {
-  ETH: "ethereum", WETH: "weth",
-  BTC: "bitcoin", WBTC: "wrapped-bitcoin",
-  USDC: "usd-coin", USDT: "tether", DAI: "dai",
-  // …
-};
-
-export async function fetchTokenPriceUsd(token: AppToken): Promise<number | null> {
-  const cached = priceCache.get(getCacheKey(token));
-  if (cached && cached.expiresAt > Date.now()) return cached.value;
-
-  const coinGeckoId = getCoinGeckoId(token);
-  if (!coinGeckoId) return null;
-
-  const response = await fetch(
-    `${COINGECKO_PRICE_URL}?ids=${coinGeckoId}&vs_currencies=usd`
-  );
-  // cache 60s → priceCache.set(...)
-  return value;
-}
-```
-
-### Conversion
-
-```typescript
-export function formatCurrencyValue(
-  value: number | null, currency: "USD" | "EUR" = "USD"
-): string | null {
-  if (value == null || !Number.isFinite(value) || value <= 0) return null;
-  const rate = currency === "EUR" ? 0.92 : 1;
-  const symbol = currency === "EUR" ? "€" : "$";
-  return `${symbol}${amount.toLocaleString("fr-FR", { min, max })}`;
-}
-```
-
----
-
-## 13. Types
-
-**Code de référence** — `lib/types/normalized-route.ts` :
-
-```typescript
-export type ProviderName = "lifi" | "socket" | "rango";
-
-export interface ProviderSelection {
-  lifi: boolean;
-  socket: boolean;
-  rango: boolean;
-}
-
-export interface NormalizedRoute {
-  id: string;
-  provider: ProviderName;
-  fromChainId: number;
-  toChainId: number;
-  fromTokenAddress: string;
-  toTokenAddress: string;
-  fromAmount: string;
-  toAmount: string;
-  toolLabel: string;    // e.g. "1inch → Hop" ou "LI.FI"
-  durationSeconds: number;
-  raw: unknown;         // Route LI.FI, RangoRoute, etc.
-}
-```
-
----
-
-## 14. Variables d'environnement
-
-| Variable | Rôle |
-|----------|------|
-| `NEXT_PUBLIC_LIFI_API_KEY` | Clé API LI.FI (optionnelle, pour quota) |
-| `NEXT_PUBLIC_RANGO_API_KEY` | Clé API Rango (si activée) |
-| `NEXT_PUBLIC_PLATFORM_FEE_PERCENT` | Frais plateforme (ex: 0.5 = 0.5 %) |
-| `NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID` | WalletConnect projectId |
-
----
-
-## 15. Arborescence complète
-
-```
-swap-aggregator/
-├── AGENTS.md
-├── ARCHITECTURE.md        ← ce fichier
-├── PROJECT.md
-├── README.md
-├── next.config.js
-├── package.json
-├── tsconfig.json
-├── app/
-│   ├── layout.tsx         # Providers: I18n, Wagmi, RainbowKit
-│   ├── page.tsx           # "use client"; → <SwapPage>
-│   └── globals.css
-├── components/
-│   ├── SwapCard.tsx       # UI principale (554 lignes)
-│   ├── RouteList.tsx      # Liste des routes
-│   └── TokenSelectModal.tsx # Modal sélection chaîne/token
-├── lib/
-│   ├── chains.ts          # 7 EVM chains
-│   ├── topTokens.ts       # Top 20 + aliases
-│   ├── lifi.ts            # SwapParams, AppToken, buildKnownFallbackTokens()
-│   ├── orchestrator.ts    # getRoutesForSelection()
-│   ├── pricing.ts         # Coingecko prices
-│   ├── tokenUtils.ts      # Native asset meta, sorting
-│   ├── i18n.tsx           # 62 clés de traduction en/fr
-│   ├── types/
-│   │   └── normalized-route.ts  # ProviderName, ProviderSelection, NormalizedRoute
-│   └── aggregators/
-│       ├── lifi/
-│       │   ├── client.ts           # createClient()
-│       │   ├── routes.ts           # getChains, getTokens, getRoutes, getTokenBalances, fetchWalletTokenBalances
-│       │   └── execute.ts          # executeSwap()
-│       │   └── routing/
-│       │       └── orchestrator.ts # (LI.FI-specific, minimal wrapper)
-│       ├── rango/
-│       │   ├── client.ts           # throw Error("not implemented")
-│       │   ├── routes.ts           # fetchRangoRoutes() + normalizeRangoRoute()
-│       │   └── execute.ts          # throw Error("not implemented")
-│       └── socket/
-│           ├── client.ts           # throw Error("not implemented")
-│           ├── routes.ts           # throw Error("not implemented")
-│           └── execute.ts          # throw Error("not implemented")
-└── public/
-```
+### Contrat HTTP
+
+`GET /api/tokens/search` est une route dynamique Node.js :
+
+| Paramètre | Valeurs |
+| --- | --- |
+| `chainId` | Identifiant décimal d'un réseau EVM configuré, obligatoire. |
+| `query` | Nom, symbole ou adresse EVM ; vide pour les tokens populaires ; 100 caractères maximum. |
+| `limit` | 25 (défaut), 50, 100 ou 200. |
+| `fresh` | 0 (défaut) ou 1 ; 1 exige une adresse exacte et contourne le cache local. |
+
+La réponse contient `chainId`, `query`, `tokens`, `limit`, `hasMore`, `truncated`, `checkedAt`.
+Les erreurs publiques sont 400 (entrée invalide), 429 (quota/concurrence, avec
+`Retry-After: 60`) ou 503 (vérification indisponible). Une réponse
+LI.FI 404 pour une adresse exacte devient une liste vide. Les autres erreurs ne
+sont jamais converties en une fausse absence de token ni exposées avec leurs
+détails privés. Toutes les réponses HTTP utilisent `Cache-Control: no-store`.
+
+### Service serveur
+
+`lib/tokens/search.server.ts` porte la frontière `server-only`
+et crée un client LI.FI sans wallet. Il lit `LIFI_API_KEY` uniquement
+sur le serveur. Les demandes de liste utilisent `getTokens` avec réseau,
+type EVM, recherche textuelle, `minPriceUSD: 0`, tri market cap et
+`limit + 1` pour détecter la troncature. Une adresse passe par
+`getToken`, sans fallback CoinGecko ou RPC.
+
+Les limites de résultats servent à l'affichage, pas à constituer une allowlist :
+la recherche exacte reste accessible au-delà des 200 premiers résultats.
+
+| Limite locale | Valeur |
+| --- | --- |
+| Cache | 256 entrées maximum, TTL 60 s ; résultat vide 10 s. |
+| Appels simultanés | 8 ; requêtes identiques regroupées. |
+| Budget d'appels LI.FI | 60/minute par défaut, configurable entre 1 et 1000. |
+| Timeout LI.FI | 8 s, sans retry automatique. |
+| Timeout du client HTTP | 10 s, associé au signal d'annulation. |
+
+Ces limites sont en mémoire **par processus**, et ne constituent pas un quota
+global entre instances ou régions. Un cache et un compteur partagés, ou une limite
+en amont, pourront être ajoutés pour un déploiement distribué. Les cotations SDK
+navigateur ne passent pas par ce service.
+
+### Validation et consentement
+
+`lib/tokens/validation.ts` vérifie réseau/adresse, décimales entières
+0–255, noms et symboles bornés, puis copie uniquement les champs utiles. Les logos
+externes doivent être des URL HTTPS. Les logos du catalogue sont des SVG locaux,
+livrés dans `public/tokens/` et sélectionnés par réseau/adresse (`TOKEN_LOGOS.md`).
+L'identité est `chainId:adresse-en-minuscules` ;
+le symbole n'est jamais une clé de déduplication.
+
+Le verdict le plus restrictif prévaut : un résultat `flagged`, y compris
+dans le détail d'un fournisseur ou un doublon, bloque le token. Un statut absent
+ou `unverified` exige, hors catalogue local, une confirmation avec contrat complet, réseau et
+explorateur. Le consentement `riskAcknowledged` reste dans la sélection
+locale et n'est jamais accepté dans les données reçues de l'API. Changer de
+recherche ou réseau efface le panneau et sa case de confirmation.
+
+Le catalogue local épingle les actifs natifs et une sélection d'ERC-20 par réseau,
+adresse, décimales et symbole. Il est versionné ; aucune réponse API ne peut l'étendre.
+Ces actifs sont exemptés de consentement d'import et de requête d'authenticité.
+Le statut affiché « Catalogue Hermes » est distinct du verdict LI.FI. Un signalement
+reçu dans une recherche ou la cotation reste prioritaire. Les copies d'une entrée
+renvoyées aux appelants ne permettent pas de modifier les données épinglées.
+Voir `TOKEN_CATALOG.md` pour la liste et les sources. Aucun prix n'est inventé :
+`priceUSD: "0"` signifie qu'aucun prix n'est encore disponible.
+
+## Interface et continuité de sélection
+
+Les réseaux sont recherchables par nom ou identifiant. Les routes s'affichent à droite
+du formulaire sur ordinateur et s'empilent sur mobile. L'inversion échange les réseaux
+et les tokens en conservant le montant saisi.
+
+`lib/token-continuity.ts` ne conserve un token lors d'un changement de réseau que si
+les deux identités correspondent aux contrats/décimales épinglés d'un actif populaire.
+Les variantes restent distinctes (ETH/WETH, USDC/USDC.e, USDT/USDT0, actifs Binance-pegged).
+Sans correspondance, la modale s'ouvre ; côté source, le montant est effacé.
+Cette liste restreinte sert uniquement à la continuité, jamais à filtrer la recherche.
+Aucun système de mise à jour automatique du catalogue n'est configuré.
+
+Le registre 1Click charge en complément des tokens EVM validés, visibles dans le
+parcours élargi et la recherche. Il ne modifie pas les identités du catalogue local
+ni les règles de consentement. La recherche LI.FI reste disponible pour les autres
+contrats, au-delà des tokens populaires.
+
+## Cotations et exécution
+
+Les cotations LI.FI passent par le SDK navigateur ; celles de Rango et 1Click
+passent par des routes Next.js avec identifiants serveur. Les fournisseurs activés
+dans le formulaire sont interrogés en parallèle, avec un délai client de 15 s.
+L'échec d'un fournisseur conserve les routes des autres. Les incidents de cotation
+sont journalisés dans la console technique, sans bannière d'indisponibilité ni
+message d'erreur technique dans le formulaire. Socket reste désactivé.
+
+Un devis ne nécessite pas de wallet. Les paramètres utilisent alors un compte vide ;
+LI.FI reçoit une demande sans adresses de wallet, Rango accepte uniquement les
+cotations anonymes, et 1Click reçoit une demande `dry: true`. La connexion du wallet
+change la clé de cotation et invalide les aperçus anonymes avant toute exécution.
+Les métadonnées et décimales de la sélection accompagnent également les demandes
+1Click. Les routes normalisées forment une union typée LI.FI / Rango / 1Click,
+avec un payload spécifique à chaque fournisseur.
+Le service `lib/routing/` normalise, déduplique par ID/provider et trie les routes par
+montant net décroissant. La clé de cotation lie compte, chaînes, adresses et montant.
+Les réponses périmées sont ignorées et les cotations expirent au bout de 30 s.
+La sélection des providers fait aussi partie de la clé de requête du hook.
+`useSwapQuotes` planifie alors une nouvelle requête immédiatement. Les anciennes
+routes restent affichées mais sont désactivées pendant le renouvellement. Une
+réponse échouée, vide ou déjà expirée programme une tentative après 15 s ; elle
+ne réactive pas une route périmée. Une seule requête peut être active par cycle.
+La fonction tient compte de l'heure réelle au retour d'un onglet masqué ou à la
+reconnexion. Le timer et les listeners sont nettoyés lors d'un changement de
+paramètres, de la fermeture du composant ou de la suspension pour exécution.
+
+`QuoteCountdown` affiche les secondes jusqu'à la prochaine échéance, un anneau
+qui se vide et une animation pendant la recherche. Les préférences de mouvements
+réduits sont respectées ; le lecteur d'écran n'annonce pas chaque seconde.
+L'actualisation automatique n'appelle jamais le wallet ni la fonction d'exécution.
+
+L'orchestrateur publie les résultats de chaque provider dès leur arrivée. Le hook
+affiche ces routes pendant que les autres recherches continuent, sans permettre
+l'exécution avant la fin du cycle. L'annulation bloque aussi les résultats partiels.
+Les cartes mettent en avant montant reçu, durée, gas et minimum ; les frais
+additionnels sont signalés et le détail des montants/contrats reste dépliable.
+Les listes de réseaux avec logos sont accessibles au clavier. Le choix USD/EUR
+est mémorisé localement ; EUR reste indisponible sans taux de référence valide.
+
+Avant toute action du wallet, `executeSwapQuote` :
+
+1. vérifie le compte, les paramètres et l'expiration de la cotation ;
+2. compare l'identité et les décimales de la sélection avec les tokens du devis ;
+3. refuse les signalements connus et les imports sans consentement ;
+4. compare les actifs locaux à leurs métadonnées épinglées ; relit les autres
+   tokens avec `fresh=1`, puis refuse une indisponibilité, un signalement, des
+   métadonnées différentes ou un nouveau besoin de consentement ;
+5. revérifie le compte après cette attente, active le réseau source si nécessaire,
+   contrôle les soldes ERC-20/natif et réserve le gas ;
+6. revérifie la cotation et le compte, puis choisit l'exécuteur par provider :
+   SDK EVM LI.FI, préparation/signature/suivi Rango ou dépôt ERC-20 1Click. Les payloads sont distincts.
+
+Le wallet client est récupéré depuis wagmi au moment de l'action. Les changements
+automatiques de taux sont refusés ; les signatures restent demandées par le wallet.
+Une nouvelle requête locale ne garantit pas un nouveau scan chez LI.FI : leurs
+verdicts peuvent être mis en cache et ne constituent pas une garantie de sécurité.
+
+### Rango Basic API
+
+`POST /api/rango/{quote,swap,status}` accepte uniquement des entrées bornées et
+validées. L'hôte est fixe selon la clé publique de test ou privée, jamais issu du
+client ; les clés et détails d'erreur privés restent au serveur. Des budgets
+séparés par processus protègent les cotations, préparations et suivis.
+
+La transaction finale conserve le protocole, les tokens, le compte et le minimum
+sélectionnés. Aucun frais coté ne peut augmenter automatiquement. L'exécuteur
+accepte uniquement EVM, valeur exacte et approval limitée au principal, attend
+la receipt d'approval puis reconstruit la transaction. Les contrôles de compte,
+chaîne et validité sont répétés après les attentes, puis le gas et les soldes
+sont estimés à nouveau avant signature.
+
+Le suivi distingue l'envoi source de la livraison finale. Timeout ou résultat
+incomplet signifie « en attente », pas échec autorisant un renvoi. Le hash et le
+requestId sont conservés en local pour une reprise après rechargement ; les
+nouveaux swaps sont bloqués pendant cette attente. Aucune reprise ne signe.
+Voir [RANGO_INTEGRATION.md](./RANGO_INTEGRATION.md) pour les limites et références.
+
+### 1Click / NEAR Intents
+
+| Route Next.js | Usage |
+| --- | --- |
+| `GET /api/oneclick/tokens` | Registre EVM 1Click, sans restriction par symbole ; cache serveur de 5 minutes. |
+| `POST /api/oneclick/quote` | Devis de prévisualisation (`dry: true`) ou instructions de dépôt après connexion (`dry: false`). |
+| `GET /api/oneclick/status?depositAddress=…` | État du dépôt et lien de transaction de destination lorsqu'il existe. |
+
+`lib/aggregators/oneclick/server.ts` appelle un hôte fixe avec un timeout de 25 s.
+Les clés `NEAR_1CLICK_API_KEY` et `NEAR_1CLICK_JWT` restent côté serveur. Les deux
+contrats et leurs décimales doivent correspondre au registre du fournisseur.
+Les réseaux intégrés sont Ethereum, Base, Arbitrum, Optimism, Polygon, BNB Chain,
+Avalanche et Gnosis. Le client écarte les sources natives ; l'exécution est limitée
+aux dépôts EVM ERC-20. La disponibilité des paires reste déterminée par 1Click.
+
+Le mode aperçu peut utiliser une adresse nulle pour les champs destinataire/remboursement
+exigés par 1Click, et ne renvoie jamais d'instructions de dépôt. Le mode exécutable
+exige un wallet non nul. L'exécuteur obtient un nouveau devis, refuse un minimum
+inférieur au minimum sélectionné, vérifie les instructions et leur échéance, puis
+sollicite une confirmation. Il estime le gas et revérifie wallet, réseau, soldes et
+validité avant d'appeler `transfer` vers le dépôt. Aucun polling ne signe.
+
+Le dépôt est enregistré sous `hermes:oneclick:latest`, lié au wallet, avant l'attente
+de la receipt source. Le statut est interrogé toutes les 8 s jusqu'à `SUCCESS`,
+`REFUNDED` ou `FAILED`. Un dépôt actif suspend les nouvelles cotations/exécutions ;
+une confirmation source ne signifie pas une livraison finale.
+Le devis présente le minimum reçu ; le coût du gas reste inconnu dans la liste si
+1Click ne le fournit pas, puis est estimé avant signature. Les frais plateforme
+non nuls désactivent ce fournisseur tant que leur configuration n'est pas implémentée.
+
+### Diagnostics des cotations
+
+`lib/routing/diagnostics.ts` produit des entrées `console.warn` préfixées
+`[Hermes quotes]`. L'orchestrateur écrit un événement `provider_failed` pour chaque
+fournisseur en échec ; le hook écrit `refresh_failed` lorsqu'un cycle échoue ou
+qu'une cotation expire avant la fin du renouvellement. Les annulations d'une ancienne
+recherche après modification du formulaire ne génèrent pas ces diagnostics.
+
+Les champs autorisés sont l'événement, le fournisseur éventuel, les deux identifiants
+de réseaux, une catégorie de cause et le statut HTTP disponible. Les adaptateurs
+HTTP Rango et 1Click conservent ce statut sur l'erreur technique. Certaines causes
+connues sont catégorisées (`unsupported_pair`, `provider_configuration`,
+`invalid_quote`, `expired_quote`, `all_providers_failed`). Les autres erreurs sont
+classées sans copier leur texte brut, pile, URL, clé API, compte, montant ni payload.
+
+Ces journaux sont actuellement dans la **console du navigateur**, car l'orchestration
+est cliente. Il n'existe pas de collecte centralisée ni de stockage persistant de
+ces diagnostics. Ils ne passent pas par le rendu React. Même si tous les fournisseurs
+échouent, le formulaire ne montre pas d'erreur technique de recherche : il conserve
+l'état de liste vide ou de devis périmés et la tentative automatique après 15 s.
+Les erreurs d'exécution/signature et les indications de solde/gas restent affichées
+lorsqu'elles sont nécessaires à l'action de l'utilisateur.
+
+## Montants et prix
+
+`lib/amounts.ts` convertit la saisie avec `BigInt` et accepte
+une virgule ou un point décimal. Les entiers LI.FI restent des chaînes ; exposants,
+signes, séparateurs de milliers et excès de décimales sont rejetés.
+
+Les frais plateforme sont configurables, avec slippage 0,5 % et impact maximal
+5 % chez LI.FI ; Rango refuse les verdicts d'impact élevé de son API.
+1Click utilise également le slippage commun de 0,5 %, converti en points de base.
+Rango exige un destinataire de commission pour des frais non nuls et accepte
+au maximum 3 %. Le montant net, le minimum reçu et les frais réseau restent distincts.
+Les prix USD passent aussi par le service tokens, par réseau/adresse. Le taux EUR
+vient de la BCE via Frankfurter, avec sa date et un repli sur USD si indisponible.
+Ces demandes de prix sont indépendantes de l'authenticité : leur échec ne retire
+pas une entrée du catalogue local et ne bloque pas sa sélection.
+
+## Configuration et modules
+
+| Emplacement ou variable | Responsabilité |
+| --- | --- |
+| `LIFI_API_KEY` | Clé optionnelle privée du service tokens ; remplace l'ancienne variable publique. |
+| `TOKEN_SEARCH_REQUESTS_PER_MINUTE` | Budget local d'appels du service tokens. |
+| `NEXT_PUBLIC_PLATFORM_FEE_PERCENT` | Frais Hermes 0–100. |
+| `RANGO_API_KEY` | Clé serveur privée facultative ; clé publique de test par défaut. |
+| `RANGO_REFERRER_ADDRESS` | Commission Rango non nulle (plafond 3 %). |
+| `NEAR_1CLICK_API_KEY` / `NEAR_1CLICK_JWT` | Identifiants 1Click privés, côté serveur. |
+| `lib/aggregators/oneclick/` | Registre, devis, dépôt ERC-20 et types de suivi 1Click. |
+| `lib/routing/diagnostics.ts` | Logs techniques de cotation, sans rendu dans l'interface ni données sensibles. |
+| `lib/token-continuity.ts` | Conservation des seules identités populaires épinglées lors d'un changement de réseau. |
+| `lib/aggregators/rango/` | Validation API, signature EVM et suivi séparés de LI.FI. |
+| `lib/tokens/client.ts` | HTTP navigateur et validation des réponses. |
+| `lib/tokens/catalog.ts` | Métadonnées locales épinglées et recherche synchrone. |
+| `lib/contractTokenResolver.ts` | Wrapper de résolution LI.FI par adresse ; aucun fallback RPC. |
+| `lib/aggregators/lifi/client.ts` | SDK navigateur et fournisseur EVM, sans clé privée. |
+| `lib/routing/execute.ts` | Contrôles avant exécution. |
+| `components/TokenSelectModal.tsx` | Recherche, consentement, focus trap et scroll. |
+| `components/QuoteCountdown.tsx` | Compteur d'expiration et états de renouvellement. |
+| `next.config.js` | Imports optimisés de `viem/chains`, sans les modules Tempo inutilisés. |
+
+L'import global de `viem/chains` entraînait `tempo/VirtualMaster` et son import
+dynamique de workers Node dans le bundle de l'API. `optimizePackageImports` conserve
+uniquement les exports nécessaires, corrigeant le warning `Critical dependency`
+sans patcher `node_modules`, changer de version ou filtrer les diagnostics.
+
+## Vérifications et limites
+
+Exécuter `npm run typecheck`, `npm test`, `npm run lint` et `npm run build`.
+Les tests contrôlent les paramètres API, homonymes, cache, quotas, erreurs, consentement,
+réponses tardives, métadonnées avant signature et protections de cotation existantes.
+Ils couvrent également l'exemption exacte du catalogue, les homonymes malveillants,
+l'actualisation automatique, les délais de retry, la suspension et le compte à rebours.
+Ils couvrent aussi les aperçus anonymes, les dépôts 1Click simulés, la continuité des tokens,
+la journalisation filtrée et l'absence de messages techniques de cotation dans le rendu.
+Ils ne déplacent pas de fonds.
+
+Socket, wallets non-EVM, scan GoPlus, scoring des bridges et orchestration
+entièrement serveur restent hors périmètre. Rango est en bêta, limité aux
+transactions EVM acceptées par son validateur. Les parcours signés complets Rango et 1Click restent
+à vérifier manuellement. La disponibilité d'une route dépend des providers,
+de leurs quotas, de la liquidité et du montant demandé.
