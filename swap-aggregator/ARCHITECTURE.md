@@ -2,7 +2,8 @@
 
 Hermes utilise Next.js 14 App Router, React 18, TypeScript, wagmi/viem,
 RainbowKit, le SDK LI.FI 4.7 et son fournisseur d'exécution Ethereum officiel,
-ainsi que l'API Basic Rango pour l'EVM.
+ainsi que les API Basic Rango et 1Click / NEAR Intents pour l'EVM.
+Cette description correspond à la branche `feat/hermes-oneclick` (mise à jour le 30 septembre 2026).
 Les réseaux EVM de `lib/chains.ts` sont la référence commune à la
 découverte, au wallet et aux contrôles des métadonnées.
 
@@ -95,12 +96,40 @@ renvoyées aux appelants ne permettent pas de modifier les données épinglées.
 Voir `TOKEN_CATALOG.md` pour la liste et les sources. Aucun prix n'est inventé :
 `priceUSD: "0"` signifie qu'aucun prix n'est encore disponible.
 
+## Interface et continuité de sélection
+
+Les réseaux sont recherchables par nom ou identifiant. Les routes s'affichent à droite
+du formulaire sur ordinateur et s'empilent sur mobile. L'inversion échange les réseaux
+et les tokens en conservant le montant saisi.
+
+`lib/token-continuity.ts` ne conserve un token lors d'un changement de réseau que si
+les deux identités correspondent aux contrats/décimales épinglés d'un actif populaire.
+Les variantes restent distinctes (ETH/WETH, USDC/USDC.e, USDT/USDT0, actifs Binance-pegged).
+Sans correspondance, la modale s'ouvre ; côté source, le montant est effacé.
+Cette liste restreinte sert uniquement à la continuité, jamais à filtrer la recherche.
+Aucun système de mise à jour automatique du catalogue n'est configuré.
+
+Le registre 1Click charge en complément des tokens EVM validés, visibles dans le
+parcours élargi et la recherche. Il ne modifie pas les identités du catalogue local
+ni les règles de consentement. La recherche LI.FI reste disponible pour les autres
+contrats, au-delà des tokens populaires.
+
 ## Cotations et exécution
 
-Les cotations LI.FI passent par le SDK navigateur ; celles de Rango passent par
-un proxy Next.js avec clé serveur. Les deux recherches sélectionnées démarrent
-en parallèle avec timeout 15 s. Une panne de provider n'efface pas les routes de
-l'autre ; l'interface signale la disponibilité partielle. Socket reste désactivé.
+Les cotations LI.FI passent par le SDK navigateur ; celles de Rango et 1Click
+passent par des routes Next.js avec identifiants serveur. Les fournisseurs activés
+dans le formulaire sont interrogés en parallèle, avec un délai client de 15 s.
+L'échec d'un fournisseur conserve les routes des autres. Les incidents de cotation
+sont journalisés dans la console technique, sans bannière d'indisponibilité ni
+message d'erreur technique dans le formulaire. Socket reste désactivé.
+
+Un devis ne nécessite pas de wallet. Les paramètres utilisent alors un compte vide ;
+LI.FI reçoit une demande sans adresses de wallet, Rango accepte uniquement les
+cotations anonymes, et 1Click reçoit une demande `dry: true`. La connexion du wallet
+change la clé de cotation et invalide les aperçus anonymes avant toute exécution.
+Les métadonnées et décimales de la sélection accompagnent également les demandes
+1Click. Les routes normalisées forment une union typée LI.FI / Rango / 1Click,
+avec un payload spécifique à chaque fournisseur.
 Le service `lib/routing/` normalise, déduplique par ID/provider et trie les routes par
 montant net décroissant. La clé de cotation lie compte, chaînes, adresses et montant.
 Les réponses périmées sont ignorées et les cotations expirent au bout de 30 s.
@@ -137,7 +166,7 @@ Avant toute action du wallet, `executeSwapQuote` :
 5. revérifie le compte après cette attente, active le réseau source si nécessaire,
    contrôle les soldes ERC-20/natif et réserve le gas ;
 6. revérifie la cotation et le compte, puis choisit l'exécuteur par provider :
-   SDK EVM LI.FI ou préparation/signature/suivi Rango. Les payloads sont distincts.
+   SDK EVM LI.FI, préparation/signature/suivi Rango ou dépôt ERC-20 1Click. Les payloads sont distincts.
 
 Le wallet client est récupéré depuis wagmi au moment de l'action. Les changements
 automatiques de taux sont refusés ; les signatures restent demandées par le wallet.
@@ -164,6 +193,59 @@ requestId sont conservés en local pour une reprise après rechargement ; les
 nouveaux swaps sont bloqués pendant cette attente. Aucune reprise ne signe.
 Voir [RANGO_INTEGRATION.md](./RANGO_INTEGRATION.md) pour les limites et références.
 
+### 1Click / NEAR Intents
+
+| Route Next.js | Usage |
+| --- | --- |
+| `GET /api/oneclick/tokens` | Registre EVM 1Click, sans restriction par symbole ; cache serveur de 5 minutes. |
+| `POST /api/oneclick/quote` | Devis de prévisualisation (`dry: true`) ou instructions de dépôt après connexion (`dry: false`). |
+| `GET /api/oneclick/status?depositAddress=…` | État du dépôt et lien de transaction de destination lorsqu'il existe. |
+
+`lib/aggregators/oneclick/server.ts` appelle un hôte fixe avec un timeout de 25 s.
+Les clés `NEAR_1CLICK_API_KEY` et `NEAR_1CLICK_JWT` restent côté serveur. Les deux
+contrats et leurs décimales doivent correspondre au registre du fournisseur.
+Les réseaux intégrés sont Ethereum, Base, Arbitrum, Optimism, Polygon, BNB Chain,
+Avalanche et Gnosis. Le client écarte les sources natives ; l'exécution est limitée
+aux dépôts EVM ERC-20. La disponibilité des paires reste déterminée par 1Click.
+
+Le mode aperçu peut utiliser une adresse nulle pour les champs destinataire/remboursement
+exigés par 1Click, et ne renvoie jamais d'instructions de dépôt. Le mode exécutable
+exige un wallet non nul. L'exécuteur obtient un nouveau devis, refuse un minimum
+inférieur au minimum sélectionné, vérifie les instructions et leur échéance, puis
+sollicite une confirmation. Il estime le gas et revérifie wallet, réseau, soldes et
+validité avant d'appeler `transfer` vers le dépôt. Aucun polling ne signe.
+
+Le dépôt est enregistré sous `hermes:oneclick:latest`, lié au wallet, avant l'attente
+de la receipt source. Le statut est interrogé toutes les 8 s jusqu'à `SUCCESS`,
+`REFUNDED` ou `FAILED`. Un dépôt actif suspend les nouvelles cotations/exécutions ;
+une confirmation source ne signifie pas une livraison finale.
+Le devis présente le minimum reçu ; le coût du gas reste inconnu dans la liste si
+1Click ne le fournit pas, puis est estimé avant signature. Les frais plateforme
+non nuls désactivent ce fournisseur tant que leur configuration n'est pas implémentée.
+
+### Diagnostics des cotations
+
+`lib/routing/diagnostics.ts` produit des entrées `console.warn` préfixées
+`[Hermes quotes]`. L'orchestrateur écrit un événement `provider_failed` pour chaque
+fournisseur en échec ; le hook écrit `refresh_failed` lorsqu'un cycle échoue ou
+qu'une cotation expire avant la fin du renouvellement. Les annulations d'une ancienne
+recherche après modification du formulaire ne génèrent pas ces diagnostics.
+
+Les champs autorisés sont l'événement, le fournisseur éventuel, les deux identifiants
+de réseaux, une catégorie de cause et le statut HTTP disponible. Les adaptateurs
+HTTP Rango et 1Click conservent ce statut sur l'erreur technique. Certaines causes
+connues sont catégorisées (`unsupported_pair`, `provider_configuration`,
+`invalid_quote`, `expired_quote`, `all_providers_failed`). Les autres erreurs sont
+classées sans copier leur texte brut, pile, URL, clé API, compte, montant ni payload.
+
+Ces journaux sont actuellement dans la **console du navigateur**, car l'orchestration
+est cliente. Il n'existe pas de collecte centralisée ni de stockage persistant de
+ces diagnostics. Ils ne passent pas par le rendu React. Même si tous les fournisseurs
+échouent, le formulaire ne montre pas d'erreur technique de recherche : il conserve
+l'état de liste vide ou de devis périmés et la tentative automatique après 15 s.
+Les erreurs d'exécution/signature et les indications de solde/gas restent affichées
+lorsqu'elles sont nécessaires à l'action de l'utilisateur.
+
 ## Montants et prix
 
 `lib/amounts.ts` convertit la saisie avec `BigInt` et accepte
@@ -172,6 +254,7 @@ signes, séparateurs de milliers et excès de décimales sont rejetés.
 
 Les frais plateforme sont configurables, avec slippage 0,5 % et impact maximal
 5 % chez LI.FI ; Rango refuse les verdicts d'impact élevé de son API.
+1Click utilise également le slippage commun de 0,5 %, converti en points de base.
 Rango exige un destinataire de commission pour des frais non nuls et accepte
 au maximum 3 %. Le montant net, le minimum reçu et les frais réseau restent distincts.
 Les prix USD passent aussi par le service tokens, par réseau/adresse. Le taux EUR
@@ -188,6 +271,10 @@ pas une entrée du catalogue local et ne bloque pas sa sélection.
 | `NEXT_PUBLIC_PLATFORM_FEE_PERCENT` | Frais Hermes 0–100. |
 | `RANGO_API_KEY` | Clé serveur privée facultative ; clé publique de test par défaut. |
 | `RANGO_REFERRER_ADDRESS` | Commission Rango non nulle (plafond 3 %). |
+| `NEAR_1CLICK_API_KEY` / `NEAR_1CLICK_JWT` | Identifiants 1Click privés, côté serveur. |
+| `lib/aggregators/oneclick/` | Registre, devis, dépôt ERC-20 et types de suivi 1Click. |
+| `lib/routing/diagnostics.ts` | Logs techniques de cotation, sans rendu dans l'interface ni données sensibles. |
+| `lib/token-continuity.ts` | Conservation des seules identités populaires épinglées lors d'un changement de réseau. |
 | `lib/aggregators/rango/` | Validation API, signature EVM et suivi séparés de LI.FI. |
 | `lib/tokens/client.ts` | HTTP navigateur et validation des réponses. |
 | `lib/tokens/catalog.ts` | Métadonnées locales épinglées et recherche synchrone. |
@@ -210,10 +297,12 @@ Les tests contrôlent les paramètres API, homonymes, cache, quotas, erreurs, co
 réponses tardives, métadonnées avant signature et protections de cotation existantes.
 Ils couvrent également l'exemption exacte du catalogue, les homonymes malveillants,
 l'actualisation automatique, les délais de retry, la suspension et le compte à rebours.
+Ils couvrent aussi les aperçus anonymes, les dépôts 1Click simulés, la continuité des tokens,
+la journalisation filtrée et l'absence de messages techniques de cotation dans le rendu.
 Ils ne déplacent pas de fonds.
 
 Socket, wallets non-EVM, scan GoPlus, scoring des bridges et orchestration
 entièrement serveur restent hors périmètre. Rango est en bêta, limité aux
-transactions EVM acceptées par son validateur. Le parcours signé complet reste
+transactions EVM acceptées par son validateur. Les parcours signés complets Rango et 1Click restent
 à vérifier manuellement. La disponibilité d'une route dépend des providers,
 de leurs quotas, de la liquidité et du montant demandé.

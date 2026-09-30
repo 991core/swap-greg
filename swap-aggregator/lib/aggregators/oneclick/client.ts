@@ -30,7 +30,7 @@ export async function fetchOneClickQuote(params: RouteSelectionParams, dry: bool
       fromTokenDecimals: params.fromTokenDecimals, toTokenDecimals: params.toTokenDecimals, wallet: params.fromAddress || undefined, dry }),
   });
   const quote = await response.json();
-  if (!response.ok) throw new Error(quote.error ?? `1Click HTTP ${response.status}`);
+  if (!response.ok) throw Object.assign(new Error(quote.error ?? `1Click HTTP ${response.status}`), { status: response.status });
   if (quote.amountIn !== params.fromAmount || !/^[1-9]\d*$/.test(quote.amountOut) || !/^[1-9]\d*$/.test(quote.minAmountOut) ||
       BigInt(quote.minAmountOut) > BigInt(quote.amountOut) || !Number.isFinite(quote.timeEstimate) || quote.timeEstimate < 0) throw new Error("Invalid 1Click quote");
   return quote;

@@ -1,6 +1,7 @@
 import { fetchRoutes, type SwapParams } from "../aggregators/lifi/routes";
 import type { NormalizedRoute, ProviderSelection } from "../types/normalized-route";
 import { normalizeLifiRoute } from "./normalize";
+import { logQuoteFailure } from "./diagnostics";
 import { sortRoutes } from "./sort";
 import { deduplicateRoutes } from "./deduplicate";
 import { fetchRangoRoutes } from "../aggregators/rango/routes";
@@ -30,7 +31,11 @@ export async function getRoutesForSelection(params: RouteSelectionParams, signal
   if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
   let failures = 0;
   results.forEach((result, index) => {
-    if (result.status === "rejected") { failures++; onWarning?.({ provider: jobs[index].provider, message: "unavailable" }); }
+    if (result.status === "rejected") {
+      failures++;
+      logQuoteFailure(result.reason, { event: "provider_failed", provider: jobs[index].provider, fromChainId: params.fromChainId, toChainId: params.toChainId });
+      onWarning?.({ provider: jobs[index].provider, message: "unavailable" });
+    }
   });
   if (jobs.length && failures === jobs.length) throw new Error("No selected provider is available. Retrying automatically.");
   return sortRoutes(deduplicateRoutes(routes));

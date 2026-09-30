@@ -40,11 +40,11 @@ describe("quote lifetime", () => {
     await act(() => vi.advanceTimersByTimeAsync(500));
     expect(fetchQuotes.mock.calls[1][0].providers?.rango).toBe(false);
   });
-  it("keeps provider warnings beside successful routes", async () => {
+  it("does not expose provider warnings in render state", async () => {
     fetchQuotes.mockImplementation(async (_params, _signal, warn) => { warn?.({ provider: "rango", message: "unavailable" }); return [quote()]; });
     const hook = renderHook(() => useSwapQuotes(params));
     await act(() => vi.advanceTimersByTimeAsync(500));
-    expect(hook.result.current.routes).toHaveLength(1); expect(hook.result.current.warnings).toEqual([{ provider: "rango", message: "unavailable" }]); expect(hook.result.current.error).toBeNull();
+    expect(hook.result.current.routes).toHaveLength(1); expect(hook.result.current).not.toHaveProperty("warnings"); expect(hook.result.current.error).toBeNull();
   });
   it("ignores a late response after the amount has been cleared", async () => {
     let resolve!: (routes: NormalizedRoute[]) => void;

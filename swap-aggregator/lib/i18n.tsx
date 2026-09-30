@@ -21,7 +21,7 @@ type TranslationKey =
   | "chain_search" | "chain_no_results" | "quote_without_wallet" | "oneclick_confirm" | "oneclick_minimum" | "oneclick_status" | "oneclick_explorer" | "oneclick_source_tx" | "oneclick_unavailable_route"
   | "routes_short" | "slippage_short" | "hermes_fee_short" | "auto_short" | "wallet_network"
   | "swap_title" | "source_network" | "destination_network" | "balance_label" | "route_details" | "route_duration" | "route_gas" | "route_minimum" | "route_extra_fees" | "route_waiting_others" | "route_sort_hint" | "route_recipient" | "route_amount_exact" | "route_estimates" | "fee_details" | "selected_route"
-  | "highest_output" | "compare_routes" | "routes_empty_description" | "choose_provider" | "provider_unavailable"
+  | "highest_output" | "compare_routes" | "routes_empty_description" | "choose_provider"
   | "rango_test_notice" | "rango_preparing" | "rango_approval" | "rango_signing" | "rango_tracking" | "rango_pending" | "rango_resume" | "rango_complete" | "rango_failed" | "rango_submitted"
   | "hero_tagline"
   | "boot_loading"
@@ -142,7 +142,6 @@ const translations: Record<Lang, Record<TranslationKey, string>> = {
     compare_routes: "Your route, your choice",
     routes_empty_description: "Choose your tokens and enter an amount to compare the available routes.",
     choose_provider: "Select at least one provider to find routes.",
-    provider_unavailable: "{provider} is temporarily unavailable. Other providers remain available.",
     rango_test_notice: "Rango beta · public test API by default, with limited capacity. These are real mainnet swaps, not simulated funds.",
     rango_preparing: "Checking the final quote",
     rango_approval: "Token approval · a separate network fee may apply",
@@ -292,7 +291,6 @@ const translations: Record<Lang, Record<TranslationKey, string>> = {
     compare_routes: "Ta route, ton choix",
     routes_empty_description: "Choisis tes cryptos et saisis un montant pour comparer les routes disponibles.",
     choose_provider: "Active au moins un provider pour rechercher des routes.",
-    provider_unavailable: "{provider} est temporairement indisponible. Les autres providers restent disponibles.",
     rango_test_notice: "Rango bêta · API publique de test par défaut, à capacité limitée. Les swaps utilisent de vrais fonds sur le mainnet.",
     rango_preparing: "Vérification de la cotation finale",
     rango_approval: "Approbation du token · des frais réseau distincts peuvent s’appliquer",

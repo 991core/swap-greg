@@ -257,7 +257,7 @@ export function SwapCard({ onConnect }: { onConnect?: () => void } = {}) {
         {!insufficientBalance && insufficientGas && <p className="jumper-warning">{translate("insufficient_gas")}</p>}
         {isConnected && params && !balanceReady && <p className="jumper-hint">{translate("balance_unavailable")}</p>}
         {!isConnected && <p className="jumper-hint">{translate("quote_without_wallet")}</p>}
-        {(quotes.error || error) && <p className="jumper-error" role="alert">{error || quotes.error}</p>}
+        {error && <p className="jumper-error" role="alert">{error}</p>}
         {success && <p className="jumper-success" role="status">{translate("swap_success")}</p>}
         {error && (execution || rangoProgress?.txHash) && <p className="jumper-warning">{translate("wallet_history")}</p>}
       </div>
@@ -279,7 +279,6 @@ export function SwapCard({ onConnect }: { onConnect?: () => void } = {}) {
       </div>
       {!quotes.routes.length && !quotes.loading && <div className="jumper-routes-empty"><span aria-hidden="true">⇄</span><p>{translate(params ? "no_routes_hint" : "routes_empty_description")}</p></div>}
       {quotes.loading && <div role="status" className="jumper-route-loading"><span>{translate(quotes.routes.length ? "route_waiting_others" : "searching_routes")}</span>{!quotes.routes.length && <div className="jumper-route-skeleton" aria-hidden="true"><i /><i /><i /></div>}</div>}
-      {quotes.warnings.map((warning) => <p key={warning.provider} className="jumper-warning">{translate("provider_unavailable", { provider: warning.provider === "lifi" ? "LI.FI" : warning.provider === "oneclick" ? "1Click" : "Rango" })}</p>)}
       <RouteList routes={quotes.routes} selectedId={selectedRoute?.id ?? null} onSelect={(route) => setSelectedId(route.id)} toDecimals={toToken?.decimals ?? 18} toSymbol={toToken?.symbol ?? ""} currency={currency} eurRate={fx?.rate ?? null} priceUsd={price(toToken)} disabled={swapping || Boolean(pendingRango) || activeOneClick || quotes.loading || quotes.expired} />
     </aside>
     </div>

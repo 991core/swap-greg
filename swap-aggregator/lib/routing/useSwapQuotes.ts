@@ -1,15 +1,16 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { NormalizedRoute } from "../types/normalized-route";
-import { getRoutesForSelection, type RouteSelectionParams, type ProviderWarning } from "./orchestrator";
+import { getRoutesForSelection, type RouteSelectionParams } from "./orchestrator";
+import { logQuoteFailure } from "./diagnostics";
 import { quoteKey } from "./quote";
 import { QUOTE_RETRY_MS } from "./config";
 
 type QuoteState = {
   key: string | null; routes: NormalizedRoute[]; loading: boolean; error: string | null;
-  expired: boolean; expiresAt: number | null; retryAt: number | null; waiting: boolean; warnings: ProviderWarning[];
+  expired: boolean; expiresAt: number | null; retryAt: number | null; waiting: boolean;
 };
-const empty: QuoteState = { key: null, routes: [], loading: false, error: null, expired: false, expiresAt: null, retryAt: null, waiting: false, warnings: [] };
+const empty: QuoteState = { key: null, routes: [], loading: false, error: null, expired: false, expiresAt: null, retryAt: null, waiting: false };
 
 export function useSwapQuotes(params: RouteSelectionParams | null, enabled = true) {
   const key = params ? quoteKey(params) + JSON.stringify([params.providers?.lifi ?? true, params.providers?.rango ?? true, params.providers?.socket ?? false, params.providers?.oneclick ?? false]) : null;
@@ -45,8 +46,7 @@ export function useSwapQuotes(params: RouteSelectionParams | null, enabled = tru
       setState((old) => ({ ...old, loading: true, error: null, retryAt: null, waiting: false,
         expired: old.expiresAt !== null && old.expiresAt <= Date.now() }));
       try {
-        const warnings: ProviderWarning[] = [];
-        const routes = await getRoutesForSelection(request, controller.signal, (warning) => warnings.push(warning), (partial) => {
+        const routes = await getRoutesForSelection(request, controller.signal, undefined, (partial) => {
           if (controller.signal.aborted || !partial.length) return;
           // Show fast providers immediately. Execution stays disabled until the
           // current search completes; no stale results can enter a new request.
@@ -57,10 +57,11 @@ export function useSwapQuotes(params: RouteSelectionParams | null, enabled = tru
         const expiresAt = routes.length ? Math.min(...routes.map((route) => route.expiresAt)) : null;
         if (expiresAt !== null && (!Number.isFinite(expiresAt) || expiresAt <= Date.now())) throw new Error("Quote expired during refresh.");
         const retryAt = expiresAt === null ? Date.now() + QUOTE_RETRY_MS : null;
-        setState({ key, routes, loading: false, error: null, expired: false, expiresAt, retryAt, waiting: false, warnings });
+        setState({ key, routes, loading: false, error: null, expired: false, expiresAt, retryAt, waiting: false });
         schedule(expiresAt ?? retryAt!);
       } catch (error) {
         if (controller.signal.aborted) return;
+        logQuoteFailure(error, { event: "refresh_failed", fromChainId: request.fromChainId, toChainId: request.toChainId });
         const retryAt = Date.now() + QUOTE_RETRY_MS;
         setState((old) => ({ ...old, loading: false, expired: true, retryAt,
           error: error instanceof Error ? error.message : String(error) }));

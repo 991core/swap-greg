@@ -56,9 +56,11 @@ describe("provider isolation", () => {
     expect(result.map(r => r.provider)).toEqual(["rango", "lifi"]);
   });
   it("keeps LI.FI when Rango fails and reports the partial failure", async () => {
-    vi.mocked(rangoRequest).mockRejectedValue(new Error("429")); const warn = vi.fn();
+    const log = vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.mocked(rangoRequest).mockRejectedValue(Object.assign(new Error("429"), { status: 429 })); const warn = vi.fn();
     expect((await getRoutesForSelection(params, undefined, warn)).map(r=>r.provider)).toEqual(["lifi"]);
     expect(warn).toHaveBeenCalledWith({ provider: "rango", message: "unavailable" });
+    expect(log).toHaveBeenCalledWith("[Hermes quotes]", expect.objectContaining({ event: "provider_failed", provider: "rango", status: 429 }));
   });
   it("keeps Rango when LI.FI fails", async () => { vi.mocked(fetchRoutes).mockRejectedValue(new Error("offline")); expect((await getRoutesForSelection(params)).map(r=>r.provider)).toEqual(["rango"]); });
   it("does not query providers that the user has disabled", async () => {
@@ -73,8 +75,9 @@ describe("provider isolation", () => {
     await expect(getRoutesForSelection(params)).rejects.toThrow("No selected provider");
   });
   it("discards all results and progress after cancellation", async () => {
+    const log = vi.spyOn(console, "warn").mockImplementation(() => {});
     const controller = new AbortController(); const progress = vi.fn(); controller.abort();
     await expect(getRoutesForSelection(params, controller.signal, undefined, progress)).rejects.toThrow("Aborted");
-    expect(progress).not.toHaveBeenCalled();
+    expect(progress).not.toHaveBeenCalled(); expect(log).not.toHaveBeenCalled();
   });
 });
