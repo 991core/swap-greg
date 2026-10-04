@@ -1,28 +1,48 @@
-import { createClient, type ExtendedChain, type Route, type Token } from "@lifi/sdk";
-import { SolanaProvider } from "@lifi/sdk-provider-solana";
-import { TronProvider } from "@lifi/sdk-provider-tron";
-import type { WalletClient } from "viem";
+import { createClient } from "@lifi/sdk";
+import { EthereumProvider } from "@lifi/sdk-provider-ethereum";
+import { getWalletClient, switchChain } from "wagmi/actions";
+import { walletConfig } from "../../wallet";
+import { isAppChainId } from "../../chains";
+import { createGuardedLifiWallet, type LifiWalletSecurity } from "../../security/lifi-wallet";
 
 export const lifiClient = createClient({
   integrator: "hermes-hms",
-  apiKey: process.env.LIFI_API_KEY || process.env.NEXT_PUBLIC_LIFI_API_KEY || undefined,
-  providers: [SolanaProvider(), TronProvider()],
+  preloadChains: false,
+  providers: [EthereumProvider({
+    disableMessageSigning: true,
+    getWalletClient: async () => {
+      throw new Error("A transaction authorizer is required before using the wallet.");
+    },
+    switchChain: async (chainId) => {
+      if (!isAppChainId(chainId)) throw new Error("Unsupported network.");
+      throw new Error("A transaction authorizer is required before switching the wallet.");
+    },
+  })],
 });
 
-let activeWalletClient: WalletClient | null = null;
+export function getLifiSdkClient() { return lifiClient; }
 
-export function setLifiWalletClient(walletClient: WalletClient | null) {
-  activeWalletClient = walletClient;
+/** Quotes share a client; every execution gets its own immutable authorization scope. */
+export function getLifiExecutionClient(security: LifiWalletSecurity) {
+  if (!security || typeof security.authorizeTransaction !== "function" || typeof security.check !== "function") {
+    throw new Error("A transaction authorizer is required before using the wallet.");
+  }
+  const readGuardedWallet = async () => {
+    security.check();
+    const client = await getWalletClient(walletConfig, { chainId: security.chainId });
+    security.check();
+    if (!client) throw new Error("Connect a wallet before executing a swap.");
+    return createGuardedLifiWallet(client, security);
+  };
+  return createClient({ integrator: "hermes-hms", preloadChains: false, providers: [EthereumProvider({
+    disableMessageSigning: true,
+    getWalletClient: readGuardedWallet,
+    switchChain: async (chainId) => {
+      if (!isAppChainId(chainId) || chainId !== security.chainId) throw new Error("Unsupported execution network.");
+      security.check();
+      await switchChain(walletConfig, { chainId });
+      security.check();
+      return readGuardedWallet();
+    },
+  })] });
 }
-
-export function getLifiSdkClient() {
-  return lifiClient;
-}
-
-export function getActiveWalletClient() {
-  return activeWalletClient;
-}
-
-export type LifiRoute = Route;
-export type LifiToken = Token;
-export type LifiExtendedChain = ExtendedChain;

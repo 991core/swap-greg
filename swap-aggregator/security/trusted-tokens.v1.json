@@ -1,0 +1,631 @@
+{
+  "schemaVersion": 1,
+  "version": 1,
+  "entries": [
+    {
+      "assetId": "catalog:8453:native",
+      "chainId": 8453,
+      "type": "native",
+      "address": null,
+      "decimals": 18,
+      "symbol": "ETH",
+      "name": "Ether",
+      "status": "trusted",
+      "consensusSources": [
+        "catalog_review:TOKEN_CATALOG.md"
+      ],
+      "firstVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "lastVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "version": 1
+    },
+    {
+      "assetId": "catalog:1:native",
+      "chainId": 1,
+      "type": "native",
+      "address": null,
+      "decimals": 18,
+      "symbol": "ETH",
+      "name": "Ether",
+      "status": "trusted",
+      "consensusSources": [
+        "catalog_review:TOKEN_CATALOG.md"
+      ],
+      "firstVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "lastVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "version": 1
+    },
+    {
+      "assetId": "catalog:42161:native",
+      "chainId": 42161,
+      "type": "native",
+      "address": null,
+      "decimals": 18,
+      "symbol": "ETH",
+      "name": "Ether",
+      "status": "trusted",
+      "consensusSources": [
+        "catalog_review:TOKEN_CATALOG.md"
+      ],
+      "firstVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "lastVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "version": 1
+    },
+    {
+      "assetId": "catalog:10:native",
+      "chainId": 10,
+      "type": "native",
+      "address": null,
+      "decimals": 18,
+      "symbol": "ETH",
+      "name": "Ether",
+      "status": "trusted",
+      "consensusSources": [
+        "catalog_review:TOKEN_CATALOG.md"
+      ],
+      "firstVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "lastVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "version": 1
+    },
+    {
+      "assetId": "catalog:137:native",
+      "chainId": 137,
+      "type": "native",
+      "address": null,
+      "decimals": 18,
+      "symbol": "POL",
+      "name": "POL",
+      "status": "trusted",
+      "consensusSources": [
+        "catalog_review:TOKEN_CATALOG.md"
+      ],
+      "firstVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "lastVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "version": 1
+    },
+    {
+      "assetId": "catalog:56:native",
+      "chainId": 56,
+      "type": "native",
+      "address": null,
+      "decimals": 18,
+      "symbol": "BNB",
+      "name": "BNB",
+      "status": "trusted",
+      "consensusSources": [
+        "catalog_review:TOKEN_CATALOG.md"
+      ],
+      "firstVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "lastVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "version": 1
+    },
+    {
+      "assetId": "catalog:43114:native",
+      "chainId": 43114,
+      "type": "native",
+      "address": null,
+      "decimals": 18,
+      "symbol": "AVAX",
+      "name": "Avalanche",
+      "status": "trusted",
+      "consensusSources": [
+        "catalog_review:TOKEN_CATALOG.md"
+      ],
+      "firstVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "lastVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "version": 1
+    },
+    {
+      "assetId": "catalog:100:native",
+      "chainId": 100,
+      "type": "native",
+      "address": null,
+      "decimals": 18,
+      "symbol": "XDAI",
+      "name": "xDAI",
+      "status": "trusted",
+      "consensusSources": [
+        "catalog_review:TOKEN_CATALOG.md"
+      ],
+      "firstVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "lastVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "version": 1
+    },
+    {
+      "assetId": "catalog:1088:native",
+      "chainId": 1088,
+      "type": "native",
+      "address": null,
+      "decimals": 18,
+      "symbol": "METIS",
+      "name": "Metis",
+      "status": "trusted",
+      "consensusSources": [
+        "catalog_review:TOKEN_CATALOG.md"
+      ],
+      "firstVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "lastVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "version": 1
+    },
+    {
+      "assetId": "catalog:1:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "chainId": 1,
+      "type": "erc20",
+      "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "decimals": 6,
+      "symbol": "USDC",
+      "name": "USDCoin",
+      "status": "trusted",
+      "consensusSources": [
+        "catalog_review:TOKEN_CATALOG.md"
+      ],
+      "firstVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "lastVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "version": 1
+    },
+    {
+      "assetId": "catalog:1:0xdac17f958d2ee523a2206206994597c13d831ec7",
+      "chainId": 1,
+      "type": "erc20",
+      "address": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+      "decimals": 6,
+      "symbol": "USDT",
+      "name": "Tether USD",
+      "status": "trusted",
+      "consensusSources": [
+        "catalog_review:TOKEN_CATALOG.md"
+      ],
+      "firstVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "lastVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "version": 1
+    },
+    {
+      "assetId": "catalog:1:0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+      "chainId": 1,
+      "type": "erc20",
+      "address": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+      "decimals": 18,
+      "symbol": "WETH",
+      "name": "Wrapped Ether",
+      "status": "trusted",
+      "consensusSources": [
+        "catalog_review:TOKEN_CATALOG.md"
+      ],
+      "firstVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "lastVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "version": 1
+    },
+    {
+      "assetId": "catalog:1:0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
+      "chainId": 1,
+      "type": "erc20",
+      "address": "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
+      "decimals": 8,
+      "symbol": "WBTC",
+      "name": "Wrapped BTC",
+      "status": "trusted",
+      "consensusSources": [
+        "catalog_review:TOKEN_CATALOG.md"
+      ],
+      "firstVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "lastVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "version": 1
+    },
+    {
+      "assetId": "catalog:1:0x6b175474e89094c44da98b954eedeac495271d0f",
+      "chainId": 1,
+      "type": "erc20",
+      "address": "0x6b175474e89094c44da98b954eedeac495271d0f",
+      "decimals": 18,
+      "symbol": "DAI",
+      "name": "Dai Stablecoin",
+      "status": "trusted",
+      "consensusSources": [
+        "catalog_review:TOKEN_CATALOG.md"
+      ],
+      "firstVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "lastVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "version": 1
+    },
+    {
+      "assetId": "catalog:1:0x514910771af9ca656af840dff83e8264ecf986ca",
+      "chainId": 1,
+      "type": "erc20",
+      "address": "0x514910771af9ca656af840dff83e8264ecf986ca",
+      "decimals": 18,
+      "symbol": "LINK",
+      "name": "ChainLink Token",
+      "status": "trusted",
+      "consensusSources": [
+        "catalog_review:TOKEN_CATALOG.md"
+      ],
+      "firstVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "lastVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "version": 1
+    },
+    {
+      "assetId": "catalog:10:0x0b2c639c533813f4aa9d7837caf62653d097ff85",
+      "chainId": 10,
+      "type": "erc20",
+      "address": "0x0b2c639c533813f4aa9d7837caf62653d097ff85",
+      "decimals": 6,
+      "symbol": "USDC",
+      "name": "USDCoin",
+      "status": "trusted",
+      "consensusSources": [
+        "catalog_review:TOKEN_CATALOG.md"
+      ],
+      "firstVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "lastVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "version": 1
+    },
+    {
+      "assetId": "catalog:10:0x4200000000000000000000000000000000000006",
+      "chainId": 10,
+      "type": "erc20",
+      "address": "0x4200000000000000000000000000000000000006",
+      "decimals": 18,
+      "symbol": "WETH",
+      "name": "Wrapped Ether",
+      "status": "trusted",
+      "consensusSources": [
+        "catalog_review:TOKEN_CATALOG.md"
+      ],
+      "firstVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "lastVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "version": 1
+    },
+    {
+      "assetId": "catalog:10:0x4200000000000000000000000000000000000042",
+      "chainId": 10,
+      "type": "erc20",
+      "address": "0x4200000000000000000000000000000000000042",
+      "decimals": 18,
+      "symbol": "OP",
+      "name": "Optimism",
+      "status": "trusted",
+      "consensusSources": [
+        "catalog_review:TOKEN_CATALOG.md"
+      ],
+      "firstVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "lastVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "version": 1
+    },
+    {
+      "assetId": "catalog:56:0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c",
+      "chainId": 56,
+      "type": "erc20",
+      "address": "0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c",
+      "decimals": 18,
+      "symbol": "WBNB",
+      "name": "Wrapped BNB",
+      "status": "trusted",
+      "consensusSources": [
+        "catalog_review:TOKEN_CATALOG.md"
+      ],
+      "firstVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "lastVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "version": 1
+    },
+    {
+      "assetId": "catalog:137:0x3c499c542cef5e3811e1192ce70d8cc03d5c3359",
+      "chainId": 137,
+      "type": "erc20",
+      "address": "0x3c499c542cef5e3811e1192ce70d8cc03d5c3359",
+      "decimals": 6,
+      "symbol": "USDC",
+      "name": "USDCoin",
+      "status": "trusted",
+      "consensusSources": [
+        "catalog_review:TOKEN_CATALOG.md"
+      ],
+      "firstVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "lastVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "version": 1
+    },
+    {
+      "assetId": "catalog:137:0xc2132d05d31c914a87c6611c10748aeb04b58e8f",
+      "chainId": 137,
+      "type": "erc20",
+      "address": "0xc2132d05d31c914a87c6611c10748aeb04b58e8f",
+      "decimals": 6,
+      "symbol": "USDT",
+      "name": "Tether USD",
+      "status": "trusted",
+      "consensusSources": [
+        "catalog_review:TOKEN_CATALOG.md"
+      ],
+      "firstVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "lastVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "version": 1
+    },
+    {
+      "assetId": "catalog:137:0x7ceb23fd6bc0add59e62ac25578270cff1b9f619",
+      "chainId": 137,
+      "type": "erc20",
+      "address": "0x7ceb23fd6bc0add59e62ac25578270cff1b9f619",
+      "decimals": 18,
+      "symbol": "WETH",
+      "name": "Wrapped Ether",
+      "status": "trusted",
+      "consensusSources": [
+        "catalog_review:TOKEN_CATALOG.md"
+      ],
+      "firstVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "lastVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "version": 1
+    },
+    {
+      "assetId": "catalog:137:0x1bfd67037b42cf73acf2047067bd4f2c47d9bfd6",
+      "chainId": 137,
+      "type": "erc20",
+      "address": "0x1bfd67037b42cf73acf2047067bd4f2c47d9bfd6",
+      "decimals": 8,
+      "symbol": "WBTC",
+      "name": "Wrapped BTC",
+      "status": "trusted",
+      "consensusSources": [
+        "catalog_review:TOKEN_CATALOG.md"
+      ],
+      "firstVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "lastVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "version": 1
+    },
+    {
+      "assetId": "catalog:137:0x8f3cf7ad23cd3cadbd9735aff958023239c6a063",
+      "chainId": 137,
+      "type": "erc20",
+      "address": "0x8f3cf7ad23cd3cadbd9735aff958023239c6a063",
+      "decimals": 18,
+      "symbol": "DAI",
+      "name": "Dai Stablecoin",
+      "status": "trusted",
+      "consensusSources": [
+        "catalog_review:TOKEN_CATALOG.md"
+      ],
+      "firstVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "lastVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "version": 1
+    },
+    {
+      "assetId": "catalog:137:0x53e0bca35ec356bd5dddfebbd1fc0fd03fabad39",
+      "chainId": 137,
+      "type": "erc20",
+      "address": "0x53e0bca35ec356bd5dddfebbd1fc0fd03fabad39",
+      "decimals": 18,
+      "symbol": "LINK",
+      "name": "ChainLink Token",
+      "status": "trusted",
+      "consensusSources": [
+        "catalog_review:TOKEN_CATALOG.md"
+      ],
+      "firstVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "lastVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "version": 1
+    },
+    {
+      "assetId": "catalog:8453:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+      "chainId": 8453,
+      "type": "erc20",
+      "address": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+      "decimals": 6,
+      "symbol": "USDC",
+      "name": "USD Coin",
+      "status": "trusted",
+      "consensusSources": [
+        "catalog_review:TOKEN_CATALOG.md"
+      ],
+      "firstVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "lastVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "version": 1
+    },
+    {
+      "assetId": "catalog:8453:0x4200000000000000000000000000000000000006",
+      "chainId": 8453,
+      "type": "erc20",
+      "address": "0x4200000000000000000000000000000000000006",
+      "decimals": 18,
+      "symbol": "WETH",
+      "name": "Wrapped Ether",
+      "status": "trusted",
+      "consensusSources": [
+        "catalog_review:TOKEN_CATALOG.md"
+      ],
+      "firstVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "lastVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "version": 1
+    },
+    {
+      "assetId": "catalog:8453:0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf",
+      "chainId": 8453,
+      "type": "erc20",
+      "address": "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf",
+      "decimals": 8,
+      "symbol": "cbBTC",
+      "name": "Coinbase Wrapped BTC",
+      "status": "trusted",
+      "consensusSources": [
+        "catalog_review:TOKEN_CATALOG.md"
+      ],
+      "firstVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "lastVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "version": 1
+    },
+    {
+      "assetId": "catalog:8453:0x50c5725949a6f0c72e6c4a641f24049a917db0cb",
+      "chainId": 8453,
+      "type": "erc20",
+      "address": "0x50c5725949a6f0c72e6c4a641f24049a917db0cb",
+      "decimals": 18,
+      "symbol": "DAI",
+      "name": "Dai Stablecoin",
+      "status": "trusted",
+      "consensusSources": [
+        "catalog_review:TOKEN_CATALOG.md"
+      ],
+      "firstVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "lastVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "version": 1
+    },
+    {
+      "assetId": "catalog:42161:0xaf88d065e77c8cc2239327c5edb3a432268e5831",
+      "chainId": 42161,
+      "type": "erc20",
+      "address": "0xaf88d065e77c8cc2239327c5edb3a432268e5831",
+      "decimals": 6,
+      "symbol": "USDC",
+      "name": "USDCoin",
+      "status": "trusted",
+      "consensusSources": [
+        "catalog_review:TOKEN_CATALOG.md"
+      ],
+      "firstVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "lastVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "version": 1
+    },
+    {
+      "assetId": "catalog:42161:0x82af49447d8a07e3bd95bd0d56f35241523fbab1",
+      "chainId": 42161,
+      "type": "erc20",
+      "address": "0x82af49447d8a07e3bd95bd0d56f35241523fbab1",
+      "decimals": 18,
+      "symbol": "WETH",
+      "name": "Wrapped Ether",
+      "status": "trusted",
+      "consensusSources": [
+        "catalog_review:TOKEN_CATALOG.md"
+      ],
+      "firstVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "lastVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "version": 1
+    },
+    {
+      "assetId": "catalog:42161:0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf",
+      "chainId": 42161,
+      "type": "erc20",
+      "address": "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf",
+      "decimals": 8,
+      "symbol": "cbBTC",
+      "name": "Coinbase Wrapped BTC",
+      "status": "trusted",
+      "consensusSources": [
+        "catalog_review:TOKEN_CATALOG.md"
+      ],
+      "firstVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "lastVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "version": 1
+    },
+    {
+      "assetId": "catalog:43114:0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e",
+      "chainId": 43114,
+      "type": "erc20",
+      "address": "0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e",
+      "decimals": 6,
+      "symbol": "USDC",
+      "name": "USDC Token",
+      "status": "trusted",
+      "consensusSources": [
+        "catalog_review:TOKEN_CATALOG.md"
+      ],
+      "firstVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "lastVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "version": 1
+    },
+    {
+      "assetId": "catalog:43114:0xb31f66aa3c1e785363f0875a1b74e27b85fd66c7",
+      "chainId": 43114,
+      "type": "erc20",
+      "address": "0xb31f66aa3c1e785363f0875a1b74e27b85fd66c7",
+      "decimals": 18,
+      "symbol": "WAVAX",
+      "name": "Wrapped AVAX",
+      "status": "trusted",
+      "consensusSources": [
+        "catalog_review:TOKEN_CATALOG.md"
+      ],
+      "firstVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "lastVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "version": 1
+    },
+    {
+      "assetId": "catalog:56:0x55d398326f99059ff775485246999027b3197955",
+      "chainId": 56,
+      "type": "erc20",
+      "address": "0x55d398326f99059ff775485246999027b3197955",
+      "decimals": 18,
+      "symbol": "USDT",
+      "name": "Binance Pegged USDT",
+      "status": "trusted",
+      "consensusSources": [
+        "catalog_review:TOKEN_CATALOG.md"
+      ],
+      "firstVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "lastVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "version": 1
+    },
+    {
+      "assetId": "catalog:56:0x7130d2a12b9bcbfae4f2634d864a1ee1ce3ead9c",
+      "chainId": 56,
+      "type": "erc20",
+      "address": "0x7130d2a12b9bcbfae4f2634d864a1ee1ce3ead9c",
+      "decimals": 18,
+      "symbol": "BTCB",
+      "name": "Binance Pegged Bitcoin",
+      "status": "trusted",
+      "consensusSources": [
+        "catalog_review:TOKEN_CATALOG.md"
+      ],
+      "firstVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "lastVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "version": 1
+    },
+    {
+      "assetId": "catalog:56:0x2170ed0880ac9a755fd29b2688956bd959f933f8",
+      "chainId": 56,
+      "type": "erc20",
+      "address": "0x2170ed0880ac9a755fd29b2688956bd959f933f8",
+      "decimals": 18,
+      "symbol": "ETH",
+      "name": "Binance Pegged ETH",
+      "status": "trusted",
+      "consensusSources": [
+        "catalog_review:TOKEN_CATALOG.md"
+      ],
+      "firstVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "lastVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "version": 1
+    },
+    {
+      "assetId": "catalog:56:0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d",
+      "chainId": 56,
+      "type": "erc20",
+      "address": "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d",
+      "decimals": 18,
+      "symbol": "USDC",
+      "name": "Binance Pegged USD Coin",
+      "status": "trusted",
+      "consensusSources": [
+        "catalog_review:TOKEN_CATALOG.md"
+      ],
+      "firstVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "lastVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "version": 1
+    },
+    {
+      "assetId": "catalog:42161:0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9",
+      "chainId": 42161,
+      "type": "erc20",
+      "address": "0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9",
+      "decimals": 6,
+      "symbol": "USDT0",
+      "name": "USDT0",
+      "status": "trusted",
+      "consensusSources": [
+        "catalog_review:TOKEN_CATALOG.md"
+      ],
+      "firstVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "lastVerifiedAt": "2026-09-20T00:00:00.000Z",
+      "version": 1
+    }
+  ],
+  "history": []
+}
