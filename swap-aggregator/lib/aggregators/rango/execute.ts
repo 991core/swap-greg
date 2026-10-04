@@ -1,5 +1,5 @@
 import { decodeFunctionData, encodeFunctionData, erc20Abi, type Address, type Hex } from "viem";
-import { estimateFeesPerGas, estimateGas, getBalance, readContract, sendTransaction, waitForTransactionReceipt, writeContract } from "wagmi/actions";
+import { estimateFeesPerGas, estimateGas, getAccount, getBalance, readContract, sendTransaction, waitForTransactionReceipt, writeContract } from "wagmi/actions";
 import { walletConfig } from "../../wallet";
 import { isAppChainId } from "../../chains";
 import type { SwapParams } from "../lifi/routes";
@@ -9,8 +9,9 @@ import { sourceGasAmount } from "../../routing/quote";
 import { rangoRequest } from "./client";
 import { isAddress, rangoToken, RANGO_CHAINS, validateRangoQuote } from "./validation";
 import { trackRangoTransaction } from "./tracking";
-import type { RangoExecution, RangoProgress, RangoSwap, RangoTransaction } from "./types";
+import type { RangoExecution, RangoPending, RangoProgress, RangoSwap, RangoTransaction } from "./types";
 import { transactionLink } from "./explorer";
+import type { TransactionAuthorizer } from "../../security/transaction-validator";
 
 export function validateRangoTransaction(data: RangoSwap, route: RangoNormalizedRoute, params: SwapParams): RangoTransaction {
   const quoted = validateRangoQuote(data, params).route;
@@ -41,11 +42,26 @@ export function validateRangoTransaction(data: RangoSwap, route: RangoNormalized
 }
 
 export async function executeRangoRoute(route: RangoNormalizedRoute, params: SwapParams, check: () => void,
-  onProgress: (progress: RangoProgress) => void = () => {}): Promise<RangoExecution> {
+  onProgress: (progress: RangoProgress) => void = () => {}, authorizeTransaction?: TransactionAuthorizer): Promise<RangoExecution> {
+  if (typeof authorizeTransaction !== "function" || typeof check !== "function") throw new Error("A transaction authorizer is required before Rango execution.");
   if (!isAppChainId(params.fromChainId)) throw new Error("Unsupported source chain.");
   const chainId = params.fromChainId;
   const account = params.fromAddress as Address;
   const native = params.fromTokenAddress.toLowerCase() === NATIVE_ADDRESS;
+  const assertWallet = () => {
+    check();
+    const live = getAccount(walletConfig);
+    if (!live.isConnected || live.address?.toLowerCase() !== account.toLowerCase() || live.chainId !== chainId) throw new Error("The live wallet account or network changed.");
+  };
+  const authorize = async (to: string, data: string, value: string, kind: "swap" | "approval" | "approval_reset", reserve: bigint) => {
+    check();
+    await authorizeTransaction({ chainId, from: account, to, data, value }, { provider: "rango", protocol: route.raw.quote.route.swapper.id, kind });
+    assertWallet();
+    // Authorization is asynchronous: neither funds nor the gas estimate taken
+    // before it establishes that this exact request is still affordable.
+    await assertFunds(to as Address, data as Hex, BigInt(value), reserve);
+    assertWallet();
+  };
   const prepare = async () => {
     check();
     const data = await rangoRequest<RangoSwap>("swap", { params, swapper: route.raw.quote.route.swapper.id });
@@ -60,7 +76,7 @@ export async function executeRangoRoute(route: RangoNormalizedRoute, params: Swa
     ]);
     check();
     const price = fees.maxFeePerGas ?? fees.gasPrice;
-    if (!price || balance.value < value + (gas * price * BigInt(120) / BigInt(100)) + reserve) throw new Error("Rango: insufficient native balance for transaction fees.");
+    if (gas <= BigInt(0) || price == null || price <= BigInt(0) || balance.value < value + (gas * price * BigInt(120) / BigInt(100)) + reserve) throw new Error("Rango: insufficient native balance for transaction fees.");
     if (tokenBalance !== null && tokenBalance < BigInt(params.fromAmount)) throw new Error("Rango: insufficient token balance.");
   };
   onProgress({ stage: "preparing" });
@@ -75,6 +91,7 @@ export async function executeRangoRoute(route: RangoNormalizedRoute, params: Swa
     if (allowance < BigInt(params.fromAmount)) for (const amount of amounts) {
       const data = encodeFunctionData({ abi: erc20Abi, functionName: "approve", args: [spender, amount] });
       await assertFunds(token, data, BigInt(0), sourceGasAmount(route));
+      await authorize(token, data, "0", amount === BigInt(0) ? "approval_reset" : "approval", sourceGasAmount(route));
       check(); onProgress({ stage: "approval" });
       const hash = await writeContract(walletConfig, { chainId, account, address: token, abi: erc20Abi, functionName: "approve", args: [spender, amount] });
       onProgress({ stage: "approval", txHash: hash, txLink: transactionLink(chainId, hash) });
@@ -91,10 +108,32 @@ export async function executeRangoRoute(route: RangoNormalizedRoute, params: Swa
   }
   const tx = prepared.tx;
   await assertFunds(tx.txTo as Address, tx.txData as Hex, BigInt(tx.value), BigInt(0));
-  check(); onProgress({ stage: "signing" });
-  const hash = await sendTransaction(walletConfig, { chainId, account, to: tx.txTo as Address, data: tx.txData as Hex, value: BigInt(tx.value) });
-  const pending = { provider: "rango" as const, requestId: prepared.data.requestId, txHash: hash, chainId,
-    account, toToken: prepared.data.route!.to, minimum: route.toAmountMin };
+  await authorize(tx.txTo, tx.txData!, BigInt(tx.value).toString(), "swap", BigInt(0));
+  const pending: RangoPending = { provider: "rango", requestId: prepared.data.requestId, chainId,
+    account, toToken: prepared.data.route!.to, minimum: route.toAmountMin,
+    intent: { version: 1, fromTokenAddress: params.fromTokenAddress, amount: params.fromAmount,
+      transaction: tx, submittedAt: Date.now() } };
+  // The synchronous callback must persist this intent before the wallet is invoked.
+  onProgress({ stage: "signing", pending });
+  assertWallet();
+  let hash: `0x${string}`;
+  try {
+    hash = await sendTransaction(walletConfig, { chainId, account, to: tx.txTo as Address, data: tx.txData as Hex, value: BigInt(tx.value) });
+    if (!/^0x[\da-f]{64}$/i.test(hash)) throw new Error("Rango: unknown submission outcome. Reconcile the existing intent before sending again.");
+  } catch (error) {
+    // Only an explicit wallet rejection establishes that no broadcast occurred.
+    let cause = error;
+    for (let depth = 0; depth < 6 && cause && typeof cause === "object"; depth++) {
+      const value = cause as { code?: unknown; name?: unknown; cause?: unknown };
+      if (value.code === 4001 || value.name === "UserRejectedRequestError") {
+        onProgress({ stage: "failed", pending: null });
+        break;
+      }
+      cause = value.cause;
+    }
+    throw error;
+  }
+  pending.txHash = hash;
   // From here, never auto-resubmit. The source receipt is not proof of bridge completion.
   onProgress({ stage: "tracking", txHash: hash, txLink: transactionLink(chainId, hash), pending });
   return trackRangoTransaction(pending);

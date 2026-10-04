@@ -1,16 +1,32 @@
 import { erc20Abi, encodeFunctionData, isAddress, type Address } from "viem";
-import { estimateFeesPerGas, estimateGas, getBalance, readContract, waitForTransactionReceipt, writeContract } from "wagmi/actions";
+import { estimateFeesPerGas, estimateGas, getAccount, getBalance, readContract, waitForTransactionReceipt, writeContract } from "wagmi/actions";
 import { walletConfig } from "../../wallet";
 import { isAppChainId } from "../../chains";
 import type { OneClickNormalizedRoute } from "../../types/normalized-route";
 import { fetchOneClickQuote } from "./client";
 import type { SwapParams } from "../lifi/routes";
-import type { PendingOneClick, OneClickExecutionOptions } from "./types";
+import type { PendingOneClickV1, OneClickExecutionOptions } from "./types";
 export type { OneClickExecutionOptions } from "./types";
-export async function executeOneClickRoute(route: OneClickNormalizedRoute, params: SwapParams, check: () => void, options: OneClickExecutionOptions) {
+import type { TransactionAuthorizer } from "../../security/transaction-validator";
+
+function explicitlyRejected(error: unknown): boolean {
+  // RPC/transport failures can happen after broadcast; only wallet rejection
+  // establishes that the request was not sent. Never infer it from message text.
+  let current = error;
+  for (let depth = 0; depth < 6 && current && typeof current === "object"; depth++) {
+    const value = current as { code?: unknown; name?: unknown; cause?: unknown };
+    if (value.code === 4001 || value.name === "UserRejectedRequestError") return true;
+    current = value.cause;
+  }
+  return false;
+}
+export async function executeOneClickRoute(route: OneClickNormalizedRoute, params: SwapParams, check: () => void, options: OneClickExecutionOptions,
+  authorizeTransaction?: TransactionAuthorizer) {
+  if (typeof authorizeTransaction !== "function" || typeof check !== "function") throw new Error("A transaction authorizer is required before 1Click execution.");
   const chainId = params.fromChainId;
   if (!isAppChainId(chainId)) throw new Error("Unsupported network");
   if (/^0x0{40}$/i.test(params.fromTokenAddress)) throw new Error("1Click native deposits are not supported.");
+  check();
   const quote = await fetchOneClickQuote({ ...params, fromTokenDecimals: route.raw.fromToken.decimals, toTokenDecimals: route.raw.toToken.decimals }, false);
   check();
   if (!quote.depositAddress || !isAddress(quote.depositAddress) || /^0x0{40}$/i.test(quote.depositAddress) ||
@@ -19,21 +35,61 @@ export async function executeOneClickRoute(route: OneClickNormalizedRoute, param
   if (!options.confirm(quote)) return null;
   check();
   const account = params.fromAddress as Address; const amount = BigInt(params.fromAmount); const args = [quote.depositAddress, amount] as const;
-  const gas = await estimateGas(walletConfig, { account, chainId, to: params.fromTokenAddress as Address,
-    data: encodeFunctionData({ abi: erc20Abi, functionName: "transfer", args }) });
-  const [fees, balance, tokenBalance] = await Promise.all([
-    estimateFeesPerGas(walletConfig, { chainId }), getBalance(walletConfig, { address: account, chainId }),
-    readContract(walletConfig, { chainId, address: params.fromTokenAddress as Address, abi: erc20Abi, functionName: "balanceOf", args: [account] }),
-  ]);
-  check();
-  const gasPrice = fees.maxFeePerGas ?? fees.gasPrice;
-  if (gasPrice == null || balance.value < gas * gasPrice) throw new Error("Insufficient native balance for gas.");
-  if (tokenBalance < amount) throw new Error("Insufficient token balance.");
+  const assertFunds = async () => {
+    const [estimatedGas, fees, balance, tokenBalance] = await Promise.all([
+      estimateGas(walletConfig, { account, chainId, to: params.fromTokenAddress as Address,
+        data: encodeFunctionData({ abi: erc20Abi, functionName: "transfer", args }) }),
+      estimateFeesPerGas(walletConfig, { chainId }), getBalance(walletConfig, { address: account, chainId }),
+      readContract(walletConfig, { chainId, address: params.fromTokenAddress as Address, abi: erc20Abi, functionName: "balanceOf", args: [account] }),
+    ]);
+    check();
+    if (estimatedGas <= BigInt(0)) throw new Error("Invalid source gas estimate.");
+    const gas = (estimatedGas * BigInt(120) + BigInt(99)) / BigInt(100);
+    const gasPrice = fees.maxFeePerGas ?? fees.gasPrice;
+    if (gasPrice == null || gasPrice <= BigInt(0) || balance.value < gas * gasPrice) throw new Error("Insufficient native balance for gas.");
+    if (tokenBalance < amount) throw new Error("Insufficient token balance.");
+    return gas;
+  };
+  await assertFunds();
   if (Date.parse(quote.deadline) <= Date.now() + 30_000) throw new Error("1Click deposit instructions expired.");
-  const hash = await writeContract(walletConfig, { account, chainId, address: params.fromTokenAddress as Address, abi: erc20Abi, functionName: "transfer", args });
-  const pending: PendingOneClick = { wallet: account, fromChainId: chainId, depositAddress: quote.depositAddress, hash, status: "PENDING_DEPOSIT" };
+  await authorizeTransaction({ chainId, from: account, to: params.fromTokenAddress,
+    data: encodeFunctionData({ abi: erc20Abi, functionName: "transfer", args }), value: "0" },
+  { provider: "oneclick", protocol: "oneclick", kind: "deposit", depositAddress: quote.depositAddress });
+  check();
+  const assertWallet = () => {
+    check();
+    const live = getAccount(walletConfig);
+    if (!live.isConnected || live.address?.toLowerCase() !== account.toLowerCase() || live.chainId !== chainId) throw new Error("The live wallet account or network changed.");
+  };
+  assertWallet();
+  // Use the fresh estimate for the actual wallet request as well.
+  const gas = await assertFunds();
+  assertWallet();
+  if (Date.parse(quote.deadline) <= Date.now() + 30_000) throw new Error("1Click deposit instructions expired.");
+  let pending: PendingOneClickV1 = { version: 1, wallet: account, fromChainId: chainId, toChainId: params.toChainId,
+    fromTokenAddress: params.fromTokenAddress as Address, toTokenAddress: params.toTokenAddress as Address,
+    fromTokenDecimals: route.raw.fromToken.decimals, toTokenDecimals: route.raw.toToken.decimals,
+    depositAddress: quote.depositAddress as Address, status: "UNKNOWN", submittedAt: Date.now(),
+    amount: params.fromAmount, minimum: quote.minAmountOut, originToken: quote.originToken,
+    destinationToken: quote.destinationToken, quoteResponse: quote.quoteResponse };
+  // Persist before the wallet request, including when its broadcast result is
+  // ambiguous. The caller must fail closed if this intention cannot be saved.
+  options.onPending(pending);
+  check();
+  let hash: `0x${string}`;
+  try {
+    hash = await writeContract(walletConfig, { account, chainId, address: params.fromTokenAddress as Address,
+      abi: erc20Abi, functionName: "transfer", args, gas });
+    if (!/^0x[\da-f]{64}$/i.test(hash)) throw new Error("Unknown source transfer outcome. Keep tracking the existing deposit.");
+  } catch (error) {
+    if (explicitlyRejected(error)) options.onPending({ ...pending, status: "FAILED", sourceOutcome: "rejected" });
+    // A timeout or transport error does not authorize a new transfer.
+    throw error;
+  }
+  pending = { ...pending, hash, status: "PENDING_DEPOSIT" };
   options.onPending(pending);
   const receipt = await waitForTransactionReceipt(walletConfig, { hash, chainId });
-  if (receipt.status !== "success") { options.onPending({ ...pending, status: "FAILED" }); throw new Error("The source transfer reverted."); }
+  if (receipt.status === "reverted") { options.onPending({ ...pending, status: "FAILED", sourceOutcome: "reverted" }); throw new Error("The source transfer reverted."); }
+  if (receipt.status !== "success") throw new Error("Unknown source receipt outcome. Keep tracking the existing deposit.");
   return { provider: "oneclick" as const, pending };
 }

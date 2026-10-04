@@ -1,15 +1,11 @@
 import { NextResponse } from "next/server";
-import { getOneClickTokens, ONECLICK_CHAINS } from "@/lib/aggregators/oneclick/server";
-
+import { getOneClickTokens, runOneClickOperation, validateOneClickOrigin, oneClickErrorResponse, ONECLICK_RESPONSE_HEADERS } from "@/lib/aggregators/oneclick/server";
 export const runtime = "nodejs";
-
-export async function GET() {
+export const dynamic = "force-dynamic";
+export async function GET(request: Request) {
   try {
-    const tokens = await getOneClickTokens();
-    return NextResponse.json(tokens.filter((token) =>
-      Object.values(ONECLICK_CHAINS).includes(token.blockchain),
-    ));
-  } catch {
-    return NextResponse.json({ error: "1Click token registry unavailable" }, { status: 502 });
-  }
+    validateOneClickOrigin(request);
+    const tokens = await runOneClickOperation("tokens", "registry", signal => getOneClickTokens(signal), request.signal);
+    return NextResponse.json(tokens, { headers: ONECLICK_RESPONSE_HEADERS });
+  } catch (error) { return oneClickErrorResponse(error); }
 }

@@ -174,6 +174,12 @@ en anglais.
 
 ## Vérifications
 
+La modale conserve la découverte LI.FI sur les neuf réseaux, avec 25 lignes par
+page. Le classement de marché vient de CoinGecko ou CoinMarketCap, avec un buffer
+de 120 actifs et une cible de 100, associés par contrat/réseau. Les données
+manquantes sont signalées. La sélection n'autorise aucun token à être signé :
+le registre local et une politique de contrats/ABI revue restent obligatoires.
+
 ```bash
 npm run typecheck
 npm test
@@ -204,4 +210,33 @@ l'orchestration entièrement serveur des cotations restent à traiter.
 
 Set `NEAR_1CLICK_API_KEY` / `NEAR_1CLICK_JWT` on the server when required. 1Click supports EVM ERC-20 deposits; gas is additional and estimated before signing. Nonzero platform fees disable 1Click until its fee configuration exists. Source confirmation and destination tracking remain separate.
 
-Discovery is not restricted by continuity: popular catalog assets, remote name/symbol/address searches, pagination and 1Click EVM registry results are available. Noncatalog tokens must pass the restored metadata preflight before signing.
+Discovery is not restricted by continuity: popular catalog assets, remote name/symbol/address searches, pagination and 1Click EVM registry results are available. Every signed token must match the persistent local registry; noncatalog selection consent only permits quote previews.
+
+## Corrections de l'audit du 2 octobre 2026
+
+Les verdicts négatifs observés restent bloquants pendant la session, y compris
+pour les sélections locales et les anciens devis. Les minima LI.FI sont contrôlés
+avec leur payload. Les contrats, bénéficiaires, remboursements, modes et montants
+1Click sont liés au devis conservé ; une livraison n'est terminée que si les
+preuves correspondent au dépôt et au minimum attendu. L'intention de dépôt est
+sauvegardée avant l'appel wallet. Les envois ambigus et les anciens dossiers
+restent en attente de réconciliation, sans renvoi automatique.
+
+Les API 1Click ont des limites de taille, d'origine, de concurrence et des quotas
+séparés par processus, avec erreurs publiques nettoyées. La pile utilise désormais
+Next.js 15.5.27 et React 19.2.8. Les contrôles TypeScript, lint, build et les
+350 tests passent ; les wallets et livraisons réels restent une validation manuelle.
+
+L'audit npm ne rapporte plus de vulnérabilité haute ou critique. Il conserve une
+alerte modérée `decode-uri-component` signalée dans 16 paquets de la chaîne WalletConnect,
+dont le connecteur n'est pas activé dans ce MVP. Son remplacement nécessite une
+migration compatible de cette chaîne CommonJS/ESM ; un override incompatible
+n'est pas appliqué. Voir `ARCHITECTURE.md` pour les limites du suivi et des preuves.
+# Token security
+
+The local versioned Trusted Token Registry now gates all signing. Discovery and
+quote previews remain available; reviewed router, approval and deposit policies
+default to empty, so real execution is blocked until independently reviewed
+contracts and supported transaction semantics are configured. See
+[TOKEN_SECURITY.md](TOKEN_SECURITY.md) for the registry workflow, persistence,
+provider bindings and validation limitations.

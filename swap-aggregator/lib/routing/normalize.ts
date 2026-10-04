@@ -2,11 +2,10 @@ import type { Route } from "@lifi/sdk";
 import type { SwapParams } from "../aggregators/lifi/routes";
 import type { LifiNormalizedRoute } from "../types/normalized-route";
 import { QUOTE_TTL_MS } from "./config";
-import { quoteKey } from "./quote";
+import { quoteKey, validQuoteOutput } from "./quote";
 
 export function normalizeLifiRoute(route: Route, params: SwapParams, expiresAt = Date.now() + QUOTE_TTL_MS): LifiNormalizedRoute {
-  if (!route.id || !/^\d+$/.test(route.toAmount) || BigInt(route.toAmount) <= BigInt(0) ||
-      !/^\d+$/.test(route.toAmountMin) || !route.steps?.length) throw new Error("Invalid LI.FI quote.");
+  if (!route.id || !validQuoteOutput(route.toAmount, route.toAmountMin) || !route.steps?.length) throw new Error("Invalid LI.FI quote.");
   const result: LifiNormalizedRoute = {
     id: `lifi:${route.id}`, provider: "lifi",
     fromChainId: route.fromChainId, toChainId: route.toChainId,

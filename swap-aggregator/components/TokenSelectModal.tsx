@@ -1,25 +1,35 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { APP_CHAINS } from "@/lib/chains";
 import { getCatalogToken, getPopularTokens, isCatalogToken } from "@/lib/tokens/catalog";
 import { findTokenOnChain } from "@/lib/token-continuity";
 import { searchTokens } from "@/lib/tokens/client";
 import { SEARCH_LIMITS, TokenSearchError, type AppToken, type TokenSearchResult, type TokenSearchErrorCode } from "@/lib/tokens/types";
-import { isKnownNativeToken, requiresTokenConfirmation, tokenKey, tokenVerification, uniqueTokens } from "@/lib/tokens/validation";
+import { isKnownNativeToken, requiresTokenConfirmation, tokenKey, tokenVerification } from "@/lib/tokens/validation";
 import { useI18n } from "@/lib/i18n";
 import { TokenIcon } from "./TokenIcon";
 import { ChainSelect } from "./ChainSelect";
+import { rememberTokenVerdicts, withObservedVerdict, isObservedTokenFlagged, subscribeTokenVerdicts, tokenVerdictsSnapshot, serverTokenVerdictsSnapshot } from "@/lib/tokens/verdicts";
+import { rankTokenResults } from "@/lib/tokens/ranking";
+import { popularTokensSnapshot, serverPopularTokensSnapshot, subscribePopularTokens } from "@/lib/tokens/popular";
+import { isRegistryToken, registrySnapshot, serverRegistrySnapshot, subscribeRegistry } from "@/lib/security/client";
+import { marketUniverseSnapshot, serverMarketUniverseSnapshot, subscribeMarketUniverse } from "@/lib/tokens/market-universe";
 
 type Props = { extraTokens?: Record<number, AppToken[]>; open: boolean; onClose: () => void; chains: ReadonlyArray<{ id: number; name: string }>; selectedChainId: number; selectedToken: AppToken | null; onSelect: (chainId: number, token: AppToken) => void; title: string };
 type SearchState = { key: string; loading: boolean; result?: TokenSearchResult; error?: TokenSearchErrorCode };
 export default function TokenSelectModal({ open, onClose, chains, selectedChainId, selectedToken, onSelect, title, extraTokens = {} }: Props) {
-  const { translate } = useI18n();
+  const { translate, lang } = useI18n();
+  useSyncExternalStore(subscribeTokenVerdicts, tokenVerdictsSnapshot, serverTokenVerdictsSnapshot);
+  const popularByChain = useSyncExternalStore(subscribePopularTokens, popularTokensSnapshot, serverPopularTokensSnapshot);
+  const registry = useSyncExternalStore(subscribeRegistry, registrySnapshot, serverRegistrySnapshot);
+  const marketUniverse = useSyncExternalStore(subscribeMarketUniverse, marketUniverseSnapshot, serverMarketUniverseSnapshot);
   const [query, setQuery] = useState("");
   const [chainId, setChainId] = useState(selectedChainId);
   const [limit, setLimit] = useState<number>(SEARCH_LIMITS[0]);
   const [retry, setRetry] = useState(0);
   const [browseAll, setBrowseAll] = useState(false);
+  const [visibleLimit, setVisibleLimit] = useState<number>(SEARCH_LIMITS[0]);
   const [state, setState] = useState<SearchState | null>(null);
   const [confirmation, setConfirmation] = useState<{ key: string; token: AppToken } | null>(null);
   const [acknowledged, setAcknowledged] = useState(false);
@@ -34,10 +44,13 @@ export default function TokenSelectModal({ open, onClose, chains, selectedChainI
   const pendingToken = confirmation?.key === requestKey ? confirmation.token : null;
   const chainName = chains.find((chain) => chain.id === chainId)?.name ?? String(chainId);
   const explorer = APP_CHAINS.find((chain) => chain.id === chainId)?.blockExplorers?.default.url;
+  const popular = popularByChain[chainId];
+  const loadingPopular = !normalizedQuery && !browseAll && popular?.status === "loading";
 
   useEffect(() => {
     if (!open) return;
     setChainId(selectedChainId); setQuery(""); setLimit(SEARCH_LIMITS[0]); setState(null); setBrowseAll(false);
+    setVisibleLimit(SEARCH_LIMITS[0]);
     setConfirmation(null); setAcknowledged(false);
     const previousFocus = document.activeElement as HTMLElement | null;
     const overflow = document.body.style.overflow;
@@ -53,7 +66,10 @@ export default function TokenSelectModal({ open, onClose, chains, selectedChainI
     const timer = setTimeout(async () => {
       try {
         const result = await searchTokens(chainId, normalizedQuery, { limit, signal: controller.signal });
-        if (!controller.signal.aborted) setState({ key: requestKey, loading: false, result });
+        if (!controller.signal.aborted) {
+          rememberTokenVerdicts(result.tokens);
+          setState({ key: requestKey, loading: false, result });
+        }
       } catch (error) {
         if (!controller.signal.aborted) setState({ key: requestKey, loading: false, error: error instanceof TokenSearchError ? error.code : "tokens_unavailable" });
       }
@@ -64,13 +80,20 @@ export default function TokenSelectModal({ open, onClose, chains, selectedChainI
   useEffect(() => { if (pendingToken) consent.current?.focus(); }, [pendingToken]);
 
   if (!open) return null;
-  const found = current?.result?.tokens ?? [];
+  const matches = (token: AppToken) => `${token.name} ${token.symbol}`.toLowerCase().includes(normalizedQuery) || token.address.toLowerCase() === normalizedQuery;
+  const cached = (popular?.result?.tokens ?? []).filter(token => !normalizedQuery || matches(token));
+  // Use the market snapshot directly as well: loading unrelated networks must
+  // never hold back the selected network's ranking.
+  const market = (marketUniverse.result?.tokens[chainId] ?? []).filter(token => !normalizedQuery || matches(token));
+  const found = [...market, ...cached, ...(current?.result?.tokens ?? [])];
   const local = getPopularTokens(chainId, normalizedQuery);
   // Local rows render synchronously; upstream negative verdicts still win.
   const extra = (extraTokens[chainId] ?? []).filter(token => !getCatalogToken(chainId, token.address) && (browseAll || normalizedQuery) && `${token.name} ${token.symbol} ${token.address}`.toLowerCase().includes(normalizedQuery));
-  const tokens = uniqueTokens([...local, ...found, ...extra]);
+  const tokens = rankTokenResults(local, found, extra, normalizedQuery).map(withObservedVerdict);
+  const visibleTokens = tokens.slice(0, visibleLimit);
+  const moreVisible = visibleLimit < tokens.length;
   const select = (token: AppToken) => {
-    if (token.chainId !== chainId || tokenVerification(token) === "flagged") return;
+    if (token.chainId !== chainId || tokenVerification(token) === "flagged" || isObservedTokenFlagged(token)) return;
     onSelect(chainId, token); onClose();
   };
   const choose = (token: AppToken) => {
@@ -93,37 +116,45 @@ export default function TokenSelectModal({ open, onClose, chains, selectedChainI
       }}>
       <header className="jumper-modal-header"><h2 id="token-modal-title">{title}</h2><button className="jumper-modal-close" type="button" aria-label={translate("modal_close")} onClick={onClose}>×</button></header>
       <div className="jumper-modal-search"><span>{translate("chains_label")}</span>
-        <ChainSelect chainId={chainId} chains={chains} label={translate("chains_label")} onChange={(id) => { if (id === chainId) return; const match = findTokenOnChain(selectedToken, id, getPopularTokens(id)); if (match) { onSelect(id, match); onClose(); return; } setChainId(id); setQuery(""); setLimit(SEARCH_LIMITS[0]); setBrowseAll(false); resetConfirmation(); }} />
-        <input ref={input} aria-label={translate("search_placeholder")} placeholder={translate("search_placeholder")} value={query} onChange={(event) => { setQuery(event.target.value); setLimit(SEARCH_LIMITS[0]); resetConfirmation(); }} maxLength={100} autoComplete="off" spellCheck={false} />
+        <ChainSelect chainId={chainId} chains={chains} label={translate("chains_label")} onChange={(id) => { if (id === chainId) return; const match = findTokenOnChain(selectedToken, id, getPopularTokens(id)); if (match) { onSelect(id, match); onClose(); return; } setChainId(id); setQuery(""); setLimit(SEARCH_LIMITS[0]); setVisibleLimit(SEARCH_LIMITS[0]); setBrowseAll(false); resetConfirmation(); }} />
+        <input ref={input} aria-label={translate("search_placeholder")} placeholder={translate("search_placeholder")} value={query} onChange={(event) => { setQuery(event.target.value); setLimit(SEARCH_LIMITS[0]); setVisibleLimit(SEARCH_LIMITS[0]); resetConfirmation(); }} maxLength={100} autoComplete="off" spellCheck={false} />
       </div>
-      <div className="jumper-token-list" aria-busy={loading}>
+      <div className="jumper-token-list" aria-busy={loading || loadingPopular}>
         {pendingToken ? <section className="jumper-resolved-block" aria-label={translate("token_review")}>
           <div className="jumper-token-review-title"><TokenIcon token={pendingToken} network /><strong>{pendingToken.symbol} · {pendingToken.name}</strong></div>
           <p>{chainName}</p><code>{pendingToken.address}</code>
           {explorer && <a href={explorer + "/address/" + pendingToken.address} target="_blank" rel="noopener noreferrer">{translate("view_contract")} ↗</a>}
           <p className="jumper-warning">{translate("custom_token_warning")}</p>
+          {!isRegistryToken(registry, pendingToken) && <p className="jumper-warning">{translate("security_registry_required")}</p>}
           <label className="jumper-token-consent"><input ref={consent} type="checkbox" checked={acknowledged} onChange={(event) => setAcknowledged(event.target.checked)} />{translate("token_acknowledge")}</label>
           <div className="jumper-token-actions"><button type="button" className="jumper-refresh" onClick={resetConfirmation}>{translate("token_back")}</button>
             <button type="button" className="jumper-refresh" disabled={!acknowledged} onClick={() => { if (acknowledged) select({ ...pendingToken, riskAcknowledged: true }); }}>{translate("confirm_token", { symbol: pendingToken.symbol })}</button></div>
         </section> : <>
           <div className="jumper-token-list-heading"><p className="jumper-hint">{translate(normalizedQuery ? "token_search_results" : "popular_tokens")}</p><span>{tokens.length}</span></div>
-          {tokens.map((token) => {
+          {!normalizedQuery && marketUniverse.status === "ready" && marketUniverse.result?.source && <p className="jumper-hint">{translate("popular_tokens_ranked")} ({marketUniverse.result.source})</p>}
+          {!normalizedQuery && (marketUniverse.status === "error" || (marketUniverse.status === "ready" && !marketUniverse.result?.source)) && <p className="jumper-warning">{translate("market_ranking_unavailable")}</p>}
+          {visibleTokens.map((token) => {
             const status = tokenVerification(token);
             return <button key={tokenKey(token)} type="button" className="jumper-token-row" disabled={status === "flagged"} aria-pressed={selectedToken !== null && tokenKey(selectedToken) === tokenKey(token)} onClick={() => choose(token)}>
               <TokenIcon token={token} network />
               <span className="jumper-token-row-info"><strong>{token.symbol}</strong><span>{token.name}</span>
                 <code title={token.address}>{isKnownNativeToken(token) ? translate("native_asset") : token.address}</code>
                 <span className={"jumper-token-verification " + status}>{translate(status === "flagged" ? "token_flagged" : isKnownNativeToken(token) ? "native_asset" : isCatalogToken(token) ? "token_catalog" : status === "verified" ? "token_verified" : "token_unverified")}</span>
-              </span><span className="jumper-token-row-end"><span className="jumper-chain-badge">{chainName}</span><span aria-hidden="true">{selectedToken && tokenKey(selectedToken) === tokenKey(token) ? "✓" : "↗"}</span></span>
+                <span className="jumper-hint">{translate(isRegistryToken(registry, token) ? "security_registry_trusted" : "security_registry_preview")}</span>
+              </span><span className="jumper-token-row-end"><span className="jumper-chain-badge">{chainName}</span>
+                {token.marketSource && typeof token.marketCapUSD === "number" && <span title={translate("market_cap_label") + " · " + token.marketSource}>{translate("market_cap_short")} {new Intl.NumberFormat(lang, { style: "currency", currency: "USD", notation: "compact", maximumFractionDigits: 1 }).format(token.marketCapUSD)}</span>}
+                <span aria-hidden="true">{selectedToken && tokenKey(selectedToken) === tokenKey(token) ? "✓" : "↗"}</span></span>
             </button>;
           })}
           {!tokens.length && !loading && !current?.error && <p className="jumper-hint">{translate("no_tokens_for_chain")}</p>}
           {loading && <p role="status" className="jumper-hint">{translate("tokens_searching")}</p>}
-          {!normalizedQuery && !browseAll && <button type="button" className="jumper-refresh" onClick={() => setBrowseAll(true)}>{translate("tokens_browse")}</button>}
+          {loadingPopular && <p role="status" className="jumper-hint">{translate("popular_tokens_loading")}</p>}
+          {!normalizedQuery && !browseAll && popular?.status === "error" && <p role="status" className="jumper-hint">{translate("popular_tokens_unavailable")}</p>}
+          {!normalizedQuery && !browseAll && <button type="button" className="jumper-refresh" onClick={() => { setBrowseAll(true); setLimit(200); setVisibleLimit(SEARCH_LIMITS[0]); }}>{translate("tokens_browse")}</button>}
           {current?.error && <div role="status" className="jumper-warning"><p>{translate(current.error)}</p>
             {!["invalid_search", "invalid_address"].includes(current.error) && <button type="button" className="jumper-refresh" onClick={() => setRetry((old) => old + 1)}>{translate("token_retry")}</button>}</div>}
-          {current?.result?.hasMore && <button type="button" className="jumper-refresh" onClick={() => setLimit(SEARCH_LIMITS.find((value) => value > limit) ?? limit)}>{translate("tokens_more")}</button>}
-          {current?.result?.truncated && !current.result.hasMore && <p className="jumper-hint">{translate("tokens_refine")}</p>}
+          {(moreVisible || current?.result?.hasMore) && <button type="button" className="jumper-refresh" onClick={() => { setVisibleLimit(value => value + SEARCH_LIMITS[0]); if (!moreVisible) setLimit(SEARCH_LIMITS.find((value) => value > limit) ?? limit); }}>{translate("tokens_more")}</button>}
+          {!moreVisible && current?.result?.truncated && !current.result.hasMore && <p className="jumper-hint">{translate("tokens_refine")}</p>}
         </>}
         <p className="jumper-hint">{translate("token_route_hint")}</p>
       </div>

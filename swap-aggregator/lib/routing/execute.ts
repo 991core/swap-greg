@@ -16,12 +16,17 @@ import { executeRangoRoute } from "../aggregators/rango/execute";
 import type { RangoProgress } from "../aggregators/rango/types";
 
 import { executeOneClickRoute, type OneClickExecutionOptions } from "../aggregators/oneclick/execute";
+import { isObservedTokenFlagged, rememberTokenVerdicts } from "../tokens/verdicts";
+import { authorizeSwapIntent, createTransactionAuthorizer } from "../security/client";
+import type { SecuritySwapIntent } from "../security/quote-validator";
+import { SLIPPAGE } from "./config";
 
 export class SwapValidationError extends Error {
   constructor(public readonly key: "quote_changed" | "insufficient_balance" | "insufficient_gas" | "token_blocked" | "token_metadata_changed" | "token_confirmation_required" | "tokens_unavailable") { super(key); }
 }
 export async function executeSwapQuote(route: NormalizedRoute, params: SwapParams, updateRouteHook: UpdateRouteHook, selection: { fromToken: AppToken; toToken: AppToken }, onRangoProgress?: (progress: RangoProgress) => void, oneClick?: OneClickExecutionOptions) {
   const check = () => {
+    if (isObservedTokenFlagged(selection.fromToken) || isObservedTokenFlagged(selection.toToken)) throw new SwapValidationError("token_blocked");
     const account = getAccount(walletConfig);
     if (!account.isConnected || account.address?.toLowerCase() !== params.fromAddress.toLowerCase() || !canExecuteQuote(route, params)) {
       throw new SwapValidationError("quote_changed");
@@ -29,6 +34,26 @@ export async function executeSwapQuote(route: NormalizedRoute, params: SwapParam
   };
   check();
   const tokens = routeTokens(route);
+  const protocol = route.provider === "lifi" ? route.raw.steps[0]?.tool : route.provider === "rango" ? route.raw.quote.route.swapper.id : "oneclick";
+  const securityIntent: SecuritySwapIntent = Object.freeze({
+    provider: route.provider, protocol: protocol || "unknown", fromChainId: params.fromChainId, toChainId: params.toChainId,
+    fromTokenAddress: params.fromTokenAddress, toTokenAddress: params.toTokenAddress,
+    fromTokenDecimals: selection.fromToken.decimals, toTokenDecimals: selection.toToken.decimals,
+    fromAddress: params.fromAddress, receiver: params.fromAddress, fromAmount: params.fromAmount,
+    toAmount: route.toAmount, minimumAmountOut: route.toAmountMin, expiresAt: route.expiresAt, maxSlippageBps: Math.round(SLIPPAGE * 10_000),
+  });
+  const quoted: SecuritySwapIntent = { ...securityIntent,
+    fromChainId: tokens.fromToken.chainId, toChainId: tokens.toToken.chainId,
+    fromTokenAddress: tokens.fromToken.address, toTokenAddress: tokens.toToken.address,
+    fromTokenDecimals: tokens.fromToken.decimals, toTokenDecimals: tokens.toToken.decimals,
+    ...(route.provider === "lifi" ? { fromAmount: route.raw.fromAmount, fromAddress: route.raw.fromAddress ?? params.fromAddress,
+      receiver: route.raw.toAddress ?? params.fromAddress, toAmount: route.raw.toAmount, minimumAmountOut: route.raw.toAmountMin } : {}),
+  };
+  // Selection consent and provider verdicts cannot onboard an identity. The server reads local authority fresh.
+  await authorizeSwapIntent(securityIntent, quoted);
+  check();
+  const authorizeTransaction = createTransactionAuthorizer(securityIntent);
+  rememberTokenVerdicts([tokens.fromToken, tokens.toToken]);
   const pairs = [[selection.fromToken, tokens.fromToken], [selection.toToken, tokens.toToken]] as const;
   for (const [selected, quoted] of pairs) {
     if (tokenKey(selected) !== tokenKey(quoted) || selected.decimals !== quoted.decimals) throw new SwapValidationError("token_metadata_changed");
@@ -48,7 +73,8 @@ export async function executeSwapQuote(route: NormalizedRoute, params: SwapParam
     if (!token) throw new SwapValidationError("tokens_unavailable");
     const selected = pairs[index][0];
     if (tokenKey(token) !== tokenKey(selected) || token.decimals !== selected.decimals) throw new SwapValidationError("token_metadata_changed");
-    if (tokenVerification(token) === "flagged") throw new SwapValidationError("token_blocked");
+    rememberTokenVerdicts([token]);
+    if (tokenVerification(token) === "flagged" || isObservedTokenFlagged(selected)) throw new SwapValidationError("token_blocked");
     if (requiresTokenConfirmation(token) && !selected.riskAcknowledged) throw new SwapValidationError("token_confirmation_required");
   });
   check();
@@ -68,11 +94,11 @@ export async function executeSwapQuote(route: NormalizedRoute, params: SwapParam
   if (getAccount(walletConfig).chainId !== params.fromChainId) throw new SwapValidationError("quote_changed");
   if (route.provider === "oneclick") {
     if (!oneClick) throw new SwapValidationError("quote_changed");
-    return executeOneClickRoute(route, params, () => { check(); if (getAccount(walletConfig).chainId !== params.fromChainId) throw new SwapValidationError("quote_changed"); }, oneClick);
+    return executeOneClickRoute(route, params, () => { check(); if (getAccount(walletConfig).chainId !== params.fromChainId) throw new SwapValidationError("quote_changed"); }, oneClick, authorizeTransaction);
   }
   if (route.provider === "rango") return executeRangoRoute(route, params, () => {
     check();
     if (getAccount(walletConfig).chainId !== params.fromChainId) throw new SwapValidationError("quote_changed");
-  }, onRangoProgress);
-  return executeLifiRoute(route.raw, { updateRouteHook, acceptExchangeRateUpdateHook: async () => false });
+  }, onRangoProgress, authorizeTransaction);
+  return executeLifiRoute(route.raw, { updateRouteHook, acceptExchangeRateUpdateHook: async () => false }, { authorizeTransaction, check });
 }

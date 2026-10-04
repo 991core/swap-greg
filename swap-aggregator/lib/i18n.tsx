@@ -22,7 +22,7 @@ type TranslationKey =
   | "routes_short" | "slippage_short" | "hermes_fee_short" | "auto_short" | "wallet_network"
   | "swap_title" | "source_network" | "destination_network" | "balance_label" | "route_details" | "route_duration" | "route_gas" | "route_minimum" | "route_extra_fees" | "route_waiting_others" | "route_sort_hint" | "route_recipient" | "route_amount_exact" | "route_estimates" | "fee_details" | "selected_route"
   | "highest_output" | "compare_routes" | "routes_empty_description" | "choose_provider"
-  | "rango_test_notice" | "rango_preparing" | "rango_approval" | "rango_signing" | "rango_tracking" | "rango_pending" | "rango_resume" | "rango_complete" | "rango_failed" | "rango_submitted"
+  | "rango_test_notice" | "rango_preparing" | "rango_approval" | "rango_signing" | "rango_tracking" | "rango_pending" | "rango_unknown" | "rango_resume" | "rango_complete" | "rango_failed" | "rango_submitted"
   | "hero_tagline"
   | "boot_loading"
   | "boot_no_chains"
@@ -104,6 +104,10 @@ type TranslationKey =
   | "no_routes_hint"
   | "execution_progress"
   | "popular_tokens" | "token_search_results" | "tokens_searching" | "tokens_more" | "tokens_refine"
+  | "popular_tokens_loading" | "popular_tokens_unavailable" | "popular_tokens_ranked"
+  | "security_registry_unavailable" | "security_registry_required" | "security_policy_required" | "security_registry_trusted" | "security_registry_preview"
+  | "market_ranking_unavailable"
+  | "market_cap_short" | "market_cap_label"
   | "token_verified" | "token_unverified" | "token_flagged" | "native_asset" | "token_catalog" | "tokens_browse"
   | "token_review" | "view_contract" | "token_acknowledge" | "token_back" | "token_retry" | "token_route_hint"
   | "invalid_search" | "invalid_address" | "rate_limited" | "tokens_unavailable"
@@ -148,12 +152,24 @@ const translations: Record<Lang, Record<TranslationKey, string>> = {
     rango_signing: "Confirm the swap in your wallet",
     rango_tracking: "Tracking the swap and destination delivery",
     rango_pending: "Transaction submitted. Completion is not yet confirmed. Do not send it again; resume tracking below.",
+    rango_unknown: "Submission outcome unknown. Check your wallet and reconcile the existing transaction before sending again.",
     rango_resume: "Resume tracking",
     rango_complete: "Delivery confirmed",
     rango_submitted: "Transaction submitted",
     rango_failed: "Check the transaction or refund",
     popular_tokens: "Popular tokens on this network",
-    token_search_results: "LI.FI search results",
+    token_search_results: "Search results",
+    popular_tokens_loading: "Loading popular tokens on this network…",
+    popular_tokens_unavailable: "The expanded list is unavailable. Local tokens and contract search remain accessible.",
+    popular_tokens_ranked: "Native token first, then market capitalization from CoinGecko or CoinMarketCap, matched by network and address. Unranked tokens follow; discovery does not approve swaps.",
+    security_registry_unavailable: "Local token registry unavailable. Signing is blocked; quotes remain available.",
+    security_registry_required: "Token not approved in the local registry. Selection allows previews; explicit administrative review is required before swapping.",
+    security_policy_required: "Signing is blocked until the route's contracts and transaction format have been reviewed locally.",
+    security_registry_trusted: "Approved in the local registry",
+    security_registry_preview: "Preview only · local approval required",
+    market_ranking_unavailable: "Market ranking unavailable. The list remains searchable without a capitalization ranking.",
+    market_cap_short: "Cap.",
+    market_cap_label: "Market capitalization",
     tokens_searching: "Searching LI.FI…",
     tokens_more: "Show more tokens",
     tokens_refine: "First 200 results shown. Refine the name or paste the full contract address.",
@@ -297,12 +313,24 @@ const translations: Record<Lang, Record<TranslationKey, string>> = {
     rango_signing: "Confirme le swap dans ton wallet",
     rango_tracking: "Suivi du swap et de la réception à destination",
     rango_pending: "Transaction envoyée, mais fin du swap non confirmée. Ne la renvoie pas ; reprends le suivi ci-dessous.",
+    rango_unknown: "Résultat de l’envoi inconnu. Vérifie ton portefeuille et réconcilie la transaction existante avant tout nouvel envoi.",
     rango_resume: "Reprendre le suivi",
     rango_complete: "Réception confirmée",
     rango_submitted: "Transaction envoyée",
     rango_failed: "Vérifie la transaction ou le remboursement",
     popular_tokens: "Tokens populaires sur ce réseau",
-    token_search_results: "Résultats de recherche LI.FI",
+    token_search_results: "Résultats de recherche",
+    popular_tokens_loading: "Chargement des tokens populaires de ce réseau…",
+    popular_tokens_unavailable: "La liste élargie est indisponible. Les tokens locaux et la recherche par contrat restent accessibles.",
+    popular_tokens_ranked: "Token natif en premier, puis capitalisation CoinGecko ou CoinMarketCap, associée par réseau et adresse. Les tokens non classés suivent ; leur découverte n’autorise pas les swaps.",
+    security_registry_unavailable: "Registre local indisponible. Les signatures sont bloquées ; les devis restent disponibles.",
+    security_registry_required: "Token non approuvé dans le registre local. La sélection permet les devis ; une revue administrative explicite est nécessaire avant le swap.",
+    security_policy_required: "Les signatures sont bloquées tant que les contrats de la route et son format de transaction n’ont pas été revus localement.",
+    security_registry_trusted: "Approuvé dans le registre local",
+    security_registry_preview: "Devis uniquement · approbation locale requise",
+    market_ranking_unavailable: "Classement de marché indisponible. La liste reste consultable sans classement par capitalisation.",
+    market_cap_short: "Cap.",
+    market_cap_label: "Capitalisation boursière",
     tokens_searching: "Recherche sur LI.FI…",
     tokens_more: "Afficher plus de tokens",
     tokens_refine: "Les 200 premiers résultats sont affichés. Précise le nom ou colle l’adresse complète du contrat.",

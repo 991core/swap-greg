@@ -8,6 +8,10 @@ const unsafeText = /[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/;
 export function looksLikeAddress(value: string): boolean { return /^0x[0-9a-f]{40}$/i.test(value.trim()); }
 export function tokenKey(token: { chainId: number; address: string }): string { return `${token.chainId}:${token.address.toLowerCase()}`; }
 
+export function knownTokenMetric(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0;
+}
+
 export function tokenVerification(token: Pick<AppToken, "verificationStatus" | "verificationStatusBreakdown">) {
   if (token.verificationStatus === "flagged" || token.verificationStatusBreakdown?.some((item) => item.result === "flagged")) return "flagged";
   if (token.verificationStatusBreakdown?.some((item) => item.result === "unverified")) return "unverified";
@@ -51,6 +55,8 @@ export function validateToken(value: unknown, chainId: number, expectedAddress?:
       ...(validText(item.reason, 240) ? { reason: item.reason } : {}),
     })),
   };
+  if (knownTokenMetric(raw.marketCapUSD)) token.marketCapUSD = raw.marketCapUSD;
+  if (knownTokenMetric(raw.volumeUSD24H)) token.volumeUSD24H = raw.volumeUSD24H;
   if (typeof raw.logoURI === "string" && raw.logoURI.length <= 2048) {
     try {
       const url = new URL(raw.logoURI);
@@ -65,7 +71,17 @@ export function uniqueTokens(tokens: AppToken[]): AppToken[] {
   for (const token of tokens) {
     const previous = byAddress.get(tokenKey(token));
     // A duplicate's negative verdict must never be overwritten by a positive one.
-    if (!previous || tokenVerification(token) === "flagged" || (tokenVerification(previous) === "verified" && tokenVerification(token) === "unverified")) byAddress.set(tokenKey(token), token);
+    if (!previous) { byAddress.set(tokenKey(token), token); continue; }
+    const incomingWins = tokenVerification(token) === "flagged" || (tokenVerification(previous) === "verified" && tokenVerification(token) === "unverified");
+    const winner = incomingWins ? token : previous;
+    const other = incomingWins ? previous : token;
+    const merged = { ...winner };
+    if (winner.decimals === other.decimals && winner.symbol === other.symbol) {
+      for (const metric of ["marketCapUSD", "volumeUSD24H"] as const) {
+        if (!knownTokenMetric(winner[metric]) && knownTokenMetric(other[metric])) merged[metric] = other[metric];
+      }
+    }
+    byAddress.set(tokenKey(token), merged);
   }
   return [...byAddress.values()];
 }

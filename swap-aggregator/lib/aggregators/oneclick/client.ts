@@ -2,8 +2,9 @@ import type { AppToken } from "../../tokens/types";
 import { validateToken } from "../../tokens/validation";
 import type { RouteSelectionParams } from "../../routing/orchestrator";
 import type { OneClickNormalizedRoute } from "../../types/normalized-route";
-import { QUOTE_TTL_MS, ROUTE_TIMEOUT_MS } from "../../routing/config";
-const CHAINS: Record<number, string> = { 1: "eth", 8453: "base", 42161: "arb", 10: "op", 137: "pol", 56: "bsc", 43114: "avax", 100: "gnosis" };
+import { QUOTE_TTL_MS, ROUTE_TIMEOUT_MS, SLIPPAGE } from "../../routing/config";
+import { isOneClickTokenEvidence, ONECLICK_CHAINS, validateOneClickQuoteResponse, type OneClickQuoteResponse, type OneClickQuoteRequest, type OneClickTokenEvidence } from "./validation";
+export const ONECLICK_CHAIN_NAMES = ONECLICK_CHAINS;
 type Token = { assetId: string; blockchain: string; contractAddress: string; decimals: number; symbol: string };
 export async function fetchOneClickTokens(signal?: AbortSignal): Promise<Record<number, AppToken[]>> {
   const response = await fetch("/api/oneclick/tokens", { signal });
@@ -12,14 +13,45 @@ export async function fetchOneClickTokens(signal?: AbortSignal): Promise<Record<
   if (!Array.isArray(data)) throw new Error("Invalid 1Click registry");
   const result: Record<number, AppToken[]> = {};
   for (const token of data as Token[]) {
-    const chainId = Number(Object.keys(CHAINS).find((id) => CHAINS[Number(id)] === token.blockchain));
+    const chainId = Number(Object.keys(ONECLICK_CHAIN_NAMES).find((id) => ONECLICK_CHAIN_NAMES[Number(id)] === token.blockchain));
     const validated = validateToken({ chainId, address: token.contractAddress, decimals: token.decimals,
       symbol: token.symbol, name: token.symbol, priceUSD: "0" }, chainId);
     if (validated) (result[chainId] ??= []).push(validated);
   }
   return result;
 }
-export type OneClickQuote = { amountIn: string; amountOut: string; minAmountOut: string; timeEstimate: number; depositAddress?: string; deadline?: string };
+export type OneClickQuote = { amountIn: string; amountOut: string; minAmountOut: string; timeEstimate: number; depositAddress?: string; deadline?: string;
+  quoteResponse: OneClickQuoteResponse; originToken: OneClickTokenEvidence; destinationToken: OneClickTokenEvidence };
+
+export function validateOneClickTokenBinding(value: unknown, chainId: number, address: string, decimals: number | undefined): OneClickTokenEvidence {
+  if (!isOneClickTokenEvidence(value)) throw new Error("Invalid 1Click asset evidence");
+  const token = value;
+  if (!ONECLICK_CHAIN_NAMES[chainId] || token.blockchain !== ONECLICK_CHAIN_NAMES[chainId] ||
+      token.contractAddress.toLowerCase() !== address.toLowerCase() || token.decimals !== decimals) throw new Error("Invalid 1Click asset evidence");
+  return token;
+}
+
+export function validateOneClickBoundQuote(value: unknown, params: RouteSelectionParams, dry: boolean): OneClickQuote {
+  if (!value || typeof value !== "object") throw new Error("Invalid 1Click quote");
+  const dto = value as OneClickQuote;
+  const origin = validateOneClickTokenBinding(dto.originToken, params.fromChainId, params.fromTokenAddress, params.fromTokenDecimals);
+  const destination = validateOneClickTokenBinding(dto.destinationToken, params.toChainId, params.toTokenAddress, params.toTokenDecimals);
+  const deadline = dto.quoteResponse?.quoteRequest?.deadline;
+  const now = Date.now();
+  if (typeof deadline !== "string" || !Number.isFinite(Date.parse(deadline)) || Date.parse(deadline) <= now + 30_000 ||
+      Date.parse(deadline) > now + 20 * 60_000 + 5_000) throw new Error("Invalid or expired 1Click deposit instructions.");
+  const expected: OneClickQuoteRequest = { dry, swapType: "EXACT_INPUT", slippageTolerance: Math.round(SLIPPAGE * 10_000),
+    originAsset: origin.assetId, destinationAsset: destination.assetId, amount: params.fromAmount,
+    depositType: "ORIGIN_CHAIN", refundTo: params.fromAddress || "0x0000000000000000000000000000000000000000",
+    refundType: "ORIGIN_CHAIN", recipient: params.fromAddress || "0x0000000000000000000000000000000000000000",
+    recipientType: "DESTINATION_CHAIN", deadline, depositMode: "SIMPLE" };
+  const proof = validateOneClickQuoteResponse(dto.quoteResponse, expected, now);
+  const quote = proof.quote;
+  if (dto.amountIn !== quote.amountIn || dto.amountOut !== quote.amountOut || dto.minAmountOut !== quote.minAmountOut ||
+      dto.timeEstimate !== quote.timeEstimate || (!dry && (dto.depositAddress !== quote.depositAddress || dto.deadline !== quote.deadline)) ||
+      (dry && (dto.depositAddress !== undefined || dto.deadline !== undefined))) throw new Error("Invalid 1Click quote");
+  return { ...dto, quoteResponse: proof, originToken: origin, destinationToken: destination };
+}
 export async function fetchOneClickQuote(params: RouteSelectionParams, dry: boolean, signal?: AbortSignal): Promise<OneClickQuote> {
   if (!dry && !params.fromAddress) throw new Error("Connect a wallet before requesting an executable quote.");
   const response = await fetch("/api/oneclick/quote", {
@@ -31,12 +63,10 @@ export async function fetchOneClickQuote(params: RouteSelectionParams, dry: bool
   });
   const quote = await response.json();
   if (!response.ok) throw Object.assign(new Error(quote.error ?? `1Click HTTP ${response.status}`), { status: response.status });
-  if (quote.amountIn !== params.fromAmount || !/^[1-9]\d*$/.test(quote.amountOut) || !/^[1-9]\d*$/.test(quote.minAmountOut) ||
-      BigInt(quote.minAmountOut) > BigInt(quote.amountOut) || !Number.isFinite(quote.timeEstimate) || quote.timeEstimate < 0) throw new Error("Invalid 1Click quote");
-  return quote;
+  return validateOneClickBoundQuote(quote, params, dry);
 }
 export async function fetchOneClickRoute(params: RouteSelectionParams, signal?: AbortSignal): Promise<OneClickNormalizedRoute[]> {
-  if (!CHAINS[params.fromChainId] || !CHAINS[params.toChainId] || !params.fromToken || !params.toToken ||
+  if (!ONECLICK_CHAIN_NAMES[params.fromChainId] || !ONECLICK_CHAIN_NAMES[params.toChainId] || !params.fromToken || !params.toToken ||
       !/^0x[0-9a-fA-F]{40}$/.test(params.fromTokenAddress) || /^0x0{40}$/i.test(params.fromTokenAddress) ||
       !/^0x[0-9a-fA-F]{40}$/.test(params.toTokenAddress)) return [];
   const quote = await fetchOneClickQuote(params, true, signal);

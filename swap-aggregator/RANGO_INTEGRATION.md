@@ -79,6 +79,8 @@ pas un audit des protocoles sous-jacents.
 
 ## Suivi et reprise
 
+Avant de demander l’envoi au wallet, une intention complète (transaction, montant, tokens, minimum et `requestId`) est sauvegardée dans le navigateur. Un échec de sauvegarde bloque l’envoi. Un timeout ou une réponse ambiguë conserve cette intention et bloque tout nouvel envoi, y compris après rechargement ; sans hash, une réconciliation manuelle avec le wallet est nécessaire. Seul un refus explicite du wallet permet de retirer une intention sans hash.
+
 Après envoi, le `requestId` de la préparation et le hash sont suivis par l'API
 Rango toutes les 8 secondes, jusqu'à 75 vérifications par session. Une receipt
 sur le réseau source n'est pas suffisante pour confirmer un bridge.

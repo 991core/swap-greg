@@ -120,7 +120,7 @@ it("finds a known contract locally by its exact address without an API request",
   const onSelect = mount();
   const address = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
   type(address); fireEvent.click(screen.getByRole("button", { name: /USDC/ })); await tick();
-  expect(onSelect).toHaveBeenCalledWith(1, getCatalogToken(1, address));
+  expect(onSelect).toHaveBeenCalledWith(1, expect.objectContaining(getCatalogToken(1, address)!));
   expect(searchTokens).not.toHaveBeenCalled();
 });
 it("keeps local matches visible instantly and through a remote search outage", async () => {
@@ -139,11 +139,15 @@ it("does not give a same-symbol impostor the catalog exemption", async () => {
 it("keeps a negative remote verdict on a duplicate catalog asset", async () => {
   const known = getCatalogToken(1, "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48")!;
   vi.mocked(searchTokens).mockImplementation(async (chainId, query = "") => result(chainId, query, [{ ...known, verificationStatus: "flagged" }]));
-  mount(); type("usdc"); await tick();
+  const onSelect = mount(); type("usdc"); await tick();
   expect(screen.getByRole<HTMLButtonElement>("button", { name: /USDC/ }).disabled).toBe(true);
+  type(""); await tick();
+  const local = screen.getByRole<HTMLButtonElement>("button", { name: /USDC/ });
+  expect(local.disabled).toBe(true);
+  fireEvent.click(local); expect(onSelect).not.toHaveBeenCalled();
 });
 it("only fetches the remote popular list when browsing more is requested", async () => {
   mount(); await tick(); expect(searchTokens).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole("button", { name: "Browse more tokens on LI.FI" })); await tick(0);
-  expect(searchTokens).toHaveBeenCalledWith(1, "", expect.objectContaining({ limit: 25 }));
+  expect(searchTokens).toHaveBeenCalledWith(1, "", expect.objectContaining({ limit: 200 }));
 });

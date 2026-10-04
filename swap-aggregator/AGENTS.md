@@ -2,7 +2,7 @@
 
 ## Scope
 
-Hermes is a Next.js 14 App Router MVP for EVM cross-chain swaps. LI.FI and
+Hermes is a Next.js 15.5 App Router MVP for EVM cross-chain swaps. LI.FI and
 Rango Basic API (EVM beta) are active. Socket remains disabled. Rango uses its
 documented public TEST key by default; mainnet signing still spends real funds.
 Read `RANGO_INTEGRATION.md` for the adapter limits and remaining manual QA.
@@ -33,6 +33,11 @@ lets the user select a route. It does not silently force a “best” route.
 - `lib/tokens/catalog.ts` pins the local native/ERC-20 defaults by chain/address,
   decimals and symbol. `TOKEN_CATALOG.md` records their sources and maintenance.
   The form and modal initialize from local configuration without a chain/API gate.
+- `lib/tokens/popular.ts` preloads up to 100 LI.FI identities on every Hermes
+  chain when the form mounts, independently of picker opening. Cache reads and
+  local pagination never validate a token by address or gate local selection.
+  `ranking.ts` orders exact search matches, then the native asset, then known capitalizations, preserves
+  catalog pins and negative verdicts, and never grants a safety exemption.
 - `app/api/tokens/search/route.ts` exposes validated token search. `lib/tokens/`
   separates browser requests, shared validation, and a server-only LI.FI client.
   Search has a bounded one-minute cache, request coalescing and per-process quotas.
@@ -54,6 +59,17 @@ lets the user select a route. It does not silently force a “best” route.
   are not bundled into the token route. Do not suppress Webpack warnings globally.
 
 ## Required invariants
+
+- The token-security mandate supersedes the former non-catalog consent exemption
+  for execution. Discovery and selection consent only permit quote previews.
+  Every signed token must match the persistent local Trusted Token Registry.
+  External consensus never onboards or migrates identities automatically.
+  See `TOKEN_SECURITY.md` for explicit administration, audit and strict ABI policy.
+- Every actual signature must pass fresh server registry/quote/transaction checks.
+  Default router/spender/deposit policies are empty and block signing. Unknown
+  calldata, typed permits and signing methods fail closed; no SDK signer bypass.
+- Market ranking comes from CoinGecko or CoinMarketCap with exact chain/address
+  matching. LI.FI discovery capitalization is never the market-ranking authority.
 
 - A quote is executable only while its `quoteKey`, wallet, source chain, token
   addresses, amount, recipient, and expiry still match the form.
@@ -142,6 +158,10 @@ API access, automatic expiry/refresh/retry, hidden/offline tabs and animation st
 ## Retained 1Click branch additions
 
 - 1Click is the third provider (`lib/aggregators/oneclick/`); credentials remain server-only. Anonymous previews never produce executable deposits.
+- A negative token verdict observed during the browser session remains blocking for that exact chain/address, including catalog selections and already-issued quotes.
+- 1Click quote responses must bind the entire request and token identities. Persist a complete pending intent before asking the wallet to send; ambiguous sends and recognized legacy records remain blocked for manual reconciliation.
+- Only destination evidence bound to the saved quote, source hash and minimum can complete 1Click tracking. Provider signatures are preserved and compared, not independently verified cryptographically.
+- 1Click ingress/body/response bounds, quotas, coalescing and concurrency limits are per process; a distributed deployment needs shared enforcement.
 - Execution supports EVM ERC-20 deposits, with fresh minimum checks, confirmation, metadata/account/network/balance checks and gas estimation. A source receipt does not prove completion; track deposits separately and never sign from polling or storage.
 - 1Click uses common slippage; nonzero platform fees disable it until fee configuration exists. Do not silently waive displayed fees.
 - All providers support anonymous quotes; connecting invalidates previews before execution.

@@ -1,72 +1,46 @@
 import { NextResponse } from "next/server";
 import { isAddress, zeroAddress } from "viem";
-import { findOneClickToken, getOneClickTokens, oneClickRequest, ONECLICK_CHAINS } from "@/lib/aggregators/oneclick/server";
-
+import { findOneClickToken, getOneClickTokens, oneClickRequest, ONECLICK_CHAINS, readOneClickJson, runOneClickOperation, OneClickApiError, oneClickErrorResponse, ONECLICK_RESPONSE_HEADERS } from "@/lib/aggregators/oneclick/server";
+import { isOneClickAmount, isOneClickRecord, validateOneClickQuoteResponse, type OneClickQuoteRequest } from "@/lib/aggregators/oneclick/validation";
 import { SLIPPAGE, PLATFORM_FEE } from "@/lib/routing/config";
-
 export const runtime = "nodejs";
-
+export const dynamic = "force-dynamic";
 export async function POST(request: Request) {
   try {
-    if (PLATFORM_FEE > 0) return NextResponse.json({ error: "1Click platform fees are not configured" }, { status: 503 });
-    const body = await request.json();
-    const { fromChainId, toChainId, fromTokenAddress, toTokenAddress, fromTokenDecimals, toTokenDecimals, fromAmount, wallet, dry } = body ?? {};
-    if (!Number.isInteger(fromChainId) || !Number.isInteger(toChainId) ||
-        !ONECLICK_CHAINS[fromChainId] || !ONECLICK_CHAINS[toChainId] ||
-        !isAddress(fromTokenAddress) || !isAddress(toTokenAddress) ||
-        (wallet != null && !isAddress(wallet)) || (!dry && (!isAddress(wallet) || wallet.toLowerCase() === zeroAddress)) ||
-        !Number.isInteger(fromTokenDecimals) || !Number.isInteger(toTokenDecimals) ||
-        typeof fromAmount !== "string" || !/^[1-9]\d{0,77}$/.test(fromAmount) ||
-        typeof dry !== "boolean") {
-      return NextResponse.json({ error: "Invalid 1Click quote parameters" }, { status: 400 });
-    }
-    // 1Click requires recipient/refund fields even for a dry quote.
-    // The placeholder is only allowed for previews and never produces deposit instructions.
-    const recipient = wallet ?? zeroAddress;
-    const tokens = await getOneClickTokens();
-    const origin = findOneClickToken(tokens, fromChainId, fromTokenAddress);
-    const destination = findOneClickToken(tokens, toChainId, toTokenAddress);
-    if (!origin || !destination || origin.decimals !== fromTokenDecimals || destination.decimals !== toTokenDecimals) {
-      return NextResponse.json({ error: "Pair not supported by 1Click" }, { status: 400 });
-    }
-    const result = await oneClickRequest("/quote", {
-      method: "POST",
-      body: JSON.stringify({
-        dry,
-        swapType: "EXACT_INPUT",
-        slippageTolerance: Math.round(SLIPPAGE * 10_000),
-        originAsset: origin.assetId,
-        destinationAsset: destination.assetId,
-        amount: fromAmount,
-        depositType: "ORIGIN_CHAIN",
-        refundTo: recipient,
-        refundType: "ORIGIN_CHAIN",
-        recipient,
-        recipientType: "DESTINATION_CHAIN",
+    const body = await readOneClickJson(request);
+    if (PLATFORM_FEE > 0) throw new OneClickApiError(503, "1Click platform fees are not configured.");
+    if (!isOneClickRecord(body)) throw new OneClickApiError(400, "Invalid 1Click quote parameters.");
+    const { fromChainId, toChainId, fromTokenAddress, toTokenAddress, fromTokenDecimals, toTokenDecimals, fromAmount, wallet, dry } = body;
+    if (typeof fromChainId !== "number" || typeof toChainId !== "number" || !Number.isSafeInteger(fromChainId) || !Number.isSafeInteger(toChainId) ||
+        !Object.hasOwn(ONECLICK_CHAINS, fromChainId) || !Object.hasOwn(ONECLICK_CHAINS, toChainId) ||
+        typeof fromTokenAddress !== "string" || !isAddress(fromTokenAddress) || fromTokenAddress.toLowerCase() === zeroAddress ||
+        typeof toTokenAddress !== "string" || !isAddress(toTokenAddress) ||
+        (fromChainId === toChainId && fromTokenAddress.toLowerCase() === toTokenAddress.toLowerCase()) ||
+        (wallet != null && (typeof wallet !== "string" || !isAddress(wallet) || wallet.toLowerCase() === zeroAddress)) ||
+        (!dry && typeof wallet !== "string") || typeof dry !== "boolean" ||
+        typeof fromTokenDecimals !== "number" || typeof toTokenDecimals !== "number" ||
+        !Number.isInteger(fromTokenDecimals) || !Number.isInteger(toTokenDecimals) || fromTokenDecimals < 0 || toTokenDecimals < 0 || fromTokenDecimals > 255 || toTokenDecimals > 255 ||
+        !isOneClickAmount(fromAmount)) throw new OneClickApiError(400, "Invalid 1Click quote parameters.");
+    const recipient = typeof wallet === "string" ? wallet : zeroAddress;
+    const key = JSON.stringify([fromChainId, toChainId, fromTokenAddress.toLowerCase(), toTokenAddress.toLowerCase(), fromTokenDecimals, toTokenDecimals, fromAmount, recipient.toLowerCase(), dry]);
+    const result = await runOneClickOperation("quote", key, async signal => {
+      const tokens = await getOneClickTokens(signal);
+      const originToken = findOneClickToken(tokens, fromChainId, fromTokenAddress);
+      const destinationToken = findOneClickToken(tokens, toChainId, toTokenAddress);
+      if (!originToken || !destinationToken || originToken.decimals !== fromTokenDecimals || destinationToken.decimals !== toTokenDecimals || originToken.assetId === destinationToken.assetId) throw new OneClickApiError(400, "Pair not supported by 1Click.");
+      const expected: OneClickQuoteRequest = {
+        dry, swapType: "EXACT_INPUT", slippageTolerance: Math.round(SLIPPAGE * 10_000),
+        originAsset: originToken.assetId, destinationAsset: destinationToken.assetId, amount: fromAmount,
+        depositType: "ORIGIN_CHAIN", refundTo: recipient, refundType: "ORIGIN_CHAIN",
+        recipient, recipientType: "DESTINATION_CHAIN", depositMode: "SIMPLE",
         deadline: new Date(Date.now() + 20 * 60_000).toISOString(),
-      }),
-    }) as { quote?: { amountIn?: string; amountOut?: string; minAmountOut?: string; timeEstimate?: number; depositAddress?: string; depositMemo?: string; deadline?: string }; quoteRequest?: { originAsset?: string; destinationAsset?: string; amount?: string; depositMode?: string } };
-    const quote = result.quote;
-    if (!quote || quote.amountIn !== fromAmount || !/^\d+$/.test(quote.amountOut ?? "") ||
-        !/^\d+$/.test(quote.minAmountOut ?? "") ||
-        (result.quoteRequest?.originAsset && result.quoteRequest.originAsset !== origin.assetId) ||
-        (result.quoteRequest?.destinationAsset && result.quoteRequest.destinationAsset !== destination.assetId) ||
-        (result.quoteRequest?.amount && result.quoteRequest.amount !== fromAmount)) {
-      throw new Error("Invalid 1Click quote response");
-    }
-    if (!dry && (result.quoteRequest?.depositMode === "MEMO" || quote.depositMemo ||
-        !quote.depositAddress || !isAddress(quote.depositAddress) || !quote.deadline ||
-        !Number.isFinite(Date.parse(quote.deadline)) || Date.parse(quote.deadline) <= Date.now() + 30_000)) {
-      throw new Error("Unsupported 1Click deposit instructions or expired quote");
-    }
-    return NextResponse.json({
-      amountIn: quote.amountIn,
-      amountOut: quote.amountOut,
-      minAmountOut: quote.minAmountOut,
-      timeEstimate: quote.timeEstimate ?? 0,
-      ...(dry ? {} : { depositAddress: quote.depositAddress, deadline: quote.deadline }),
-    }, { headers: { "Cache-Control": "no-store" } });
-  } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "1Click unavailable" }, { status: 502 });
-  }
+      };
+      const quoteResponse = validateOneClickQuoteResponse(await oneClickRequest("/quote", { method: "POST", body: JSON.stringify(expected), signal }), expected);
+      const quote = quoteResponse.quote;
+      return { amountIn: quote.amountIn, amountOut: quote.amountOut, minAmountOut: quote.minAmountOut, timeEstimate: quote.timeEstimate,
+        ...(dry ? {} : { depositAddress: quote.depositAddress, deadline: quote.deadline }),
+        originToken, destinationToken, quoteResponse };
+    }, request.signal);
+    return NextResponse.json(result, { headers: ONECLICK_RESPONSE_HEADERS });
+  } catch (error) { return oneClickErrorResponse(error); }
 }

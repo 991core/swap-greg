@@ -3,7 +3,7 @@ import { RangoApiError, requestRangoOnServer } from "@/lib/aggregators/rango/ser
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export async function POST(request: Request, { params }: { params: { operation: string } }) {
+export async function POST(request: Request, { params }: { params: Promise<{ operation: string }> }) {
   const headers = { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" };
   try {
     const origin = request.headers.get("origin");
@@ -24,7 +24,8 @@ export async function POST(request: Request, { params }: { params: { operation: 
     let body: unknown;
     try { body = JSON.parse(text); } catch { throw new RangoApiError(400, "Invalid JSON."); }
     if (!body || typeof body !== "object" || Array.isArray(body)) throw new RangoApiError(400, "Invalid request.");
-    return NextResponse.json(await requestRangoOnServer(params.operation, body as Record<string, unknown>, request.signal), { headers });
+    const { operation } = await params;
+    return NextResponse.json(await requestRangoOnServer(operation, body as Record<string, unknown>, request.signal), { headers });
   } catch (error) {
     const known = error instanceof RangoApiError ? error : new RangoApiError(502, "Rango is unavailable.");
     return NextResponse.json({ error: known.message }, { status: known.status, headers: {

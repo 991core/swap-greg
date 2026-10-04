@@ -95,6 +95,14 @@ describe("quote lifetime", () => {
   });
   it("rejects a quote for another recipient", () => expect(() => normalizeLifiRoute({ ...rawRoute(), toAddress: "0x2222222222222222222222222222222222222222" }, params)).toThrow("does not match"));
   it("preserves minimum received and gas estimates", () => expect(normalizeLifiRoute(rawRoute(), params)).toMatchObject({ toAmountMin: "895500000000000", gasCostUSD: "0.02" }));
+  it.each(["0", "900000000000001", "-1", "1e8", "9".repeat(79)])("rejects an inconsistent LI.FI minimum %s at normalization and preflight", (minimum) => {
+    const raw = { ...rawRoute(), toAmountMin: minimum };
+    expect(() => normalizeLifiRoute(raw, params)).toThrow("Invalid LI.FI quote");
+    expect(canExecuteQuote({ ...quote(), toAmountMin: minimum, raw }, params)).toBe(false);
+  });
+  it("does not execute a displayed minimum altered independently of the SDK payload", () => {
+    expect(canExecuteQuote({ ...quote(), toAmountMin: "895500000000001" }, params)).toBe(false);
+  });
   it("retries a failed refresh after a delay without reviving expired routes", async () => {
     fetchQuotes.mockImplementationOnce(async () => [quote()]).mockRejectedValueOnce(new Error("upstream offline")).mockImplementation(async () => [quote()]);
     const hook = renderHook(() => useSwapQuotes(params));

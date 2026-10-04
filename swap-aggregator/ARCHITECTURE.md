@@ -1,9 +1,9 @@
 # Architecture Hermes
 
-Hermes utilise Next.js 14 App Router, React 18, TypeScript, wagmi/viem,
+Hermes utilise Next.js 15.5, React 19, App Router, TypeScript, wagmi/viem,
 RainbowKit, le SDK LI.FI 4.7 et son fournisseur d'exécution Ethereum officiel,
 ainsi que les API Basic Rango et 1Click / NEAR Intents pour l'EVM.
-Cette description correspond à la branche `feat/hermes-oneclick` (mise à jour le 30 septembre 2026).
+Cette description correspond à la branche `feat/hermes-oneclick` (mise à jour le 2 octobre 2026).
 Les réseaux EVM de `lib/chains.ts` sont la référence commune à la
 découverte, au wallet et aux contrôles des métadonnées.
 
@@ -11,9 +11,32 @@ découverte, au wallet et aux contrôles des métadonnées.
 
 La modale affiche les tokens principaux de `lib/tokens/catalog.ts` dès son ouverture,
 sans requête API. Les réseaux et la paire initiale sont aussi configurés localement.
-Une saisie filtre ces entrées immédiatement et déclenche une recherche LI.FI après
+Au montage du formulaire, la découverte précharge en arrière-plan jusqu'à 100
+tokens LI.FI sur chacun des neuf réseaux Hermes, avec deux workers et un cache
+navigateur d'une minute. Une panne sur un réseau n'interrompt pas les autres.
+L'ouverture de la modale consulte ce cache sans déclencher de requête de validation
+par adresse. Le catalogue local reste disponible pendant le chargement ou une panne.
+La liste fusionnée conserve les métadonnées épinglées et les verdicts négatifs.
+Le service `/api/tokens/universe` récupère un top 120 CoinGecko ou CoinMarketCap
+(100 cibles), résout les contrats par identifiants stables sur les neuf réseaux,
+et associe les capitalisations par réseau/adresse. LI.FI reste une source de
+disponibilité et de devis ; ses capitalisations ne déterminent plus le classement.
+Une source de marché indisponible est signalée sans empêcher la découverte.
+Le registre persistant et les journaux structurés sont décrits dans
+`TOKEN_SECURITY.md`. Tous les tokens signés doivent être approuvés localement ;
+les contrats et les ABI doivent également avoir une politique revue. Les listes
+vides par défaut bloquent les signatures, y compris celles issues du SDK LI.FI.
+La modale affiche 25 lignes au départ et permet d'en afficher davantage sans
+requête lorsqu'elles sont déjà chargées. Les métriques de marché sont des données
+de présentation ; elles ne confèrent aucune exemption de contrôle d'identité.
+
+Une saisie filtre les entrées locales et préchargées immédiatement et déclenche une recherche LI.FI après
 300 ms, sauf pour une adresse exacte déjà au catalogue. Le bouton de parcours
-élargi permet aussi de charger la liste distante sans saisir de nom.
+élargi permet aussi de charger jusqu'à 200 résultats LI.FI sans saisir de nom,
+et les registres complémentaires restent disponibles. La recherche par nom,
+symbole ou contrat n'est pas limitée aux 100 tokens populaires. Les correspondances
+exactes précèdent le token natif du réseau, puis les autres résultats classés par capitalisation. Actifs natifs et
+versions wrapped/bridgées restent distincts par réseau/adresse.
 Changer la saisie, le réseau ou fermer la
 modale annule la requête et invalide immédiatement ses résultats et son consentement.
 
@@ -201,7 +224,13 @@ Voir [RANGO_INTEGRATION.md](./RANGO_INTEGRATION.md) pour les limites et référe
 | `POST /api/oneclick/quote` | Devis de prévisualisation (`dry: true`) ou instructions de dépôt après connexion (`dry: false`). |
 | `GET /api/oneclick/status?depositAddress=…` | État du dépôt et lien de transaction de destination lorsqu'il existe. |
 
-`lib/aggregators/oneclick/server.ts` appelle un hôte fixe avec un timeout de 25 s.
+`lib/aggregators/oneclick/server.ts` appelle un hôte fixe avec un timeout de 14 s.
+Les corps entrants sont bornés à 4 Kio et les réponses à 2 Mio ; les erreurs
+externes ne sont pas reflétées. L'origine navigateur, les paramètres et les
+conflits du registre sont contrôlés. Les quotas par minute sont séparés :
+60 cotations, 240 demandes de suivi et 60 demandes de registre, avec respectivement
+8, 8 et 2 appels simultanés. Les appels identiques sont coalescés. Ces limites et
+le cache restent propres au processus.
 Les clés `NEAR_1CLICK_API_KEY` et `NEAR_1CLICK_JWT` restent côté serveur. Les deux
 contrats et leurs décimales doivent correspondre au registre du fournisseur.
 Les réseaux intégrés sont Ethereum, Base, Arbitrum, Optimism, Polygon, BNB Chain,
@@ -215,13 +244,36 @@ inférieur au minimum sélectionné, vérifie les instructions et leur échéanc
 sollicite une confirmation. Il estime le gas et revérifie wallet, réseau, soldes et
 validité avant d'appeler `transfer` vers le dépôt. Aucun polling ne signe.
 
-Le dépôt est enregistré sous `hermes:oneclick:latest`, lié au wallet, avant l'attente
-de la receipt source. Le statut est interrogé toutes les 8 s jusqu'à `SUCCESS`,
-`REFUNDED` ou `FAILED`. Un dépôt actif suspend les nouvelles cotations/exécutions ;
-une confirmation source ne signifie pas une livraison finale.
+Une intention complète est enregistrée sous `hermes:oneclick:latest`, liée au wallet,
+avant l'appel d'envoi au wallet. Une panne de stockage à ce stade bloque l'envoi.
+Le hash reçu est conservé avant l'attente de la receipt source. Le suivi interroge
+le statut toutes les 8 s ; `SUCCESS` seul ne clôture jamais le dossier. La preuve
+doit correspondre au devis conservé, aux actifs, au montant source, au hash source
+et à une sortie au moins égale au minimum avec un hash destination. La signature
+du fournisseur est conservée et comparée, sans vérification cryptographique
+indépendante ; la validation repose sur les données de son API via TLS.
+Un envoi ambigu sans hash, un ancien dossier reconnu ou un remboursement non
+vérifiable reste actif et nécessite une réconciliation manuelle. Seuls un rejet
+wallet explicite ou une receipt source revertée établissent un échec source.
+Un dépôt actif suspend les nouvelles cotations/exécutions, même après déconnexion ;
+une confirmation source ne signifie pas une livraison finale. Aucun suivi ne renvoie
+de fonds et le stockage n'est pas un journal de coordination entre onglets.
 Le devis présente le minimum reçu ; le coût du gas reste inconnu dans la liste si
 1Click ne le fournit pas, puis est estimé avant signature. Les frais plateforme
 non nuls désactivent ce fournisseur tant que leur configuration n'est pas implémentée.
+
+### Verdicts et minima
+
+`lib/tokens/verdicts.ts` conserve en mémoire de session les verdicts négatifs par
+réseau/adresse. Fermer la modale, sélectionner le catalogue ou recevoir un verdict
+positif ne les efface pas. La sélection et ses cotations sont bloquées dès
+l'observation ; le préflight répète ce contrôle après les attentes asynchrones.
+L'ouverture du catalogue continue de fonctionner sans requête d'authenticité.
+Ce registre n'est pas persistant entre rechargements ou onglets.
+
+Les sorties cotées doivent vérifier `0 < minimum <= sortie <= uint256`, en entiers
+textuels. Pour LI.FI, les montants normalisés affichés doivent également correspondre
+au payload SDK utilisé lors de l'exécution.
 
 ### Diagnostics des cotations
 

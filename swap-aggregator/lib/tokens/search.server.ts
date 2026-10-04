@@ -2,6 +2,7 @@ import "server-only";
 import { ChainType, createClient, getToken, getTokens } from "@lifi/sdk";
 import { SEARCH_LIMITS, TOKEN_CACHE_TTL_MS, TokenSearchError, type TokenSearchResult } from "./types";
 import { looksLikeAddress, uniqueTokens, validateToken, type TokenSearchInput } from "./validation";
+import { sortTokenResults } from "./ranking";
 
 const MAX_CACHE_ENTRIES = 256;
 const MAX_IN_FLIGHT = 8;
@@ -42,7 +43,7 @@ async function load(input: TokenSearchInput): Promise<TokenSearchResult> {
     else {
       const result = await getTokens(getClient(), {
         chains: [chainId], chainTypes: [ChainType.EVM], extended: true, minPriceUSD: 0,
-        orderBy: "marketCapUSD", limit: limit + 1, ...(query ? { search: query } : {}),
+        orderBy: "volumeUSD24H", limit: limit + 1, ...(query ? { search: query } : {}),
       }, options);
       if (!Array.isArray(result.tokens?.[chainId])) throw new TokenSearchError("tokens_unavailable");
       raw = result.tokens[chainId];
@@ -53,7 +54,7 @@ async function load(input: TokenSearchInput): Promise<TokenSearchResult> {
   }
   const validated = raw.map((token) => validateToken(token, chainId, exact ? query : undefined));
   if (exact && raw.length && !validated[0]) throw new TokenSearchError("tokens_unavailable");
-  const tokens = uniqueTokens(validated.filter((token) => token !== null));
+  const tokens = sortTokenResults(uniqueTokens(validated.filter((token) => token !== null)), query);
   const truncated = !exact && raw.length > limit;
   return { chainId, query, tokens: tokens.slice(0, limit), limit, truncated,
     hasMore: truncated && limit < SEARCH_LIMITS[SEARCH_LIMITS.length - 1], checkedAt: Date.now() };

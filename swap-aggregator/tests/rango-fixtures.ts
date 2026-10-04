@@ -29,3 +29,9 @@ export function tokenSwap() {
   return { input, data, route: normalizeRangoQuote(data, input) };
 }
 export function pendingRango(): RangoPending { return { provider: "rango", requestId, txHash: hash, account: wallet, chainId: 8453, toToken: rangoTo, minimum: "940000000000000" }; }
+
+export function pendingRangoIntent(): RangoPending {
+  const { txHash: _hash, ...pending } = pendingRango();
+  return { ...pending, intent: { version: 1, fromTokenAddress: params.fromTokenAddress,
+    amount: params.fromAmount, transaction: rangoSwap().tx!, submittedAt: Date.now() } };
+}

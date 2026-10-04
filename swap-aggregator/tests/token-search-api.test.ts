@@ -3,6 +3,8 @@ import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 vi.mock("@lifi/sdk", () => ({ ChainType: { EVM: "EVM" }, createClient: vi.fn(() => ({})), getToken: vi.fn(), getTokens: vi.fn() }));
 import { createClient, getToken, getTokens } from "@lifi/sdk";
 import { fromToken, toToken } from "./fixtures";
+import { APP_CHAINS } from "../lib/chains";
+import { POPULAR_TOKEN_LIMIT } from "../lib/tokens/types";
 let GET: typeof import("../app/api/tokens/search/route").GET;
 const request = (query = "", chainId = 8453, extra = "") => GET(new Request("http://localhost/api/tokens/search?chainId=" + chainId + "&query=" + encodeURIComponent(query) + extra));
 beforeEach(async () => {
@@ -15,6 +17,31 @@ beforeEach(async () => {
 afterEach(() => vi.unstubAllEnvs());
 
 describe("token search API", () => {
+  it.each(APP_CHAINS.map(chain => chain.id))("returns up to 100 valid LI.FI assets in stable discovery order on chain %s", async chainId => {
+    const tokens = Array.from({ length: 101 }, (_, index) => ({ ...fromToken, chainId,
+      address: "0x" + (index + 1).toString(16).padStart(40, "0"), marketCapUSD: index, volumeUSD24H: index * 2 }));
+    vi.mocked(getTokens).mockResolvedValue({ tokens: { [chainId]: tokens } });
+    const data = await (await request("", chainId, `&limit=${POPULAR_TOKEN_LIMIT}`)).json();
+    expect(data.tokens).toHaveLength(100);
+    expect(data.tokens[0]).toMatchObject({ marketCapUSD: 0, volumeUSD24H: 0 });
+    expect(data.tokens[99].marketCapUSD).toBe(99);
+    expect(data.truncated).toBe(true);
+    expect(getTokens).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ chains: [chainId], minPriceUSD: 0, extended: true, orderBy: "volumeUSD24H", limit: 101 }), expect.anything());
+  });
+  it("prioritizes exact name/symbol matches without ranking by LI.FI capitalization", async () => {
+    const token = (index: number) => ({ ...fromToken, address: "0x" + index.toString(16).padStart(40, "0") });
+    vi.mocked(getTokens).mockResolvedValue({ tokens: { 8453: [
+      { ...token(1), symbol: "BIG", marketCapUSD: 100 },
+      { ...token(2), symbol: "needle", marketCapUSD: null },
+      { ...token(3), symbol: "UNKNOWN", marketCapUSD: "1000", volumeUSD24H: -1 },
+      { ...token(4), symbol: "ZERO", marketCapUSD: 0 },
+    ] } } as never);
+    const data = await (await request("needle")).json();
+    expect(data.tokens.map((item: { symbol: string }) => item.symbol)).toEqual(["needle", "BIG", "UNKNOWN", "ZERO"]);
+    expect(data.tokens[0]).not.toHaveProperty("marketCapUSD");
+    expect(data.tokens[2]).not.toHaveProperty("marketCapUSD");
+    expect(data.tokens[2]).not.toHaveProperty("volumeUSD24H");
+  });
   it("searches the LI.FI catalogue without a price or top-symbol exclusion", async () => {
     vi.mocked(getTokens).mockResolvedValue({ tokens: { 8453: [
       { ...fromToken, address: "0x2222222222222222222222222222222222222222", symbol: "TINY", priceUSD: "0.000000001" },

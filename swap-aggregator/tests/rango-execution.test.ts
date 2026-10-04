@@ -5,6 +5,9 @@ vi.mock("wagmi/actions", () => ({ getAccount: vi.fn(), getBalance: vi.fn(), read
 vi.mock("../lib/aggregators/rango/client", () => ({ rangoRequest: vi.fn() }));
 vi.mock("../lib/aggregators/lifi/execute", () => ({ executeLifiRoute: vi.fn() }));
 vi.mock("../lib/tokens/client", () => ({ getTokenDetails: vi.fn() }));
+// Existing provider behavior tests isolate wallet/API mocks; registry failure and
+// real RPC interception are covered in security-transaction/security-wallet.
+vi.mock("../lib/security/client", async (original) => ({ ...await original<typeof import("../lib/security/client")>(), authorizeSwapIntent: vi.fn(), createTransactionAuthorizer: () => async () => {} }));
 import { estimateGas, estimateFeesPerGas, getAccount, getBalance, readContract, sendTransaction, writeContract, waitForTransactionReceipt } from "wagmi/actions";
 import { executeLifiRoute } from "../lib/aggregators/lifi/execute";
 import { getTokenDetails } from "../lib/tokens/client";
@@ -14,7 +17,7 @@ import { executeSwapQuote } from "../lib/routing/execute";
 import { trackRangoTransaction, readPendingRango } from "../lib/aggregators/rango/tracking";
 import { getCatalogToken } from "../lib/tokens/catalog";
 import { params, wallet, fromToken, toToken } from "./fixtures";
-import { hash, normalizedRango, pendingRango, rangoSwap, rangoTo, router, tokenSwap } from "./rango-fixtures";
+import { hash, normalizedRango, pendingRango, pendingRangoIntent, rangoSwap, rangoTo, router, tokenSwap } from "./rango-fixtures";
 
 const successStatus = () => ({ status: "success", output: { type: "DESIRED_OUTPUT", amount: "950000000000000", receivedToken: rangoTo } });
 beforeEach(() => {
@@ -36,6 +39,40 @@ describe("Rango signing boundary", () => {
     expect(sendTransaction).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ chainId: 8453, account: wallet, value: BigInt(params.fromAmount), to: router }));
     expect(executeLifiRoute).not.toHaveBeenCalled(); expect(getTokenDetails).not.toHaveBeenCalled();
     expect(progress).toHaveBeenCalledWith(expect.objectContaining({ stage: "tracking", pending: expect.objectContaining({ txHash: hash }) }));
+  });
+  it("saves a restorable intent before a wallet timeout and never starts tracking without a hash", async () => {
+    const progress = vi.fn();
+    vi.mocked(sendTransaction).mockImplementationOnce(async () => {
+      const saved = progress.mock.calls.at(-1)![0].pending;
+      expect(saved.txHash).toBeUndefined();
+      expect(saved.intent).toMatchObject({ amount: params.fromAmount, transaction: { txTo: router } });
+      expect(readPendingRango(JSON.stringify(saved))).toEqual(saved);
+      throw new Error("connection lost after broadcast");
+    });
+    await expect(executeSwapQuote(normalizedRango(), params, vi.fn(), { fromToken, toToken }, progress)).rejects.toThrow("connection lost");
+    expect(progress.mock.calls.at(-1)![0].pending).toMatchObject({ requestId: pendingRango().requestId });
+    expect(vi.mocked(rangoRequest).mock.calls.some(call => call[0] === "status")).toBe(false);
+  });
+  it("does not invoke the wallet when recovery storage fails", async () => {
+    const progress = vi.fn(p => { if (p.pending) throw new Error("storage unavailable"); });
+    await expect(executeSwapQuote(normalizedRango(), params, vi.fn(), { fromToken, toToken }, progress)).rejects.toThrow("storage unavailable");
+    expect(sendTransaction).not.toHaveBeenCalled();
+  });
+  it("only clears the intent for explicit wallet rejection, never an arbitrary transport message", async () => {
+    const progress = vi.fn();
+    vi.mocked(sendTransaction).mockRejectedValueOnce({ cause: { code: 4001 } });
+    await expect(executeSwapQuote(normalizedRango(), params, vi.fn(), { fromToken, toToken }, progress)).rejects.toBeTruthy();
+    expect(progress).toHaveBeenLastCalledWith({ stage: "failed", pending: null });
+    progress.mockClear();
+    vi.mocked(sendTransaction).mockRejectedValueOnce(new Error("User rejected: transport failed"));
+    await expect(executeSwapQuote(normalizedRango(), params, vi.fn(), { fromToken, toToken }, progress)).rejects.toThrow("transport failed");
+    expect(progress.mock.calls.at(-1)![0].pending).toBeTruthy();
+  });
+  it("keeps the original intent when the wallet returns a malformed hash", async () => {
+    const progress = vi.fn();
+    vi.mocked(sendTransaction).mockResolvedValueOnce("0xinvalid" as never);
+    await expect(executeSwapQuote(normalizedRango(), params, vi.fn(), { fromToken, toToken }, progress)).rejects.toThrow("unknown submission outcome");
+    expect(progress.mock.calls.at(-1)![0].pending.txHash).toBeUndefined();
   });
   it("never signs an expired quote", async () => {
     await expect(executeSwapQuote({ ...normalizedRango(), expiresAt: Date.now() }, params, vi.fn(), { fromToken, toToken })).rejects.toThrow("quote_changed");
@@ -107,6 +144,13 @@ describe("Rango tracking", () => {
     expect(await trackRangoTransaction(pendingRango(), 1, 0)).toMatchObject({ status: "pending", txHash: hash });
     vi.mocked(rangoRequest).mockResolvedValue({ status: "running" });
     expect(await trackRangoTransaction(pendingRango(), 1, 0)).toMatchObject({ status: "pending" }); expect(sendTransaction).not.toHaveBeenCalled();
+  });
+  it("restores an ambiguous intent and does not poll or sign without a hash", async () => {
+    const pending = pendingRangoIntent();
+    expect(readPendingRango(JSON.stringify(pending))).toEqual(pending);
+    expect(await trackRangoTransaction(pending, 1, 0)).toMatchObject({ status: "pending", intent: pending.intent });
+    expect(rangoRequest).not.toHaveBeenCalled(); expect(sendTransaction).not.toHaveBeenCalled();
+    expect(readPendingRango(JSON.stringify({ ...pending, intent: undefined }))).toBeNull();
   });
   it("polls until destination success", async () => {
     vi.mocked(rangoRequest).mockResolvedValueOnce({ status: "running" }).mockResolvedValueOnce(successStatus());

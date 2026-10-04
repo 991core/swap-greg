@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+vi.mock("../lib/security/client", async original => ({ ...await original<typeof import("../lib/security/client")>(), authorizeSwapIntent: vi.fn(async () => {}), createTransactionAuthorizer: vi.fn(() => vi.fn(async () => {})) }));
 vi.mock("../lib/wallet", () => ({ walletConfig: {} }));
 vi.mock("wagmi/actions", () => ({ getAccount: vi.fn(), getBalance: vi.fn(), readContract: vi.fn(), switchChain: vi.fn() }));
 vi.mock("../lib/aggregators/lifi/execute", () => ({ executeLifiRoute: vi.fn() }));
@@ -10,6 +11,7 @@ import { getTokenDetails } from "../lib/tokens/client";
 import { fromToken, params, quote, wallet } from "./fixtures";
 import type { AppToken } from "../lib/tokens/types";
 import { getCatalogToken } from "../lib/tokens/catalog";
+import { rememberTokenVerdicts } from "../lib/tokens/verdicts";
 const remoteAddress = "0x2222222222222222222222222222222222222222";
 const remoteParams = { ...params, fromTokenAddress: remoteAddress, toTokenAddress: remoteAddress };
 function remoteQuote() {
@@ -33,7 +35,7 @@ beforeEach(() => {
 describe("execution preflight", () => {
   it("uses the validated quote and refuses automatic rate changes", async () => {
     const route = quote(); await executeSwapQuote(route, params, vi.fn());
-    expect(executeLifiRoute).toHaveBeenCalledWith(route.raw, expect.objectContaining({ updateRouteHook: expect.any(Function) }));
+    expect(executeLifiRoute).toHaveBeenCalledWith(route.raw, expect.objectContaining({ updateRouteHook: expect.any(Function) }), expect.objectContaining({ authorizeTransaction: expect.any(Function), check: expect.any(Function) }));
     expect(await vi.mocked(executeLifiRoute).mock.calls[0][1]?.acceptExchangeRateUpdateHook?.({} as never)).toBe(false);
     expect(getTokenDetails).not.toHaveBeenCalled();
   });
@@ -128,5 +130,13 @@ describe("execution preflight", () => {
     await executeSwapQuote(remoteQuote(), remoteParams, vi.fn());
     expect(getTokenDetails).toHaveBeenCalledWith(8453, remoteAddress, { fresh: true });
     expect(getTokenDetails).toHaveBeenCalledWith(1, remoteAddress, { fresh: true });
+  });
+  it("rechecks a known flag received during asynchronous balance checks before executing", async () => {
+    vi.mocked(getBalance).mockImplementation(async () => {
+      rememberTokenVerdicts([{ ...quote().raw.fromToken, verificationStatus: "flagged" }]);
+      return { value: BigInt("1000000000000000000"), decimals: 18, symbol: "ETH", formatted: "1" };
+    });
+    await expect(executeSwapQuote(quote(), params, vi.fn())).rejects.toThrow("token_blocked");
+    expect(executeLifiRoute).not.toHaveBeenCalled();
   });
 });

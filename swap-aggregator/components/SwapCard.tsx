@@ -1,17 +1,17 @@
 "use client";
 
 import type { RouteExtended } from "@lifi/sdk";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { useAccount, useBalance, useReadContract } from "wagmi";
-import { erc20Abi, isAddress, type Address } from "viem";
+import { erc20Abi, type Address } from "viem";
 import { RouteList } from "./RouteList";
 import TokenSelectModal from "./TokenSelectModal";
 import { QuoteCountdown } from "./QuoteCountdown";
 import { ChainSelect } from "./ChainSelect";
 import { CurrencySwitch } from "./CurrencySwitch";
 import { quoteAmount } from "@/lib/presentation";
-import { APP_CHAINS } from "@/lib/chains";
+import { APP_CHAINS, APP_CHAIN_IDS } from "@/lib/chains";
 import { getPopularTokens } from "@/lib/tokens/catalog";
 import { type AppToken, formatTokenAmount, parseTokenAmount } from "@/lib/lifi";
 import { balancePercentage } from "@/lib/amounts";
@@ -33,6 +33,11 @@ import { transactionLink } from "@/lib/aggregators/rango/explorer";
 import { findTokenOnChain } from "@/lib/token-continuity";
 import { fetchOneClickTokens } from "@/lib/aggregators/oneclick/client";
 import { PENDING_ONECLICK_KEY, type PendingOneClick } from "@/lib/aggregators/oneclick/types";
+import { readPendingOneClick, updatePendingOneClick, isActiveOneClick } from "@/lib/aggregators/oneclick/tracking";
+import { isObservedTokenFlagged, subscribeTokenVerdicts, tokenVerdictsSnapshot, serverTokenVerdictsSnapshot } from "@/lib/tokens/verdicts";
+import { preloadPopularTokens } from "@/lib/tokens/popular";
+import { marketUniverseSnapshot } from "@/lib/tokens/market-universe";
+import { isRegistryToken, preloadTrustedRegistry, registrySnapshot, serverRegistrySnapshot, subscribeRegistry } from "@/lib/security/client";
 type Side = "from" | "to";
 function TokenSelector({ token, onClick }: { token: AppToken | null; onClick: () => void }) {
   const { translate } = useI18n();
@@ -46,6 +51,8 @@ function TokenSelector({ token, onClick }: { token: AppToken | null; onClick: ()
 export function SwapCard({ onConnect }: { onConnect?: () => void } = {}) {
   const { address, isConnected } = useAccount();
   const { translate, lang } = useI18n();
+  useSyncExternalStore(subscribeTokenVerdicts, tokenVerdictsSnapshot, serverTokenVerdictsSnapshot);
+  const registry = useSyncExternalStore(subscribeRegistry, registrySnapshot, serverRegistrySnapshot);
   const [fromChainId, setFromChainId] = useState(8453);
   const [toChainId, setToChainId] = useState(1);
   const [fromToken, setFromToken] = useState<AppToken | null>(() => getPopularTokens(8453)[0]);
@@ -60,7 +67,7 @@ export function SwapCard({ onConnect }: { onConnect?: () => void } = {}) {
   const [pendingRango, setPendingRango] = useState<RangoPending | null>(null);
   const [pendingOneClick, setPendingOneClick] = useState<PendingOneClick | null>(null);
   const [oneClickTokens, setOneClickTokens] = useState<Record<number, AppToken[]>>({});
-  const activeOneClick = Boolean(pendingOneClick && !["SUCCESS", "REFUNDED", "FAILED"].includes(pendingOneClick.status));
+  const activeOneClick = isActiveOneClick(pendingOneClick);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [modalSide, setModalSide] = useState<Side | null>(null);
@@ -79,14 +86,16 @@ export function SwapCard({ onConnect }: { onConnect?: () => void } = {}) {
   const sourceBalance = isNative ? nativeBalance.data?.value : erc20Balance.data;
   const parsed = fromToken ? parseTokenAmount(amount, fromToken.decimals) : null;
   const sameToken = Boolean(fromToken && toToken && fromChainId === toChainId && fromToken.address.toLowerCase() === toToken.address.toLowerCase());
-  const params: RouteSelectionParams | null = fromToken && toToken && parsed && parsed !== "0" && !sameToken && (providers.lifi || providers.rango || providers.oneclick)
+  const blockedSelection = isObservedTokenFlagged(fromToken) || isObservedTokenFlagged(toToken);
+  const params: RouteSelectionParams | null = fromToken && toToken && parsed && parsed !== "0" && !sameToken && !blockedSelection && (providers.lifi || providers.rango || providers.oneclick)
     ? { fromChainId, toChainId, fromTokenAddress: fromToken.address, toTokenAddress: toToken.address, fromAmount: parsed, fromAddress: isConnected && address ? address : "", providers, fromToken, toToken, fromTokenDecimals: fromToken.decimals, toTokenDecimals: toToken.decimals } : null;
   const quotes = useSwapQuotes(params, !swapping && !pendingRango && !activeOneClick);
   const selectedRoute = quotes.routes.find((route) => route.id === selectedId) ?? quotes.routes[0] ?? null;
   const insufficientBalance = Boolean(parsed && sourceBalance !== undefined && BigInt(parsed) > sourceBalance);
   const insufficientGas = Boolean(selectedRoute && nativeBalance.data && (nativeBalance.data.value < sourceGasAmount(selectedRoute) + (isNative && parsed ? BigInt(parsed) : BigInt(0)) || nativeBalance.data.value === BigInt(0)));
   const balanceReady = sourceBalance !== undefined && nativeBalance.data !== undefined;
-  const canSwap = isConnected && !swapping && !pendingRango && !activeOneClick && !quotes.loading && !quotes.expired && balanceReady && !insufficientBalance && !insufficientGas && canExecuteQuote(selectedRoute, params);
+  const registryApproved = isRegistryToken(registry, fromToken) && isRegistryToken(registry, toToken);
+  const canSwap = registryApproved && registry.executionConfigured === true && isConnected && !swapping && !pendingRango && !activeOneClick && !quotes.loading && !quotes.expired && balanceReady && !insufficientBalance && !insufficientGas && canExecuteQuote(selectedRoute, params);
   const receivePreview = selectedRoute && toToken ? quoteAmount(selectedRoute.toAmount, toToken.decimals).short : "";
   const price = (token: AppToken | null) => token ? priceLookup[getPriceLookupKey(token)] ?? Number(token.priceUSD ?? 0) : 0;
   const inputValue = parsed && fromToken && price(fromToken) > 0 ? Number(formatTokenAmount(parsed, fromToken.decimals, fromToken.decimals)) * price(fromToken) : null;
@@ -97,19 +106,37 @@ export function SwapCard({ onConnect }: { onConnect?: () => void } = {}) {
     try { setPendingRango(readPendingRango(localStorage.getItem(PENDING_RANGO_KEY))); } catch { /* Storage can be disabled. */ }
     try { if (localStorage.getItem("hermes-currency") === "EUR") setCurrencyPreference("EUR"); } catch { /* Default to USD. */ }
   }, []);
+  useEffect(() => {
+    const controller = new AbortController();
+    void preloadTrustedRegistry();
+    void preloadPopularTokens(APP_CHAIN_IDS, controller.signal);
+    let lastRefresh = Date.now();
+    const timer = setInterval(() => {
+      if (!document.hidden && navigator.onLine && (marketUniverseSnapshot().result?.enriching || Date.now() - lastRefresh >= 60_000)) {
+        lastRefresh = Date.now();
+        void preloadPopularTokens(APP_CHAIN_IDS, controller.signal);
+      }
+    }, 10_000);
+    return () => { controller.abort(); clearInterval(timer); };
+  }, []);
   function changeCurrency(value: "USD" | "EUR") {
     setCurrencyPreference(value);
     try { localStorage.setItem("hermes-currency", value); } catch { /* Keep the in-memory preference. */ }
   }
   function savePending(pending: RangoPending | null) {
+    try { if (pending) localStorage.setItem(PENDING_RANGO_KEY, JSON.stringify(pending)); else localStorage.removeItem(PENDING_RANGO_KEY); }
+    catch {
+      if (pending && !pending.txHash) throw new Error("Cannot save the Rango recovery record. No transaction was requested.");
+      // Preserve the in-memory lock if broadcast already returned a hash.
+      if (!pending) throw new Error("Cannot clear the Rango recovery record.");
+    }
     setPendingRango(pending);
-    try { if (pending) localStorage.setItem(PENDING_RANGO_KEY, JSON.stringify(pending)); else localStorage.removeItem(PENDING_RANGO_KEY); } catch { /* Keep the in-memory transaction link. */ }
   }
   function finishRango(result: RangoExecution) {
     if (result.status === "pending") savePending(result);
     else {
       savePending(null); setSuccess(result.status === "success");
-      setRangoProgress({ stage: result.status === "success" ? "complete" : "failed", txHash: result.txHash, txLink: transactionLink(result.chainId, result.txHash) });
+      setRangoProgress({ stage: result.status === "success" ? "complete" : "failed", txHash: result.txHash, txLink: result.txHash ? transactionLink(result.chainId, result.txHash) : undefined });
       if (result.status === "failed") setError(result.message ?? translate("swap_exec_error"));
     }
   }
@@ -137,8 +164,14 @@ export function SwapCard({ onConnect }: { onConnect?: () => void } = {}) {
   }, []);
 
   function saveOneClick(pending: PendingOneClick) {
-    setPendingOneClick(previous => previous?.hash === pending.hash && previous.status === pending.status && previous.destinationUrl === pending.destinationUrl ? previous : pending);
-    try { localStorage.setItem(PENDING_ONECLICK_KEY, JSON.stringify(pending)); } catch { /* Keep in memory. */ }
+    const serialized = JSON.stringify(pending);
+    try { localStorage.setItem(PENDING_ONECLICK_KEY, serialized); }
+    catch {
+      // Before asking the wallet we require a durable recovery record. Once a
+      // hash exists, losing storage must still retain the funded record in memory.
+      if (!pending.hash) throw new Error("Cannot save the 1Click recovery record. No deposit was requested.");
+    }
+    setPendingOneClick(previous => JSON.stringify(previous) === serialized ? previous : pending);
   }
   useEffect(() => {
     const controller = new AbortController();
@@ -147,10 +180,10 @@ export function SwapCard({ onConnect }: { onConnect?: () => void } = {}) {
   }, []);
   useEffect(() => {
     try {
-      const stored = JSON.parse(localStorage.getItem(PENDING_ONECLICK_KEY) ?? "null") as PendingOneClick | null;
-      setPendingOneClick(stored && address?.toLowerCase() === stored.wallet?.toLowerCase() &&
-        isAddress(stored.depositAddress) && /^0x[0-9a-f]{64}$/i.test(stored.hash) ? stored : null);
-    } catch { setPendingOneClick(null); }
+      const stored = readPendingOneClick(localStorage.getItem(PENDING_ONECLICK_KEY));
+      // Changing/disconnecting the account cannot discard an unresolved deposit.
+      setPendingOneClick(previous => isActiveOneClick(previous) ? previous : stored);
+    } catch { setPendingOneClick(previous => isActiveOneClick(previous) ? previous : null); }
   }, [address]);
   useEffect(() => {
     if (!pendingOneClick || !activeOneClick) return;
@@ -162,8 +195,8 @@ export function SwapCard({ onConnect }: { onConnect?: () => void } = {}) {
       try {
         const response = await fetch(`/api/oneclick/status?depositAddress=${encodeURIComponent(pendingOneClick.depositAddress)}`, { cache: "no-store" });
         if (!response.ok || cancelled) return;
-        const result = await response.json() as { status?: string; destinationUrl?: string };
-        if (!cancelled && result.status) saveOneClick({ ...pendingOneClick, status: result.status, destinationUrl: result.destinationUrl });
+        const result: unknown = await response.json();
+        if (!cancelled) saveOneClick(updatePendingOneClick(pendingOneClick, result));
       } catch { /* Retain the transfer record and retry tracking. */ }
       finally { running = false; }
     };
@@ -199,7 +232,7 @@ export function SwapCard({ onConnect }: { onConnect?: () => void } = {}) {
         setExecution(updated);
         quotes.updateRoute(normalizeLifiRoute(updated, params, route.expiresAt));
       }, { fromToken: fromToken!, toToken: toToken! }, (progress) => {
-        setRangoProgress(progress); if (progress.pending) savePending(progress.pending);
+        setRangoProgress(progress); if (progress.pending !== undefined) savePending(progress.pending);
       }, { onPending: saveOneClick, confirm: (quote) => window.confirm(translate("oneclick_confirm", {
         amount: formatTokenAmount(quote.amountIn, fromToken!.decimals), from: fromToken!.symbol,
         minimum: formatTokenAmount(quote.minAmountOut, toToken!.decimals, toToken!.decimals), to: toToken!.symbol,
@@ -251,22 +284,25 @@ export function SwapCard({ onConnect }: { onConnect?: () => void } = {}) {
       {currency === "EUR" && fx && <p className="jumper-hint">{translate("fx_reference", { date: fx.date })}</p>}
       <button type="button" className="jumper-cta" disabled={isConnected ? !canSwap : !onConnect} onClick={() => isConnected ? void handleSwap() : onConnect?.()}>{label}</button>
       <div aria-live="polite">
+        {registry.status === "error" && <p className="jumper-error">{translate("security_registry_unavailable")}</p>}
+        {registry.status === "ready" && !registryApproved && <p className="jumper-warning">{translate("security_registry_required")}</p>}
+        {registry.status === "ready" && registryApproved && !registry.executionConfigured && <p className="jumper-warning">{translate("security_policy_required")}</p>}
         {amount.trim() && parsed == null && <p className="jumper-error">{translate("amount_invalid")}</p>}
         {sameToken && <p className="jumper-hint">{translate("same_token")}</p>}
         {insufficientBalance && <p className="jumper-warning">{translate("insufficient_balance")}</p>}
         {!insufficientBalance && insufficientGas && <p className="jumper-warning">{translate("insufficient_gas")}</p>}
         {isConnected && params && !balanceReady && <p className="jumper-hint">{translate("balance_unavailable")}</p>}
         {!isConnected && <p className="jumper-hint">{translate("quote_without_wallet")}</p>}
-        {error && <p className="jumper-error" role="alert">{error}</p>}
+        {(blockedSelection || error) && <p className="jumper-error" role="alert">{blockedSelection ? translate("token_blocked") : error}</p>}
         {success && <p className="jumper-success" role="status">{translate("swap_success")}</p>}
         {error && (execution || rangoProgress?.txHash) && <p className="jumper-warning">{translate("wallet_history")}</p>}
       </div>
       {actions.length > 0 && <div className="jumper-progress"><p>{translate("execution_progress")}</p>{actions.map((action, index) => <div key={index}><span>{action.type} · {action.status}</span>{action.txLink && /^https:\/\//.test(action.txLink) && <a href={action.txLink} target="_blank" rel="noopener noreferrer">{action.txHash?.slice(0, 12) ?? "↗"} ↗</a>}</div>)}</div>}
       {rangoProgress && <div className="jumper-progress" role="status"><p>Rango · {translate(`rango_${rangoProgress.stage}`)}</p>{rangoProgress.txLink && <a href={rangoProgress.txLink} target="_blank" rel="noopener noreferrer">{rangoProgress.txHash?.slice(0, 12)} ↗</a>}</div>}
-      {pendingRango && <div className="jumper-warning" role="status"><p>{translate("rango_pending")}</p><a href={transactionLink(pendingRango.chainId, pendingRango.txHash)} target="_blank" rel="noopener noreferrer">{pendingRango.txHash.slice(0, 12)} ↗</a><button type="button" className="jumper-refresh" disabled={swapping} onClick={() => void resumeRango()}>{translate("rango_resume")}</button></div>}
+      {pendingRango && <div className="jumper-warning" role="status"><p>{translate(pendingRango.txHash ? "rango_pending" : "rango_unknown")}</p>{pendingRango.txHash && <a href={transactionLink(pendingRango.chainId, pendingRango.txHash)} target="_blank" rel="noopener noreferrer">{pendingRango.txHash.slice(0, 12)} ↗</a>}<button type="button" className="jumper-refresh" disabled={swapping || !pendingRango.txHash} onClick={() => void resumeRango()}>{translate("rango_resume")}</button></div>}
       {pendingOneClick && <p className="jumper-hint" role="status">
         {translate("oneclick_status", { status: pendingOneClick.status })}{" "}
-        <a href={transactionLink(pendingOneClick.fromChainId, pendingOneClick.hash)} target="_blank" rel="noopener noreferrer">{translate("oneclick_source_tx")}</a>{" "}
+        {pendingOneClick.hash && <a href={transactionLink(pendingOneClick.fromChainId, pendingOneClick.hash)} target="_blank" rel="noopener noreferrer">{translate("oneclick_source_tx")}</a>}{" "}
         {pendingOneClick.destinationUrl?.startsWith("https://") && <a href={pendingOneClick.destinationUrl} target="_blank" rel="noopener noreferrer">{translate("oneclick_explorer")}</a>}
       </p>}
       {providers.rango && <p className="jumper-test-notice">{translate("rango_test_notice")}</p>}

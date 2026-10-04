@@ -5,7 +5,7 @@ import { params, wallet } from "./fixtures";
 import { hash, rangoQuote, requestId } from "./rango-fixtures";
 
 const fetchMock = vi.fn();
-const request = (body: unknown, operation = "quote", headers: Record<string,string> = {}) => POST(new Request(`http://localhost/api/rango/${operation}`, { method: "POST", headers: { "Content-Type": "application/json", ...headers }, body: JSON.stringify(body) }), { params: { operation } });
+const request = (body: unknown, operation = "quote", headers: Record<string,string> = {}) => POST(new Request(`http://localhost/api/rango/${operation}`, { method: "POST", headers: { "Content-Type": "application/json", ...headers }, body: JSON.stringify(body) }), { params: Promise.resolve({ operation }) });
 beforeEach(() => { vi.stubEnv("RANGO_API_KEY", ""); vi.stubGlobal("fetch", fetchMock); fetchMock.mockReset(); fetchMock.mockResolvedValue(Response.json(rangoQuote())); });
 afterEach(() => vi.unstubAllEnvs());
 describe("Rango server boundary", () => {

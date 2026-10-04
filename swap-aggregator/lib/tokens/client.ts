@@ -1,5 +1,6 @@
 import { TokenSearchError, type AppToken, type TokenSearchResult } from "./types";
 import { parseTokenSearch, uniqueTokens, validateToken, looksLikeAddress } from "./validation";
+import { rememberTokenVerdicts, withObservedVerdict } from "./verdicts";
 
 export async function searchTokens(chainId: number, query = "", options: { signal?: AbortSignal; limit?: number; fresh?: boolean } = {}): Promise<TokenSearchResult> {
   const params = new URLSearchParams({ chainId: String(chainId), query, limit: String(options.limit ?? 25), fresh: options.fresh ? "1" : "0" });
@@ -11,7 +12,8 @@ export async function searchTokens(chainId: number, query = "", options: { signa
   const data = await response.json();
   if (data.chainId !== chainId || data.query !== input.query || !Array.isArray(data.tokens) || !Number.isFinite(data.checkedAt)) throw new TokenSearchError("tokens_unavailable");
   const tokens = uniqueTokens(data.tokens.slice(0, input.limit).map((token: unknown) => validateToken(token, chainId, looksLikeAddress(input.query) ? input.query : undefined)).filter((token: AppToken | null): token is AppToken => token !== null));
-  return { chainId, query: input.query, tokens, limit: input.limit, hasMore: data.hasMore === true, truncated: data.truncated === true, checkedAt: data.checkedAt };
+  if (!options.signal?.aborted) rememberTokenVerdicts(tokens);
+  return { chainId, query: input.query, tokens: tokens.map(withObservedVerdict), limit: input.limit, hasMore: data.hasMore === true, truncated: data.truncated === true, checkedAt: data.checkedAt };
 }
 
 export async function getTokenDetails(chainId: number, address: string, options: { signal?: AbortSignal; fresh?: boolean } = {}): Promise<AppToken | null> {

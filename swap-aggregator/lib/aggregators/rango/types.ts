@@ -17,7 +17,8 @@ export type RangoTransaction = {
 export type RangoSwap = RangoQuote & { tx: RangoTransaction | null };
 export type RangoStatus = { status: "running" | "success" | "failed" | null; error: string | null;
   output: { type: string; amount: string; receivedToken: RangoToken } | null };
-export type RangoPending = { provider: "rango"; requestId: string; txHash: `0x${string}`; chainId: number;
-  account: string; toToken: RangoToken; minimum: string };
+export type RangoPending = { provider: "rango"; requestId: string; txHash?: `0x${string}`; chainId: number;
+  account: string; toToken: RangoToken; minimum: string;
+  intent?: { version: 1; fromTokenAddress: string; amount: string; transaction: RangoTransaction; submittedAt: number } };
 export type RangoExecution = RangoPending & { status: "success" | "failed" | "pending"; message?: string };
-export type RangoProgress = { stage: "preparing" | "approval" | "signing" | "tracking" | "complete" | "failed"; txHash?: string; txLink?: string; pending?: RangoPending };
+export type RangoProgress = { stage: "preparing" | "approval" | "signing" | "tracking" | "complete" | "failed"; txHash?: string; txLink?: string; pending?: RangoPending | null };

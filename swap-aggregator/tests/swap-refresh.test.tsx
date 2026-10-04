@@ -2,6 +2,13 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, expect, it, vi } from "vitest";
 import type { NormalizedRoute } from "../lib/types/normalized-route";
 const account = vi.hoisted(() => ({ isConnected: true, address: "0x1111111111111111111111111111111111111111" }));
+// This suite isolates quote lifetime/verdict revocation; security-api.test.ts exercises real authority.
+vi.mock("../lib/security/client", async original => {
+  const actual = await original<typeof import("../lib/security/client")>();
+  const seed = (await import("../security/trusted-tokens.v1.json")).default;
+  const state = { status: "ready" as const, registry: seed, executionConfigured: true };
+  return { ...actual, registrySnapshot: () => state, serverRegistrySnapshot: () => state, subscribeRegistry: () => () => {}, preloadTrustedRegistry: vi.fn(async () => state), authorizeSwapIntent: vi.fn(async () => {}), createTransactionAuthorizer: () => vi.fn(async () => {}) };
+});
 vi.mock("wagmi", () => ({
   useAccount: () => account,
   useBalance: () => ({ data: { value: BigInt("1000000000000000000") }, refetch: vi.fn() }),
@@ -11,6 +18,7 @@ vi.mock("../lib/aggregators/lifi/client", () => ({ getLifiSdkClient: vi.fn() }))
 vi.mock("../lib/routing/orchestrator", () => ({ getRoutesForSelection: vi.fn() }));
 vi.mock("../lib/routing/execute", () => ({ executeSwapQuote: vi.fn(), SwapValidationError: class extends Error {} }));
 vi.mock("../lib/aggregators/oneclick/client", () => ({ fetchOneClickTokens: vi.fn(async () => ({})) }));
+vi.mock("../lib/tokens/popular", async original => ({ ...await original<typeof import("../lib/tokens/popular")>(), preloadPopularTokens: vi.fn(async () => {}) }));
 vi.mock("../lib/tokens/client", () => ({ searchTokens: vi.fn(), getTokenDetails: vi.fn() }));
 vi.mock("../lib/pricing", async (original) => ({ ...await original<typeof import("../lib/pricing")>(), fetchTokenPriceUsd: vi.fn(async () => null), fetchUsdEurRate: vi.fn(async () => null) }));
 import { SwapCard } from "../components/SwapCard";
@@ -19,7 +27,7 @@ import { getRoutesForSelection } from "../lib/routing/orchestrator";
 import { executeSwapQuote } from "../lib/routing/execute";
 import { searchTokens } from "../lib/tokens/client";
 import { quote } from "./fixtures";
-import { normalizedRango, pendingRango } from "./rango-fixtures";
+import { normalizedRango, pendingRango, pendingRangoIntent } from "./rango-fixtures";
 import { PENDING_RANGO_KEY } from "../lib/aggregators/rango/tracking";
 import { fetchUsdEurRate, fetchTokenPriceUsd } from "../lib/pricing";
 beforeEach(() => { account.isConnected = true; vi.useFakeTimers(); vi.clearAllMocks(); vi.mocked(getRoutesForSelection).mockReset(); localStorage.setItem("hermes-lang", "en"); localStorage.removeItem(PENDING_RANGO_KEY); localStorage.removeItem("hermes-currency"); });
@@ -37,7 +45,8 @@ it("automatically updates the quote and blocks Swap while refreshing without exe
   expect(screen.getByRole<HTMLButtonElement>("button", { name: "Searching routes…" }).disabled).toBe(true);
   expect(screen.getByRole<HTMLInputElement>("radio").disabled).toBe(true);
   expect(screen.getByRole("timer").textContent).toContain("Refreshing quotes…");
-  const refreshed = { ...quote("lifi:refreshed"), toAmount: "800000000000000" };
+  const refreshed = { ...quote("lifi:refreshed"), toAmount: "800000000000000", toAmountMin: "796000000000000",
+    raw: { ...quote("lifi:refreshed").raw, toAmount: "800000000000000", toAmountMin: "796000000000000" } };
   await act(async () => finish([refreshed]));
   expect(screen.getByLabelText<HTMLInputElement>("You receive").value).toBe("0.0008");
   expect(screen.getByRole<HTMLButtonElement>("button", { name: "Swap" }).disabled).toBe(false);
@@ -135,4 +144,16 @@ it("keeps quote failures in logs, retries silently, and still displays execution
   fireEvent.click(screen.getByRole("button", { name: "Swap" }));
   await act(() => vi.advanceTimersByTimeAsync(0));
   expect(screen.getByRole("alert").textContent).toBe("Wallet rejected the transaction");
+});
+
+it("restores an ambiguous Rango submission and blocks quotes, tracking and resubmission", async () => {
+  localStorage.setItem(PENDING_RANGO_KEY, JSON.stringify(pendingRangoIntent()));
+  render(<I18nProvider><SwapCard /></I18nProvider>);
+  fireEvent.change(screen.getByLabelText("You send"), { target: { value: "0.001" } });
+  await act(() => vi.advanceTimersByTimeAsync(500));
+  expect(screen.getByText(/Submission outcome unknown/)).toBeTruthy();
+  expect(screen.getByRole<HTMLButtonElement>("button", { name: "Resume tracking" }).disabled).toBe(true);
+  expect(screen.getByRole<HTMLButtonElement>("button", { name: "Transaction submitted" }).disabled).toBe(true);
+  expect(screen.queryByRole("link", { name: /^0x/ })).toBeNull();
+  expect(getRoutesForSelection).not.toHaveBeenCalled(); expect(executeSwapQuote).not.toHaveBeenCalled();
 });
