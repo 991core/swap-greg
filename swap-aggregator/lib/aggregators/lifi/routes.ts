@@ -30,7 +30,7 @@ export async function fetchRoutes(params: SwapParams, signal?: AbortSignal): Pro
     fromChainId: params.fromChainId, toChainId: params.toChainId,
     fromTokenAddress: params.fromTokenAddress, toTokenAddress: params.toTokenAddress, fromAmount: params.fromAmount,
     ...(params.fromAddress ? { fromAddress: params.fromAddress, toAddress: params.fromAddress } : {}),
-    options: { fee: PLATFORM_FEE, slippage: SLIPPAGE, maxPriceImpact: MAX_PRICE_IMPACT },
+    options: { fee: PLATFORM_FEE, slippage: SLIPPAGE, maxPriceImpact: MAX_PRICE_IMPACT, allowSwitchChain: false, executionType: "transaction" },
   }, { signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(ROUTE_TIMEOUT_MS)]) : AbortSignal.timeout(ROUTE_TIMEOUT_MS) });
   return result.routes ?? [];
 }

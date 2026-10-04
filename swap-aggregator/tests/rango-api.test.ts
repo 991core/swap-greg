@@ -46,6 +46,7 @@ describe("Rango server boundary", () => {
   it("preserves 429 as a retriable response", async () => { fetchMock.mockResolvedValue(new Response("rate limited", { status: 429 })); const response = await request({ params }); expect(response.status).toBe(429); expect(response.headers.get("Retry-After")).toBe("60"); });
   it("blocks a cross-origin request before calling the provider", async () => { expect((await request({ params }, "quote", { origin: "https://evil.example" })).status).toBe(403); expect(fetchMock).not.toHaveBeenCalled(); });
   it("accepts the public origin when Next uses an internal request URL", async () => {
+    vi.stubEnv("HERMES_PUBLIC_ORIGIN", "https://hermes.example");
     const response = await request({ params }, "quote", { host: "hermes.example", origin: "https://hermes.example", "x-forwarded-proto": "https" });
     expect(response.status).toBe(200);
   });

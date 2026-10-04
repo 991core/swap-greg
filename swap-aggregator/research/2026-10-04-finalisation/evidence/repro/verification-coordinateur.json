@@ -1,0 +1,22 @@
+{
+  "minimum": {
+    "exit_code": 0,
+    "stdout": "{\"routeMinimum\":\"1000000\",\"singleStepMinimum\":\"995001\",\"hooks\":0}\n",
+    "stderr": ""
+  },
+  "destination-status": {
+    "exit_code": 0,
+    "stdout": "{\"substatus\":\"REFUNDED\",\"executionStatus\":\"DONE\",\"hermesSuccessCondition\":true,\"receivedChain\":1,\"receivedAmount\":\"1\"}\n{\"substatus\":\"PARTIAL\",\"executionStatus\":\"DONE\",\"hermesSuccessCondition\":true,\"receivedChain\":1,\"receivedAmount\":\"1\"}\n",
+    "stderr": ""
+  },
+  "guard-scope": {
+    "exit_code": 0,
+    "stdout": "{\"attempts\":3,\"actualBroadcastRequests\":2,\"comment\":\"same guard blocked second; fresh execution guard allowed third\"}\n",
+    "stderr": ""
+  },
+  "native-value": {
+    "exit_code": 0,
+    "stdout": "{\"selectedPrincipal\":\"100\",\"candidateValue\":\"100000000\",\"nativeBalance\":\"50000\",\"gasWithPadding\":\"25200\",\"forwardedRequests\":1,\"actuallyAffordable\":false}\n",
+    "stderr": ""
+  }
+}

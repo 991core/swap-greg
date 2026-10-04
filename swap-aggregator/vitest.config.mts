@@ -11,5 +11,5 @@ export default defineConfig({
   // it before Vite's import analysis runs.
   oxc: { jsx: { runtime: "automatic" } },
 
-  test: { include: ["tests/**/*.test.{ts,tsx}"], environment: "jsdom", setupFiles: ["./tests/setup.ts"], maxWorkers: 2, restoreMocks: true },
+  test: { include: ["tests/**/*.test.{ts,tsx}"], environment: "jsdom", env: { NEXT_PUBLIC_RELEASE_MODE: "enabled" }, setupFiles: ["./tests/setup.ts"], maxWorkers: 2, restoreMocks: true },
 });

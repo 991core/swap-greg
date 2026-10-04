@@ -35,6 +35,7 @@ function authorize(input = intent()) {
     body: JSON.stringify({ mode: "quote", intent: input, quote: input }) }));
 }
 beforeEach(async () => {
+  vi.stubEnv("HERMES_ENABLE_DIAGNOSTIC_API", "true");
   vi.clearAllMocks();
   directory = await mkdtemp(path.join(tmpdir(), "hermes-independent-review-"));
   vi.stubEnv("TOKEN_REGISTRY_PATH", path.join(directory, "registry.json"));

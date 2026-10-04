@@ -1,0 +1,15 @@
+{
+  "qualification": "automated_local_only_no_funds",
+  "sha256": {
+    "lib/aggregators/lifi/policy.ts": "6ae9ee093ee4f63d1493bd590ef1b8c727fdd646048cbc5830c1aa9e5a28eb0a",
+    "lib/aggregators/lifi/client.ts": "f03c91e505ae565abdde28adc922859ecf87c55b9e08b774b432ebda4ffc7e77",
+    "lib/aggregators/lifi/tracking.ts": "3e8cc88c7b3c8ef48741c41d525231d3f95842857c5afbda20085ee61357ff26",
+    "lib/aggregators/lifi/execute.ts": "ebf6a843e6df5f3d60c68611605071f199aec6dc0fc4a7862ce975e22b987a1d",
+    "lib/aggregators/lifi/routes.ts": "4b689aabef9fef35db35964ced1a3695f2956424b285a65b5436f23251c735a8",
+    "lib/security/lifi-wallet.ts": "36dc490343442bc59da3b410ac55be0810b7ab4f49b6045ea0f6ebd5c36f7a16",
+    "tests/lifi-policy.test.ts": "1ab2efda4accaea721a7b3fa747d3b4c5cb26c8d927df60e585e7aa2cbcf6134",
+    "tests/lifi-tracking.test.ts": "2079035c898ad9663c4951417b09ae8259a1df8a747a015f75c14af0d0e6f9d5",
+    "tests/lifi-guard-regressions.test.ts": "0a71d3cdebe5e09dd0f78fc79a2dfcfbd80ce54420b19828720f06b9c7550bd4",
+    "tests/lifi-allowance-contract.test.ts": "8e5cb97bf10bdb37f7f0986dc8cbc3ccda7b211e4898ccb4a69b1297a09a7f70"
+  }
+}

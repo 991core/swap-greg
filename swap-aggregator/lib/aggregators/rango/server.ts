@@ -1,4 +1,5 @@
 import "server-only";
+import { readBoundedText, serverCanPrepareExecution } from "../../server/api";
 import { PLATFORM_FEE, SLIPPAGE, ROUTE_TIMEOUT_MS } from "../../routing/config";
 import type { SwapParams } from "../lifi/routes";
 import { isAddress, isRequestId, isUint, rangoAsset, RANGO_CHAINS, validateRangoQuote } from "./validation";
@@ -11,6 +12,40 @@ export class RangoApiError extends Error {
   constructor(public readonly status: number, message: string) { super(message); }
 }
 const invalid = () => new RangoApiError(400, "Invalid Rango request.");
+function safeDiagnosticUrl(value: unknown): string | undefined {
+  if (typeof value !== "string" || value.length > 2048) return;
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "https:" || url.username || url.password || url.hash) return;
+    for (const name of url.searchParams.keys()) if (/key|secret|auth|jwt|token/i.test(name)) return;
+    return url.href;
+  } catch { return; }
+}
+/** Retain documented proof fields only; never forward unknown diagnostic payloads. */
+function statusDiagnostics(status: RangoStatus) {
+  const bridge: Record<string, string | number | null> = {};
+  if (status.bridgeData && typeof status.bridgeData === "object" && !Array.isArray(status.bridgeData)) {
+    const raw = status.bridgeData as Record<string, unknown>;
+    for (const prefix of ["src", "dest"]) {
+      const chain = raw[`${prefix}ChainId`]; const decimals = raw[`${prefix}TokenDecimals`];
+      if (typeof chain === "number" && Number.isSafeInteger(chain) && chain > 0) bridge[`${prefix}ChainId`] = chain;
+      if (typeof decimals === "number" && Number.isInteger(decimals) && decimals >= 0 && decimals <= 255) bridge[`${prefix}TokenDecimals`] = decimals;
+      const hash = raw[`${prefix}TxHash`]; const token = raw[`${prefix}Token`]; const amount = raw[`${prefix}TokenAmt`];
+      if (hash === null || (typeof hash === "string" && /^0x[\da-f]{64}$/i.test(hash))) bridge[`${prefix}TxHash`] = hash;
+      if (token === null || isAddress(token)) bridge[`${prefix}Token`] = token as string | null;
+      if (amount === null || isUint(amount)) bridge[`${prefix}TokenAmt`] = amount as string | null;
+    }
+  }
+  const diagnosisUrl = safeDiagnosticUrl(status.diagnosisUrl);
+  const explorer = status.explorerUrl as unknown;
+  const explorerUrl = Array.isArray(explorer) && explorer.length <= 16 ? explorer.flatMap(item => {
+    if (!item || typeof item !== "object") return [];
+    const url = safeDiagnosticUrl(item.url);
+    const description = typeof item.description === "string" && /^(Inbound|Outbound)$/i.test(item.description) ? item.description : undefined;
+    return url ? [{ url, ...(description ? { description } : {}) }] : [];
+  }) : safeDiagnosticUrl(explorer);
+  return { ...(Object.keys(bridge).length ? { bridgeData: bridge } : {}), ...(diagnosisUrl ? { diagnosisUrl } : {}), ...(explorerUrl ? { explorerUrl } : {}) };
+}
 export function parseRangoParams(value: unknown, allowAnonymous = false): SwapParams {
   if (!value || typeof value !== "object") throw invalid();
   const p = value as SwapParams;
@@ -50,23 +85,31 @@ export function rangoQuery(operation: string, body: Record<string, unknown>): UR
 }
 
 // Separate buckets preserve tracking capacity when quote traffic reaches its cap.
-const budgets = { quote: { window: 0, count: 0 }, swap: { window: 0, count: 0 }, status: { window: 0, count: 0 } };
+const budgets = { quote: { window: 0, count: 0, active: 0 }, swap: { window: 0, count: 0, active: 0 }, status: { window: 0, count: 0, active: 0 } };
 export async function requestRangoOnServer(operation: string, body: Record<string, unknown>, signal?: AbortSignal) {
+  if (operation === "swap" && !serverCanPrepareExecution()) throw new RangoApiError(403, "New execution preparation is disabled.");
   const url = rangoQuery(operation, body);
   const bucket = budgets[operation as keyof typeof budgets];
   const now = Date.now();
   if (now - bucket.window >= 60_000) { bucket.window = now; bucket.count = 0; }
   if (++bucket.count > (operation === "status" ? 120 : 60)) throw new RangoApiError(429, "Rango rate limit reached.");
+  if (bucket.active >= (operation === "swap" ? 4 : 8)) throw new RangoApiError(429, "Rango is busy.");
+  bucket.active++;
+  try {
   const timeout = AbortSignal.timeout(ROUTE_TIMEOUT_MS - 1000);
+  const requestSignal = signal ? AbortSignal.any([signal, timeout]) : timeout;
   let response: Response;
-  try { response = await fetch(url, { signal: signal ? AbortSignal.any([signal, timeout]) : timeout, cache: "no-store", redirect: "error" }); }
+  try { response = await fetch(url, { signal: requestSignal, cache: "no-store", redirect: "error" }); }
   catch { throw new RangoApiError(502, "Rango is unavailable."); }
-  if (!response.ok) throw new RangoApiError(response.status === 429 ? 429 : 502, "Rango is unavailable.");
-  const data = await response.json();
+  if (!response.ok) { void response.body?.cancel(); throw new RangoApiError(response.status === 429 ? 429 : 502, "Rango is unavailable."); }
+  let data: unknown;
+  try { data = JSON.parse(await readBoundedText(response, 2 * 1024 * 1024, { upstream: true, signal: requestSignal, timeoutMs: ROUTE_TIMEOUT_MS - 1000 })); }
+  catch { throw new RangoApiError(502, "Rango is unavailable."); }
+  if (!data || typeof data !== "object" || Array.isArray(data)) throw new RangoApiError(502, "Invalid Rango response.");
   if (operation === "status") {
     const status = data as RangoStatus;
     if (![null, "running", "success", "failed"].includes(status.status)) throw new RangoApiError(502, "Invalid Rango status.");
-    return { status: status.status, output: status.output ?? null, error: status.error ? "Rango reported a transaction issue." : null };
+    return { status: status.status, output: status.output ?? null, error: status.error ? "Rango reported a transaction issue." : null, ...statusDiagnostics(status) };
   }
   const quote = data as RangoQuote;
   if (operation === "quote" && quote.resultType === "NO_ROUTE" && !quote.error) return { resultType: "NO_ROUTE", route: null, error: null };
@@ -75,4 +118,5 @@ export async function requestRangoOnServer(operation: string, body: Record<strin
   // Do not forward upstream error/trace details (URLs can contain private keys).
   return { requestId: quote.requestId, resultType: quote.resultType, route: quote.route, error: null,
     ...(operation === "swap" ? { tx: (data as RangoSwap).tx } : {}) };
+  } finally { bucket.active--; }
 }

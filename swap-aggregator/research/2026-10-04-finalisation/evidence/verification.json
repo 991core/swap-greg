@@ -1,0 +1,16 @@
+{
+  "changed_tracked_files": [],
+  "tests": 592,
+  "test_files": 35,
+  "typecheck": "pass",
+  "lint": "pass",
+  "build": "pass",
+  "production_start": "pass",
+  "audit_prod": {
+    "moderate": 16,
+    "high": 0,
+    "critical": 0
+  },
+  "node": "22.23.3",
+  "npm": "12.2.0"
+}

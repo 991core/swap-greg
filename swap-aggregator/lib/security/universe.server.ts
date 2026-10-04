@@ -125,25 +125,30 @@ export async function getMarketUniverse(): Promise<MarketUniverse> {
     const result: MarketUniverse = { ...top, tokens, resolutions, failures, enriching: candidates.length > 0 };
     // Read-only enrichment queues every resolved identity; quotas pause the queue instead of truncating it.
     let missingIndex = 0;
+    const enrichmentDeadline = Date.now() + 180_000;
     void Promise.all(Array.from({ length: 3 }, async () => {
-      while (missingIndex < candidates.length) {
+      while (missingIndex < candidates.length && Date.now() < enrichmentDeadline) {
         const candidate = candidates[missingIndex++];
-        let retry = true;
-        while (retry) {
-          retry = false;
+        for (let retry = 0; retry < 3; retry++) {
+          // A newer snapshot owns enrichment; obsolete background work may not consume new budgets.
+          if ((cache && cache.result !== result) || Date.now() >= enrichmentDeadline) break;
           try {
             const token = await getLiFiTokenByAddress(candidate.chainId, candidate.address);
             const asset = identities.get(`${candidate.chainId}:${candidate.address ?? "native"}`);
             if (asset) { token.marketCapUSD = asset.marketCap; token.marketSource = rankingSource; }
             tokens[candidate.chainId] = uniqueTokens([...tokens[candidate.chainId], token]);
+            break;
           } catch (error) {
-            if (error instanceof SecurityProviderError && error.reason === "rate_limited") {
-              retry = true; await new Promise(resolve => setTimeout(resolve, 60_000));
-            }
+            if (!(error instanceof SecurityProviderError && error.reason === "rate_limited") || retry === 2) break;
+            // Bounded read-only retry after quota windows; never an emission retry.
+            await new Promise(resolve => setTimeout(resolve, 60_000 + Math.floor(Math.random() * 5000)));
           }
         }
       }
-    })).finally(() => { result.enriching = false; });
+    })).finally(() => {
+      result.enriching = false;
+      if (missingIndex < candidates.length) result.failures.push({ provider: "lifi", chainId: 0, reason: "enrichment_incomplete" });
+    });
     cache = { config, expiresAt: Date.now() + 60_000, result }; return result;
   })().finally(() => { pending = undefined; });
   pending = { config, promise }; return promise;

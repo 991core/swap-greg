@@ -1,5 +1,5 @@
 import "server-only";
-import { ChainType, createClient, getToken, getTokens } from "@lifi/sdk";
+import { ApiBoundaryError, readBoundedText, observeApiCache, reserveLifiUpstream } from "../server/api";
 import { SEARCH_LIMITS, TOKEN_CACHE_TTL_MS, TokenSearchError, type TokenSearchResult } from "./types";
 import { looksLikeAddress, uniqueTokens, validateToken, type TokenSearchInput } from "./validation";
 import { sortTokenResults } from "./ranking";
@@ -10,13 +10,25 @@ const cache = new Map<string, { expiresAt: number; result: TokenSearchResult }>(
 const pending = new Map<string, Promise<TokenSearchResult>>();
 let windowStart = 0;
 let requestsInWindow = 0;
-let client: ReturnType<typeof createClient> | undefined;
 
-function getClient() {
-  return client ??= createClient({
-    integrator: "hermes-hms", apiKey: process.env.LIFI_API_KEY || undefined, preloadChains: false,
-    requestInterceptor: (options) => ({ ...options, cache: "no-store", retries: 0 }),
-  });
+
+/** Same fixed endpoints/parameters as SDK 4.7 actions, with byte bounds before JSON. */
+async function requestTokens(input: TokenSearchInput, exact: boolean): Promise<unknown> {
+  const url = new URL(exact ? "https://li.quest/v1/token" : "https://li.quest/v1/tokens");
+  url.search = new URLSearchParams(exact ? { chain: String(input.chainId), token: input.query } : {
+    chains: String(input.chainId), chainTypes: "EVM", extended: "true", minPriceUSD: "0",
+    orderBy: "volumeUSD24H", limit: String(input.limit + 1), ...(input.query ? { search: input.query } : {}),
+  }).toString();
+  const signal = AbortSignal.timeout(8000);
+  reserveLifiUpstream();
+  const response = await fetch(url.href, { cache: "no-store", redirect: "error", signal,
+    headers: { "x-lifi-integrator": "hermes-hms", ...(process.env.LIFI_API_KEY ? { "x-lifi-api-key": process.env.LIFI_API_KEY } : {}) } });
+  if (!response.ok) {
+    void response.body?.cancel();
+    if (exact && response.status === 404) return undefined;
+    throw new TokenSearchError(response.status === 429 ? "rate_limited" : "tokens_unavailable", response.status === 429 ? 429 : 503);
+  }
+  return JSON.parse(await readBoundedText(response, 2 * 1024 * 1024, { upstream: true, signal, timeoutMs: 8000 }));
 }
 
 function reserveRequest() {
@@ -38,17 +50,16 @@ async function load(input: TokenSearchInput): Promise<TokenSearchResult> {
   const exact = looksLikeAddress(query);
   let raw: unknown[];
   try {
-    const options = { signal: AbortSignal.timeout(8_000) };
-    if (exact) raw = [await getToken(getClient(), chainId, query, options)];
+    const result = await requestTokens(input, exact);
+    if (exact) raw = result === undefined ? [] : [result];
     else {
-      const result = await getTokens(getClient(), {
-        chains: [chainId], chainTypes: [ChainType.EVM], extended: true, minPriceUSD: 0,
-        orderBy: "volumeUSD24H", limit: limit + 1, ...(query ? { search: query } : {}),
-      }, options);
-      if (!Array.isArray(result.tokens?.[chainId])) throw new TokenSearchError("tokens_unavailable");
-      raw = result.tokens[chainId];
+      if (!result || typeof result !== "object" || !("tokens" in result) || !result.tokens || typeof result.tokens !== "object") throw new TokenSearchError("tokens_unavailable");
+      const rows = (result.tokens as Record<number, unknown>)[chainId];
+      if (!Array.isArray(rows) || rows.length > 10_000) throw new TokenSearchError("tokens_unavailable");
+      raw = rows;
     }
   } catch (error) {
+    if (error instanceof ApiBoundaryError && error.status === 429) throw new TokenSearchError("rate_limited", 429);
     if (exact && upstreamStatus(error) === 404) raw = [];
     else throw new TokenSearchError(upstreamStatus(error) === 429 ? "rate_limited" : "tokens_unavailable", upstreamStatus(error) === 429 ? 429 : 503);
   }
@@ -64,7 +75,8 @@ async function load(input: TokenSearchInput): Promise<TokenSearchResult> {
 export async function searchTokensOnServer(input: TokenSearchInput): Promise<TokenSearchResult> {
   const key = `${input.chainId}:${input.query}:${looksLikeAddress(input.query) ? 1 : input.limit}`;
   const existing = cache.get(key);
-  if (!input.fresh && existing && existing.expiresAt > Date.now()) return existing.result;
+  if (!input.fresh && existing && existing.expiresAt > Date.now()) { observeApiCache("tokens.search", true); return existing.result; }
+  observeApiCache("tokens.search", false);
   const running = pending.get(key);
   if (running) return running;
   reserveRequest();

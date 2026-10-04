@@ -1,35 +1,25 @@
 import { NextResponse } from "next/server";
+import { ApiBoundaryError, readApiJson, serverCanPrepareExecution, withApiGuard } from "@/lib/server/api";
 import { RangoApiError, requestRangoOnServer } from "@/lib/aggregators/rango/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export async function POST(request: Request, { params }: { params: Promise<{ operation: string }> }) {
+export async function POST(request: Request, context: { params: Promise<{ operation: string }> }) {
+  const { operation } = await context.params;
+  return withApiGuard(`rango.${operation}`, request, () => handle(request, operation));
+}
+async function handle(request: Request, operation: string) {
   const headers = { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" };
   try {
-    const origin = request.headers.get("origin");
-    if (origin) {
-      const target = new URL(request.url);
-      // Next may use an internal localhost URL. Compare the actual HTTP Host,
-      // retaining protocol/port checks (TLS proxies provide forwarded-proto).
-      const host = request.headers.get("host") ?? target.host;
-      const protocol = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim() ?? target.protocol.slice(0, -1);
-      let source: URL;
-      try { source = new URL(origin); } catch { throw new RangoApiError(403, "Invalid origin."); }
-      if (source.host.toLowerCase() !== host.toLowerCase() || source.protocol !== `${protocol}:` || !["http", "https"].includes(protocol)) throw new RangoApiError(403, "Cross-origin request rejected.");
-    }
-    if (!request.headers.get("content-type")?.startsWith("application/json")) throw new RangoApiError(415, "JSON required.");
-    if (Number(request.headers.get("content-length")) > 4096) throw new RangoApiError(413, "Request too large.");
-    const text = await request.text();
-    if (text.length > 4096) throw new RangoApiError(413, "Request too large.");
-    let body: unknown;
-    try { body = JSON.parse(text); } catch { throw new RangoApiError(400, "Invalid JSON."); }
+    if (operation === "swap" && !serverCanPrepareExecution()) throw new RangoApiError(403, "New execution preparation is disabled.");
+    const body = await readApiJson(request);
     if (!body || typeof body !== "object" || Array.isArray(body)) throw new RangoApiError(400, "Invalid request.");
-    const { operation } = await params;
     return NextResponse.json(await requestRangoOnServer(operation, body as Record<string, unknown>, request.signal), { headers });
   } catch (error) {
-    const known = error instanceof RangoApiError ? error : new RangoApiError(502, "Rango is unavailable.");
+    const known = error instanceof ApiBoundaryError ? new RangoApiError(error.status, error.code) : error instanceof RangoApiError ? error : new RangoApiError(502, "Rango is unavailable.");
     return NextResponse.json({ error: known.message }, { status: known.status, headers: {
       ...headers, ...(known.status === 429 ? { "Retry-After": "60" } : {}),
+      ...(known.message === "Rango fee configuration is incomplete." ? { "X-Hermes-Error-Code": "provider_configuration" } : {}),
     } });
   }
 }

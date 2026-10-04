@@ -1,20 +1,34 @@
 // @vitest-environment node
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
-vi.mock("@lifi/sdk", () => ({ ChainType: { EVM: "EVM" }, createClient: vi.fn(() => ({})), getToken: vi.fn(), getTokens: vi.fn() }));
-import { createClient, getToken, getTokens } from "@lifi/sdk";
+const getToken = vi.fn(); const getTokens = vi.fn(); const fetchMock = vi.fn();
 import { fromToken, toToken } from "./fixtures";
 import { APP_CHAINS } from "../lib/chains";
 import { POPULAR_TOKEN_LIMIT } from "../lib/tokens/types";
 let GET: typeof import("../app/api/tokens/search/route").GET;
 const request = (query = "", chainId = 8453, extra = "") => GET(new Request("http://localhost/api/tokens/search?chainId=" + chainId + "&query=" + encodeURIComponent(query) + extra));
 beforeEach(async () => {
-  vi.resetModules(); vi.mocked(getToken).mockReset(); vi.mocked(getTokens).mockReset(); vi.mocked(createClient).mockClear();
+  vi.resetModules(); vi.mocked(getToken).mockReset(); vi.mocked(getTokens).mockReset(); fetchMock.mockReset();
   vi.stubEnv("TOKEN_SEARCH_REQUESTS_PER_MINUTE", "60");
+  vi.stubGlobal("fetch", fetchMock);
+  fetchMock.mockImplementation(async (href: string, init: RequestInit) => {
+    const url = new URL(href);
+    try {
+      const data = url.pathname === "/v1/token" ? await getToken({}, Number(url.searchParams.get("chain")), url.searchParams.get("token"), { signal: init.signal }) : await getTokens({}, {
+        chains: [Number(url.searchParams.get("chains"))], chainTypes: ["EVM"], extended: true, minPriceUSD: 0,
+        orderBy: url.searchParams.get("orderBy"), limit: Number(url.searchParams.get("limit")), ...(url.searchParams.has("search") ? { search: url.searchParams.get("search") } : {}),
+      }, { signal: init.signal });
+      return Response.json(data);
+    } catch (error) {
+      const status = (error as { cause?: { status?: number } }).cause?.status;
+      if (status) return new Response("private upstream diagnostic", { status });
+      throw error;
+    }
+  });
   vi.mocked(getToken).mockResolvedValue(fromToken);
   vi.mocked(getTokens).mockResolvedValue({ tokens: { 8453: [fromToken], 1: [toToken] } });
   ({ GET } = await import("../app/api/tokens/search/route"));
 });
-afterEach(() => vi.unstubAllEnvs());
+afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); });
 
 describe("token search API", () => {
   it.each(APP_CHAINS.map(chain => chain.id))("returns up to 100 valid LI.FI assets in stable discovery order on chain %s", async chainId => {
@@ -82,7 +96,7 @@ describe("token search API", () => {
     let finish!: (value: { tokens: { 8453: typeof fromToken[] } }) => void;
     vi.mocked(getTokens).mockImplementation(() => new Promise((resolve) => { finish = resolve; }));
     const first = request("same"); const second = request("same");
-    expect(getTokens).toHaveBeenCalledOnce();
+    await Promise.resolve(); expect(getTokens).toHaveBeenCalledOnce();
     finish({ tokens: { 8453: [fromToken] } });
     expect((await first).status).toBe(200); expect((await second).status).toBe(200);
   });
@@ -136,7 +150,7 @@ describe("token search API", () => {
     vi.stubEnv("LIFI_API_KEY", "test-private-token-key");
     vi.mocked(getToken).mockResolvedValue({ ...fromToken, riskAcknowledged: true, logoURI: "javascript:alert(1)", verificationStatus: undefined } as never);
     const data = await (await request(fromToken.address)).json();
-    expect(createClient).toHaveBeenCalledWith(expect.objectContaining({ apiKey: "test-private-token-key", preloadChains: false }));
+    expect(fetchMock.mock.calls[0][1].headers).toMatchObject({ "x-lifi-api-key": "test-private-token-key" });
     expect(data.tokens[0]).not.toHaveProperty("riskAcknowledged"); expect(data.tokens[0]).not.toHaveProperty("logoURI");
     expect(data.tokens[0].verificationStatus).toBe("unverified"); expect(JSON.stringify(data)).not.toContain("test-private-token-key");
   });

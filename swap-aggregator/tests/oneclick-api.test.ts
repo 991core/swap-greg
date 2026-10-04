@@ -22,7 +22,7 @@ async function status(data: unknown, query = `depositAddress=${deposit}`, header
   return GET(new Request(`http://localhost/api/oneclick/status?${query}`, { headers }));
 }
 beforeEach(() => {
-  vi.resetModules(); vi.stubEnv("NEXT_PUBLIC_PLATFORM_FEE_PERCENT", "0"); vi.stubEnv("NEAR_1CLICK_API_KEY", "private-test-key");
+  vi.resetModules(); vi.stubEnv("NEXT_PUBLIC_RELEASE_MODE", "enabled"); vi.stubEnv("NEXT_PUBLIC_PLATFORM_FEE_PERCENT", "0"); vi.stubEnv("NEAR_1CLICK_API_KEY", "private-test-key");
   mutate = value => value; fetchMock.mockReset(); vi.stubGlobal("fetch", fetchMock);
   fetchMock.mockImplementation(async (url: string, init?: RequestInit) => url.endsWith("/tokens") ? Response.json([origin, destination]) : Response.json(mutate(proof(JSON.parse(String(init?.body))))));
 });
@@ -72,6 +72,7 @@ describe("1Click quote server boundary", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
   it("accepts trusted public host/protocol and rejects a different origin port", async () => {
+    vi.stubEnv("HERMES_PUBLIC_ORIGIN", "https://hermes.example");
     expect((await quote(input, { host: "hermes.example", "x-forwarded-proto": "https", origin: "https://hermes.example" })).status).toBe(200);
     expect((await quote(input, { host: "localhost:3000", origin: "http://localhost:3001" })).status).toBe(403);
   });

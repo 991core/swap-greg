@@ -108,7 +108,7 @@ describe("quote lifetime", () => {
     const hook = renderHook(() => useSwapQuotes(params));
     await act(() => vi.advanceTimersByTimeAsync(30_500));
     expect(hook.result.current.expired).toBe(true);
-    expect(hook.result.current.error).toBe("upstream offline");
+    expect(hook.result.current.error).toBe("route_search_failed");
     expect(hook.result.current.retryAt).toBe(Date.now() + QUOTE_RETRY_MS);
     await act(() => vi.advanceTimersByTimeAsync(QUOTE_RETRY_MS - 1));
     expect(fetchQuotes).toHaveBeenCalledTimes(2);

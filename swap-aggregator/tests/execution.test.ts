@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-vi.mock("../lib/security/client", async original => ({ ...await original<typeof import("../lib/security/client")>(), authorizeSwapIntent: vi.fn(async () => {}), createTransactionAuthorizer: vi.fn(() => vi.fn(async () => {})) }));
 vi.mock("../lib/wallet", () => ({ walletConfig: {} }));
 vi.mock("wagmi/actions", () => ({ getAccount: vi.fn(), getBalance: vi.fn(), readContract: vi.fn(), switchChain: vi.fn() }));
 vi.mock("../lib/aggregators/lifi/execute", () => ({ executeLifiRoute: vi.fn() }));
@@ -12,6 +11,8 @@ import { fromToken, params, quote, wallet } from "./fixtures";
 import type { AppToken } from "../lib/tokens/types";
 import { getCatalogToken } from "../lib/tokens/catalog";
 import { rememberTokenVerdicts } from "../lib/tokens/verdicts";
+import { authorizeSwapIntent, createTransactionAuthorizer } from "../lib/security/client";
+vi.mock("../lib/security/client", () => ({ authorizeSwapIntent: vi.fn(() => { throw new Error("retired registry gate"); }), createTransactionAuthorizer: vi.fn(() => { throw new Error("retired router gate"); }), resetRegistryForTests: vi.fn() }));
 const remoteAddress = "0x2222222222222222222222222222222222222222";
 const remoteParams = { ...params, fromTokenAddress: remoteAddress, toTokenAddress: remoteAddress };
 function remoteQuote() {
@@ -22,6 +23,13 @@ function remoteQuote() {
   } };
 }
 function executeSwapQuote(route: ReturnType<typeof quote>, input: typeof params, hook: () => void, selection: { fromToken: AppToken; toToken: AppToken } = { fromToken: route.raw.fromToken, toToken: route.raw.toToken }) {
+  // These tests vary token metadata in the quoted route. Keep the SDK step
+  // identity internally coherent so they reach the intended preflight check.
+  route.raw.steps[0].action.fromToken = route.raw.fromToken;
+  route.raw.steps[0].action.toToken = route.raw.toToken;
+  route.raw.steps[0].action.fromAmount = route.raw.fromAmount;
+  route.raw.steps[0].action.fromAddress = route.raw.fromAddress!;
+  route.raw.steps[0].action.toAddress = route.raw.toAddress!;
   return execute(route, input, hook, selection);
 }
 function account(address: string = wallet, chainId = 8453) { vi.mocked(getAccount).mockReturnValue({ isConnected: true, address, chainId } as ReturnType<typeof getAccount>); }
@@ -35,9 +43,11 @@ beforeEach(() => {
 describe("execution preflight", () => {
   it("uses the validated quote and refuses automatic rate changes", async () => {
     const route = quote(); await executeSwapQuote(route, params, vi.fn());
-    expect(executeLifiRoute).toHaveBeenCalledWith(route.raw, expect.objectContaining({ updateRouteHook: expect.any(Function) }), expect.objectContaining({ authorizeTransaction: expect.any(Function), check: expect.any(Function) }));
+    expect(executeLifiRoute).toHaveBeenCalledWith(route.raw, expect.objectContaining({ updateRouteHook: expect.any(Function) }), expect.objectContaining({ check: expect.any(Function) }));
     expect(await vi.mocked(executeLifiRoute).mock.calls[0][1]?.acceptExchangeRateUpdateHook?.({} as never)).toBe(false);
     expect(getTokenDetails).not.toHaveBeenCalled();
+    expect(authorizeSwapIntent).not.toHaveBeenCalled();
+    expect(createTransactionAuthorizer).not.toHaveBeenCalled();
   });
   it("rejects an expired quote before interacting with the wallet", async () => {
     await expect(executeSwapQuote({ ...quote(), expiresAt: 0 }, params, vi.fn())).rejects.toThrow("quote_changed");

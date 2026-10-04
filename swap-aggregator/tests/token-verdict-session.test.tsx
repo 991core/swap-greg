@@ -56,6 +56,7 @@ it("revokes an existing catalogue 1Click selection after observing a flag, closi
   expect(searchTokens).not.toHaveBeenCalled();
   fireEvent.change(screen.getByLabelText("You send"), { target: { value: "1" } });
   await act(() => vi.advanceTimersByTimeAsync(500));
+  fireEvent.click(screen.getByRole("radio"));
   expect(screen.getByRole<HTMLButtonElement>("button", { name: "Swap" }).disabled).toBe(false);
   const signal = vi.mocked(getRoutesForSelection).mock.calls[0][1];
 

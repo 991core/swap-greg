@@ -1,0 +1,85 @@
+npm notice run hermes@0.1.0 npx
+npm notice run 'vitest' run tests/lifi-guard-regressions.test.ts
+
+ RUN  v4.1.11 /home/pierre/Downloads/swap-aggregator/swap-aggregator
+
+ ❯ tests/lifi-guard-regressions.test.ts (3 tests | 3 failed) 32ms
+     × rejects the audited native value before any send 27ms
+     × does not advertise wallet batching to the SDK 3ms
+     × blocks an unlimited approval while preserving finite provider spender choice 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/lifi-guard-regressions.test.ts > LI.FI wallet economic and capability regressions > rejects the audited native value before any send
+AssertionError: promise resolved "'0xabababababababababababababababababa…'" instead of rejecting
+
+- Expected:
+Error {
+  "message": "rejected promise",
+}
+
++ Received:
+"0xabababababababababababababababababababababababababababababababab"
+
+ ❯ tests/lifi-guard-regressions.test.ts:23:149
+     21|   it("rejects the audited native value before any send", async () => {
+     22|     const f = fixture();
+     23|     await expect(f.guard.request({ method: "eth_sendTransaction", para…
+       |                                                                                                                                                     ^
+     24|     expect(f.rpc.mock.calls.filter(c => c[0].method === "eth_sendTrans…
+     25|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  tests/lifi-guard-regressions.test.ts > LI.FI wallet economic and capability regressions > does not advertise wallet batching to the SDK
+AssertionError: expected { Object (0x1) } to deeply equal {}
+
+- Expected
++ Received
+
+- {}
++ {
++   "0x1": {
++     "atomic": {
++       "status": "supported",
++     },
++   },
++ }
+
+ ❯ tests/lifi-guard-regressions.test.ts:28:100
+     26|   it("does not advertise wallet batching to the SDK", async () => {
+     27|     const f = fixture();
+     28|     expect(await f.guard.request({ method: "wallet_getCapabilities", p…
+       |                                                                                                    ^
+     29|     expect(f.rpc.mock.calls.filter(c => c[0].method === "wallet_getCap…
+     30|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  tests/lifi-guard-regressions.test.ts > LI.FI wallet economic and capability regressions > blocks an unlimited approval while preserving finite provider spender choice
+AssertionError: promise resolved "'0xabababababababababababababababababa…'" instead of rejecting
+
+- Expected:
+Error {
+  "message": "rejected promise",
+}
+
++ Received:
+"0xabababababababababababababababababababababababababababababababab"
+
+ ❯ tests/lifi-guard-regressions.test.ts:34:115
+     32|     const f = fixture(target);
+     33|     const data = encodeFunctionData({ abi: erc20Abi, functionName: "ap…
+     34|     await expect(f.guard.request({ method: "eth_sendTransaction", para…
+       |                                                                                                                   ^
+     35|     expect(f.rpc.mock.calls.filter(c => c[0].method === "eth_sendTrans…
+     36|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  3 failed (3)
+   Start at  14:53:44
+   Duration  896ms (transform 69ms, setup 327ms, import 19ms, tests 32ms, environment 426ms)
+

@@ -1,0 +1,11 @@
+npm notice run hermes@0.1.0 npx
+npm notice run 'vitest' run tests/intent-tracking.test.ts tests/intent-journal.test.ts tests/journal-provider-boundaries.test.ts tests/oneclick.test.ts tests/rango-execution.test.ts
+
+ RUN  v4.1.11 /home/pierre/Downloads/swap-aggregator/swap-aggregator
+
+
+ Test Files  5 passed (5)
+      Tests  106 passed (106)
+   Start at  15:15:16
+   Duration  1.79s (transform 242ms, setup 1.21s, import 226ms, tests 170ms, environment 1.05s)
+

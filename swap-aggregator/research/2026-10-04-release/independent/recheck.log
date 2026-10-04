@@ -1,0 +1,11 @@
+npm notice run hermes@0.1.0 test
+npm notice run vitest run tests/intent-tracking.test.ts tests/intent-journal.test.ts tests/journal-provider-boundaries.test.ts tests/lifi-guard-regressions.test.ts tests/lifi-policy.test.ts tests/lifi-tracking.test.ts tests/lifi-allowance-contract.test.ts tests/oneclick.test.ts tests/rango-execution.test.ts tests/quotes.test.tsx tests/swap-refresh.test.tsx
+
+ RUN  v4.1.11 /home/pierre/Downloads/swap-aggregator/swap-aggregator
+
+
+ Test Files  11 passed (11)
+      Tests  184 passed (184)
+   Start at  15:09:59
+   Duration  3.52s (transform 350ms, setup 2.57s, import 486ms, tests 896ms, environment 2.31s)
+

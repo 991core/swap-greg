@@ -1,0 +1,11 @@
+npm notice run hermes@0.1.0 test
+npm notice run vitest run tests/intent-tracking.test.ts tests/intent-journal.test.ts tests/journal-provider-boundaries.test.ts tests/lifi-guard-regressions.test.ts tests/lifi-policy.test.ts tests/lifi-tracking.test.ts tests/lifi-allowance-contract.test.ts tests/oneclick.test.ts tests/rango-execution.test.ts tests/quotes.test.tsx tests/swap-refresh.test.tsx tests/security-wallet.test.ts tests/rango-api.test.ts tests/api-boundary.test.ts tests/release-api.test.ts tests/route-presentation.test.tsx tests/rango-routes.test.ts tests/rango-transport.test.ts tests/oneclick-api.test.ts tests/oneclick-tracking.test.ts tests/execution.test.ts
+
+ RUN  v4.1.11 /home/pierre/Downloads/swap-aggregator/swap-aggregator
+
+
+ Test Files  21 passed (21)
+      Tests  408 passed (408)
+   Start at  15:18:34
+   Duration  6.22s (transform 441ms, setup 4.85s, import 782ms, tests 1.55s, environment 3.53s)
+

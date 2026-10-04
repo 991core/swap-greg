@@ -8,9 +8,18 @@ import { QUOTE_RETRY_MS } from "./config";
 
 type QuoteState = {
   key: string | null; routes: NormalizedRoute[]; loading: boolean; error: string | null;
-  expired: boolean; expiresAt: number | null; retryAt: number | null; waiting: boolean;
+  expired: boolean; expiresAt: number | null; retryAt: number | null; waiting: boolean; partial: boolean; partialReason: string | null;
 };
-const empty: QuoteState = { key: null, routes: [], loading: false, error: null, expired: false, expiresAt: null, retryAt: null, waiting: false };
+const empty: QuoteState = { key: null, routes: [], loading: false, error: null, expired: false, expiresAt: null, retryAt: null, waiting: false, partial: false, partialReason: null };
+
+function publicQuoteError(error: unknown): "route_rate_limited" | "route_configuration_failed" | "route_search_failed" {
+  const value = error && typeof error === "object" ? error as { failure?: unknown; status?: unknown; cause?: { status?: unknown }; message?: unknown } : {};
+  if (value.failure === "quota") return "route_rate_limited";
+  if (value.failure === "configuration") return "route_configuration_failed";
+  if (value.status === 429 || value.cause?.status === 429) return "route_rate_limited";
+  if (typeof value.message === "string" && /configuration|not configured/i.test(value.message)) return "route_configuration_failed";
+  return "route_search_failed";
+}
 
 export function useSwapQuotes(params: RouteSelectionParams | null, enabled = true) {
   const key = params ? quoteKey(params) + JSON.stringify([params.providers?.lifi ?? true, params.providers?.rango ?? true, params.providers?.socket ?? false, params.providers?.oneclick ?? false]) : null;
@@ -46,25 +55,28 @@ export function useSwapQuotes(params: RouteSelectionParams | null, enabled = tru
       setState((old) => ({ ...old, loading: true, error: null, retryAt: null, waiting: false,
         expired: old.expiresAt !== null && old.expiresAt <= Date.now() }));
       try {
-        const routes = await getRoutesForSelection(request, controller.signal, undefined, (partial) => {
-          if (controller.signal.aborted || !partial.length) return;
+        let partial = false; let partialReason: string | null = null;
+        const routes = await getRoutesForSelection(request, controller.signal, (warning) => {
+          partial = true; partialReason = warning.message === "quota" ? "route_rate_limited" : warning.message === "configuration" ? "route_configuration_failed" : "route_search_partial";
+        }, (received) => {
+          if (controller.signal.aborted || !received.length) return;
           // Show fast providers immediately. Execution stays disabled until the
           // current search completes; no stale results can enter a new request.
-          setState((old) => ({ ...old, key, routes: partial, loading: true, expired: false,
-            expiresAt: Math.min(...partial.map((route) => route.expiresAt)) }));
+          setState((old) => ({ ...old, key, routes: received, loading: true, expired: false,
+            expiresAt: Math.min(...received.map((route) => route.expiresAt)) }));
         });
         if (controller.signal.aborted) return;
         const expiresAt = routes.length ? Math.min(...routes.map((route) => route.expiresAt)) : null;
         if (expiresAt !== null && (!Number.isFinite(expiresAt) || expiresAt <= Date.now())) throw new Error("Quote expired during refresh.");
         const retryAt = expiresAt === null ? Date.now() + QUOTE_RETRY_MS : null;
-        setState({ key, routes, loading: false, error: null, expired: false, expiresAt, retryAt, waiting: false });
+        setState({ key, routes, loading: false, error: null, expired: false, expiresAt, retryAt, waiting: false, partial, partialReason });
         schedule(expiresAt ?? retryAt!);
       } catch (error) {
         if (controller.signal.aborted) return;
         logQuoteFailure(error, { event: "refresh_failed", fromChainId: request.fromChainId, toChainId: request.toChainId });
         const retryAt = Date.now() + QUOTE_RETRY_MS;
         setState((old) => ({ ...old, loading: false, expired: true, retryAt,
-          error: error instanceof Error ? error.message : String(error) }));
+          error: publicQuoteError(error) }));
         schedule(retryAt);
       } finally { inFlight = false; }
     };

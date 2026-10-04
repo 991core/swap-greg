@@ -1,7 +1,7 @@
 "use client";
 
 import type { RouteExtended } from "@lifi/sdk";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { useAccount, useBalance, useReadContract } from "wagmi";
 import { erc20Abi, type Address } from "viem";
@@ -37,7 +37,9 @@ import { readPendingOneClick, updatePendingOneClick, isActiveOneClick } from "@/
 import { isObservedTokenFlagged, subscribeTokenVerdicts, tokenVerdictsSnapshot, serverTokenVerdictsSnapshot } from "@/lib/tokens/verdicts";
 import { preloadPopularTokens } from "@/lib/tokens/popular";
 import { marketUniverseSnapshot } from "@/lib/tokens/market-universe";
-import { isRegistryToken, preloadTrustedRegistry, registrySnapshot, serverRegistrySnapshot, subscribeRegistry } from "@/lib/security/client";
+import { RELEASE_MODE, canExecuteNewSwap } from "@/lib/release-mode";
+import { exportIntentJournal, intentNeedsReconciliation, migrateLegacyIntents, readIntentJournal, reconcileSourceHash, updateIntentTracking, type IntentRecord } from "@/lib/intent/journal";
+import { trackIntentRecord } from "@/lib/intent/tracking";
 type Side = "from" | "to";
 function TokenSelector({ token, onClick }: { token: AppToken | null; onClick: () => void }) {
   const { translate } = useI18n();
@@ -52,7 +54,6 @@ export function SwapCard({ onConnect }: { onConnect?: () => void } = {}) {
   const { address, isConnected } = useAccount();
   const { translate, lang } = useI18n();
   useSyncExternalStore(subscribeTokenVerdicts, tokenVerdictsSnapshot, serverTokenVerdictsSnapshot);
-  const registry = useSyncExternalStore(subscribeRegistry, registrySnapshot, serverRegistrySnapshot);
   const [fromChainId, setFromChainId] = useState(8453);
   const [toChainId, setToChainId] = useState(1);
   const [fromToken, setFromToken] = useState<AppToken | null>(() => getPopularTokens(8453)[0]);
@@ -69,6 +70,10 @@ export function SwapCard({ onConnect }: { onConnect?: () => void } = {}) {
   const [oneClickTokens, setOneClickTokens] = useState<Record<number, AppToken[]>>({});
   const activeOneClick = isActiveOneClick(pendingOneClick);
   const [success, setSuccess] = useState(false);
+  const [intents, setIntents] = useState<IntentRecord[]>([]);
+  const [journalReady, setJournalReady] = useState(false);
+  const [recoveryHash, setRecoveryHash] = useState<Record<string, string>>({});
+  const [trackingId, setTrackingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [modalSide, setModalSide] = useState<Side | null>(null);
   const [priceLookup, setPriceLookup] = useState<Record<string, number>>({});
@@ -77,6 +82,11 @@ export function SwapCard({ onConnect }: { onConnect?: () => void } = {}) {
   const [fx, setFx] = useState<FxRate | null>(null);
   const currency = currencyPreference === "EUR" && fx ? "EUR" : "USD";
   const currencyValue = (value: number | null) => formatCurrencyValue(value, currency, fx?.rate, lang);
+  const refreshJournal = useCallback(() => {
+    try { migrateLegacyIntents(); setIntents(readIntentJournal()); setJournalReady(true); }
+    catch { setJournalReady(false); }
+  }, []);
+  const journalBlocked = !journalReady || intents.some(intent => (intent.wallet === null || intent.wallet.toLowerCase() === address?.toLowerCase()) && intentNeedsReconciliation(intent));
 
   const isNative = Boolean(fromToken && /^0x0{40}$/i.test(fromToken.address));
   const nativeBalance = useBalance({ address, chainId: fromChainId, query: { enabled: Boolean(address && fromToken), refetchInterval: 15_000 } });
@@ -90,17 +100,25 @@ export function SwapCard({ onConnect }: { onConnect?: () => void } = {}) {
   const params: RouteSelectionParams | null = fromToken && toToken && parsed && parsed !== "0" && !sameToken && !blockedSelection && (providers.lifi || providers.rango || providers.oneclick)
     ? { fromChainId, toChainId, fromTokenAddress: fromToken.address, toTokenAddress: toToken.address, fromAmount: parsed, fromAddress: isConnected && address ? address : "", providers, fromToken, toToken, fromTokenDecimals: fromToken.decimals, toTokenDecimals: toToken.decimals } : null;
   const quotes = useSwapQuotes(params, !swapping && !pendingRango && !activeOneClick);
-  const selectedRoute = quotes.routes.find((route) => route.id === selectedId) ?? quotes.routes[0] ?? null;
+  const selectedRoute = quotes.routes.find((route) => route.id === selectedId) ?? null;
   const insufficientBalance = Boolean(parsed && sourceBalance !== undefined && BigInt(parsed) > sourceBalance);
   const insufficientGas = Boolean(selectedRoute && nativeBalance.data && (nativeBalance.data.value < sourceGasAmount(selectedRoute) + (isNative && parsed ? BigInt(parsed) : BigInt(0)) || nativeBalance.data.value === BigInt(0)));
   const balanceReady = sourceBalance !== undefined && nativeBalance.data !== undefined;
-  const registryApproved = isRegistryToken(registry, fromToken) && isRegistryToken(registry, toToken);
-  const canSwap = registryApproved && registry.executionConfigured === true && isConnected && !swapping && !pendingRango && !activeOneClick && !quotes.loading && !quotes.expired && balanceReady && !insufficientBalance && !insufficientGas && canExecuteQuote(selectedRoute, params);
+  const canSwap = canExecuteNewSwap() && !journalBlocked && isConnected && !swapping && !pendingRango && !activeOneClick && !quotes.loading && !quotes.expired && balanceReady && !insufficientBalance && !insufficientGas && canExecuteQuote(selectedRoute, params);
   const receivePreview = selectedRoute && toToken ? quoteAmount(selectedRoute.toAmount, toToken.decimals).short : "";
-  const price = (token: AppToken | null) => token ? priceLookup[getPriceLookupKey(token)] ?? Number(token.priceUSD ?? 0) : 0;
+  const price = (token: AppToken | null) => token ? priceLookup[getPriceLookupKey(token)] ?? 0 : 0;
   const inputValue = parsed && fromToken && price(fromToken) > 0 ? Number(formatTokenAmount(parsed, fromToken.decimals, fromToken.decimals)) * price(fromToken) : null;
   const outputValue = receivePreview && price(toToken) > 0 ? Number(receivePreview) * price(toToken) : null;
 
+  useEffect(() => {
+    if (quotes.loading) setSelectedId(null);
+  }, [quotes.loading]);
+  useEffect(() => {
+    refreshJournal();
+    const onStorage = () => refreshJournal();
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, [refreshJournal]);
   useEffect(() => {
     setCurrencySlot(document.getElementById("hermes-currency-slot"));
     try { setPendingRango(readPendingRango(localStorage.getItem(PENDING_RANGO_KEY))); } catch { /* Storage can be disabled. */ }
@@ -108,7 +126,6 @@ export function SwapCard({ onConnect }: { onConnect?: () => void } = {}) {
   }, []);
   useEffect(() => {
     const controller = new AbortController();
-    void preloadTrustedRegistry();
     void preloadPopularTokens(APP_CHAIN_IDS, controller.signal);
     let lastRefresh = Date.now();
     const timer = setInterval(() => {
@@ -132,18 +149,22 @@ export function SwapCard({ onConnect }: { onConnect?: () => void } = {}) {
     }
     setPendingRango(pending);
   }
-  function finishRango(result: RangoExecution) {
+  async function finishRango(result: RangoExecution) {
     if (result.status === "pending") savePending(result);
     else {
-      savePending(null); setSuccess(result.status === "success");
+      if (result.journalId) await updateIntentTracking(result.journalId, result.status === "success" ? "delivered" : result.outcome ?? "intervention_required", result.evidence ?? { reason: "provider_status_unverified" });
+      if (result.status === "success") savePending(null);
+      else savePending(result);
+      setSuccess(result.status === "success");
       setRangoProgress({ stage: result.status === "success" ? "complete" : "failed", txHash: result.txHash, txLink: result.txHash ? transactionLink(result.chainId, result.txHash) : undefined });
       if (result.status === "failed") setError(result.message ?? translate("swap_exec_error"));
     }
+    refreshJournal();
   }
   async function resumeRango() {
     if (!pendingRango || executionLock.current) return;
     executionLock.current = true; setSwapping(true); setError(null);
-    try { finishRango(await trackRangoTransaction(pendingRango)); }
+    try { await finishRango(await trackRangoTransaction(pendingRango)); }
     finally { executionLock.current = false; setSwapping(false); quotes.refresh(); void nativeBalance.refetch(); if (!isNative) void erc20Balance.refetch(); }
   }
 
@@ -151,7 +172,7 @@ export function SwapCard({ onConnect }: { onConnect?: () => void } = {}) {
     let cancelled = false;
     const load = async () => {
       const updates = await Promise.all([fromToken, toToken].filter((t): t is AppToken => Boolean(t)).map(async (token) => [getPriceLookupKey(token), await fetchTokenPriceUsd(token)] as const));
-      if (!cancelled) setPriceLookup((old) => ({ ...old, ...Object.fromEntries(updates.filter((pair) => pair[1] != null)) } as Record<string, number>));
+      if (!cancelled) setPriceLookup(Object.fromEntries(updates.filter((pair) => pair[1] != null)) as Record<string, number>);
     };
     void load(); const timer = setInterval(() => void load(), 60_000);
     return () => { cancelled = true; clearInterval(timer); };
@@ -196,13 +217,19 @@ export function SwapCard({ onConnect }: { onConnect?: () => void } = {}) {
         const response = await fetch(`/api/oneclick/status?depositAddress=${encodeURIComponent(pendingOneClick.depositAddress)}`, { cache: "no-store" });
         if (!response.ok || cancelled) return;
         const result: unknown = await response.json();
-        if (!cancelled) saveOneClick(updatePendingOneClick(pendingOneClick, result));
+        if (!cancelled) {
+          const updated = updatePendingOneClick(pendingOneClick, result);
+          if (updated.status === "SUCCESS" && updated.version === 1 && updated.journalId && updated.delivery) {
+            await updateIntentTracking(updated.journalId, "delivered", updated.delivery);
+          }
+          saveOneClick(updated); refreshJournal();
+        }
       } catch { /* Retain the transfer record and retry tracking. */ }
       finally { running = false; }
     };
     void poll(); const timer = setInterval(() => void poll(), 8000);
     return () => { cancelled = true; clearInterval(timer); };
-  }, [pendingOneClick, activeOneClick]);
+  }, [pendingOneClick, activeOneClick, refreshJournal]);
 
   function handleSelect(side: Side, chainId: number, token: AppToken) {
     if (executionLock.current) return;
@@ -238,18 +265,49 @@ export function SwapCard({ onConnect }: { onConnect?: () => void } = {}) {
         minimum: formatTokenAmount(quote.minAmountOut, toToken!.decimals, toToken!.decimals), to: toToken!.symbol,
       })) });
       if (!completed || ("provider" in completed && completed.provider === "oneclick")) return;
-      if ("provider" in completed) finishRango(completed);
-      else { setExecution(completed); setSuccess(completed.steps.every((step) => step.execution?.status === "DONE")); }
+      if ("provider" in completed) await finishRango(completed);
+      else { setExecution(completed); setSuccess(completed.hermesDelivery?.state === "delivered"); }
     } catch (cause) {
       setError(cause instanceof SwapValidationError ? translate(cause.key) : cause instanceof Error ? cause.message : translate("swap_exec_error"));
     } finally {
       quotes.refresh(); setSelectedId(null); executionLock.current = false; setSwapping(false);
-      void nativeBalance.refetch(); if (!isNative) void erc20Balance.refetch();
+      refreshJournal(); void nativeBalance.refetch(); if (!isNative) void erc20Balance.refetch();
     }
   }
 
+  function exportRecords() {
+    try {
+      const blob = new Blob([exportIntentJournal()], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url; link.download = `hermes-transfers-${new Date().toISOString().slice(0, 10)}.json`;
+      link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch { setError(translate("journal_reconcile_failed")); }
+  }
+  async function reconcileAction(intentId: string, actionId: string) {
+    const hash = recoveryHash[actionId];
+    if (!hash || !/^0x[\da-f]{64}$/i.test(hash)) { setError(translate("journal_reconcile_failed")); return; }
+    try { await reconcileSourceHash(intentId, actionId, hash as `0x${string}`); refreshJournal(); setError(null); }
+    catch { setError(translate("journal_reconcile_failed")); }
+  }
+  async function trackRecord(intent: IntentRecord) {
+    if (trackingId) return;
+    setTrackingId(intent.id);
+    try {
+      const result = await trackIntentRecord(intent);
+      await updateIntentTracking(intent.id, result.status, result.evidence, undefined, result.providerState);
+      if (result.status === "delivered" && pendingRango?.journalId === intent.id) savePending(null);
+      if (result.providerState && intent.provider === "oneclick") {
+        const restored = readPendingOneClick(JSON.stringify(result.providerState));
+        if (restored) setPendingOneClick(restored);
+      }
+      refreshJournal(); setError(null);
+    } catch { setError(translate("journal_reconcile_failed")); }
+    finally { setTrackingId(null); }
+  }
+
   const actions = execution?.steps.flatMap((step) => step.execution?.actions ?? []) ?? [];
-  const label = !isConnected ? translate("cta_connect_wallet") : activeOneClick ? translate("oneclick_status", { status: pendingOneClick!.status }) : pendingRango ? translate("rango_submitted") : swapping ? translate("cta_executing") : quotes.loading ? translate("cta_searching") : translate("cta_swap");
+  const label = !canExecuteNewSwap() ? translate("quotes_only") : !isConnected ? translate("cta_connect_wallet") : activeOneClick ? translate("oneclick_status", { status: pendingOneClick!.status }) : pendingRango ? translate("rango_submitted") : swapping ? translate("cta_executing") : quotes.loading ? translate("cta_searching") : translate("cta_swap");
   return <>
     {currencySlot && createPortal(<CurrencySwitch value={currency} onChange={changeCurrency} eurAvailable={Boolean(fx)} />, currencySlot)}
     <div className="jumper-swap-widget">
@@ -282,19 +340,19 @@ export function SwapCard({ onConnect }: { onConnect?: () => void } = {}) {
       <details className="jumper-settings"><summary><span aria-hidden="true">⚙</span><span>{translate("slippage_short")} {(SLIPPAGE * 100).toLocaleString(lang)}%</span><span className="jumper-settings-divider">·</span><span>{translate("hermes_fee_short")} {(PLATFORM_FEE * 100).toLocaleString(lang)}%</span><span className="jumper-settings-chevron" aria-hidden="true">⌄</span></summary>
       <dl className="jumper-summary"><div><dt>{translate("platform_fee")}</dt><dd>{(PLATFORM_FEE * 100).toLocaleString(lang)}%</dd></div><div><dt>{translate("slippage_label")}</dt><dd>{SLIPPAGE * 100}%</dd></div></dl><p className="jumper-hint">{translate("route_sort_hint")} {translate("route_estimates")}</p></details>
       {currency === "EUR" && fx && <p className="jumper-hint">{translate("fx_reference", { date: fx.date })}</p>}
-      <button type="button" className="jumper-cta" disabled={isConnected ? !canSwap : !onConnect} onClick={() => isConnected ? void handleSwap() : onConnect?.()}>{label}</button>
+      <button type="button" className="jumper-cta" disabled={!canExecuteNewSwap() || (isConnected ? !canSwap : !onConnect)} onClick={() => isConnected ? void handleSwap() : onConnect?.()}>{label}</button>
       <div aria-live="polite">
-        {registry.status === "error" && <p className="jumper-error">{translate("security_registry_unavailable")}</p>}
-        {registry.status === "ready" && !registryApproved && <p className="jumper-warning">{translate("security_registry_required")}</p>}
-        {registry.status === "ready" && registryApproved && !registry.executionConfigured && <p className="jumper-warning">{translate("security_policy_required")}</p>}
         {amount.trim() && parsed == null && <p className="jumper-error">{translate("amount_invalid")}</p>}
         {sameToken && <p className="jumper-hint">{translate("same_token")}</p>}
         {insufficientBalance && <p className="jumper-warning">{translate("insufficient_balance")}</p>}
         {!insufficientBalance && insufficientGas && <p className="jumper-warning">{translate("insufficient_gas")}</p>}
         {isConnected && params && !balanceReady && <p className="jumper-hint">{translate("balance_unavailable")}</p>}
         {!isConnected && <p className="jumper-hint">{translate("quote_without_wallet")}</p>}
+        {RELEASE_MODE !== "enabled" && <p className="jumper-hint">{translate("quotes_only")}</p>}
+        {RELEASE_MODE === "enabled" && isConnected && params && !selectedRoute && !quotes.loading && quotes.routes.length > 0 && <p className="jumper-hint">{translate("choose_route")}</p>}
         {(blockedSelection || error) && <p className="jumper-error" role="alert">{blockedSelection ? translate("token_blocked") : error}</p>}
         {success && <p className="jumper-success" role="status">{translate("swap_success")}</p>}
+        {execution && !success && <p className="jumper-warning" role="status">{translate("swap_pending_proof")}</p>}
         {error && (execution || rangoProgress?.txHash) && <p className="jumper-warning">{translate("wallet_history")}</p>}
       </div>
       {actions.length > 0 && <div className="jumper-progress"><p>{translate("execution_progress")}</p>{actions.map((action, index) => <div key={index}><span>{action.type} · {action.status}</span>{action.txLink && /^https:\/\//.test(action.txLink) && <a href={action.txLink} target="_blank" rel="noopener noreferrer">{action.txHash?.slice(0, 12) ?? "↗"} ↗</a>}</div>)}</div>}
@@ -305,6 +363,24 @@ export function SwapCard({ onConnect }: { onConnect?: () => void } = {}) {
         {pendingOneClick.hash && <a href={transactionLink(pendingOneClick.fromChainId, pendingOneClick.hash)} target="_blank" rel="noopener noreferrer">{translate("oneclick_source_tx")}</a>}{" "}
         {pendingOneClick.destinationUrl?.startsWith("https://") && <a href={pendingOneClick.destinationUrl} target="_blank" rel="noopener noreferrer">{translate("oneclick_explorer")}</a>}
       </p>}
+      {(intents.length > 0 || !journalReady) && <section className="jumper-progress" aria-label={translate("journal_title")}>
+        <h3>{translate("journal_title")}</h3>
+        {journalBlocked && <p className="jumper-warning">{translate("journal_blocked")}</p>}
+        {intents.map(intent => <div key={intent.id}>
+          <p>{intent.provider.toUpperCase()} · {intent.status.replaceAll("_", " ")} · {new Date(intent.createdAt).toLocaleString(lang)}</p>
+          {intent.actions.some(action => ["swap", "deposit"].includes(action.kind) && action.hash) && intentNeedsReconciliation(intent) &&
+            <button type="button" className="jumper-refresh" disabled={trackingId !== null} onClick={() => void trackRecord(intent)}>{translate("rango_resume")}</button>}
+          {intent.actions.map(action => <div key={action.id}>
+            <p>{action.kind} · {action.status} {action.hash && <code>{action.hash}</code>}</p>
+            {["emitting", "ambiguous"].includes(action.status) && <div>
+              <label htmlFor={`recovery-${action.id}`}>{translate("journal_hash")}</label>
+              <input id={`recovery-${action.id}`} value={recoveryHash[action.id] ?? ""} onChange={event => setRecoveryHash(old => ({ ...old, [action.id]: event.target.value }))} autoComplete="off" spellCheck={false} />
+              <button type="button" className="jumper-refresh" onClick={() => void reconcileAction(intent.id, action.id)}>{translate("journal_reconcile")}</button>
+            </div>}
+          </div>)}
+        </div>)}
+        <button type="button" className="jumper-refresh" onClick={exportRecords}>{translate("journal_export")}</button>
+      </section>}
       {providers.rango && <p className="jumper-test-notice">{translate("rango_test_notice")}</p>}
       </div>
     </div>
@@ -313,7 +389,9 @@ export function SwapCard({ onConnect }: { onConnect?: () => void } = {}) {
         <div className="jumper-routes-tools">{params && <QuoteCountdown compact expiresAt={quotes.expiresAt} retryAt={quotes.retryAt} loading={quotes.loading} waiting={quotes.waiting} suspended={swapping || Boolean(pendingRango) || activeOneClick} />}
         {params && <button type="button" className="jumper-refresh-icon" aria-label={translate("refresh_quotes")} title={translate("refresh_quotes")} disabled={swapping || Boolean(pendingRango) || activeOneClick || quotes.loading} onClick={quotes.refresh}>↻</button>}</div>
       </div>
-      {!quotes.routes.length && !quotes.loading && <div className="jumper-routes-empty"><span aria-hidden="true">⇄</span><p>{translate(params ? "no_routes_hint" : "routes_empty_description")}</p></div>}
+      {quotes.error && <p className="jumper-warning" role="status">{translate(quotes.error as "route_search_failed")}</p>}
+      {quotes.partial && <p className="jumper-warning" role="status">{translate((quotes.partialReason ?? "route_search_partial") as "route_search_partial")}</p>}
+      {!quotes.routes.length && !quotes.loading && !quotes.error && !quotes.partial && <div className="jumper-routes-empty"><span aria-hidden="true">⇄</span><p>{translate(params ? "no_routes_hint" : "routes_empty_description")}</p></div>}
       {quotes.loading && <div role="status" className="jumper-route-loading"><span>{translate(quotes.routes.length ? "route_waiting_others" : "searching_routes")}</span>{!quotes.routes.length && <div className="jumper-route-skeleton" aria-hidden="true"><i /><i /><i /></div>}</div>}
       <RouteList routes={quotes.routes} selectedId={selectedRoute?.id ?? null} onSelect={(route) => setSelectedId(route.id)} toDecimals={toToken?.decimals ?? 18} toSymbol={toToken?.symbol ?? ""} currency={currency} eurRate={fx?.rate ?? null} priceUsd={price(toToken)} disabled={swapping || Boolean(pendingRango) || activeOneClick || quotes.loading || quotes.expired} />
     </aside>

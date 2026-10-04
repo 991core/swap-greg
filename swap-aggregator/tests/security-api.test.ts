@@ -11,10 +11,7 @@ import { GET } from "../app/api/security/registry/route";
 import { readTrustedRegistry } from "../lib/security/registry.server";
 import { readSecurityEvents } from "../lib/security/events.server";
 import { resolveTokenSources } from "../lib/security/resolver.server";
-import { getAccount, getBalance } from "wagmi/actions";
-import { executeLifiRoute } from "../lib/aggregators/lifi/execute";
-import { executeSwapQuote } from "../lib/routing/execute";
-import { quote, params, wallet } from "./fixtures";
+import { wallet } from "./fixtures";
 import type { SecuritySwapIntent } from "../lib/security/quote-validator";
 let directory: string;
 const intent = (): SecuritySwapIntent => ({ provider: "lifi", protocol: "test", fromChainId: 8453, toChainId: 1,
@@ -22,6 +19,7 @@ const intent = (): SecuritySwapIntent => ({ provider: "lifi", protocol: "test", 
   fromTokenDecimals: 18, toTokenDecimals: 18, fromAddress: wallet, receiver: wallet, fromAmount: "1000", toAmount: "1000", minimumAmountOut: "995", expiresAt: Date.now() + 30_000, maxSlippageBps: 50 });
 function request(input: unknown, origin = "http://localhost:3000") { return POST(new Request("http://localhost:3000/api/security/validate", { method: "POST", headers: { "Content-Type": "application/json", Origin: origin }, body: JSON.stringify(input) })); }
 beforeEach(async () => {
+  vi.stubEnv("HERMES_ENABLE_DIAGNOSTIC_API", "true");
   vi.clearAllMocks(); directory = await mkdtemp(path.join(tmpdir(), "hermes-security-api-"));
   vi.stubEnv("TOKEN_REGISTRY_PATH", path.join(directory, "registry.json")); vi.stubEnv("TOKEN_CONFLICT_LOG_PATH", path.join(directory, "events.json"));
   vi.stubEnv("LIFI_ALLOWED_CONTRACTS", "[]"); vi.stubEnv("ALLOWED_APPROVAL_TARGETS", "[]"); vi.stubEnv("ALLOWED_DEPOSIT_RECEIVERS", "[]");
@@ -69,11 +67,8 @@ it("blocks external unanimous fake native contract claims and keeps persistent i
   vi.mocked(resolveTokenSources).mockResolvedValue({ results: [], unavailable: [] });
   expect((await request({ mode: "quote", intent: input, quote: input })).status).toBe(422);
 });
-it("rejects a selected impostor despite consent before balance reads or SDK execution", async () => {
-  vi.mocked(getAccount).mockReturnValue({ isConnected: true, address: wallet, chainId: 8453 } as never);
-  vi.stubGlobal("fetch", vi.fn(async (_url, options) => request(JSON.parse(options.body))));
-  const fakeAddress = "0x1111111111111111111111111111111111111112";
-  const route = quote(); route.fromTokenAddress = fakeAddress; route.raw.fromToken = { ...route.raw.fromToken, address: fakeAddress, riskAcknowledged: true } as never;
-  await expect(executeSwapQuote(route, { ...params, fromTokenAddress: fakeAddress }, vi.fn(), { fromToken: { ...route.raw.fromToken, riskAcknowledged: true }, toToken: route.raw.toToken })).rejects.toThrow("TOKEN_NOT_IN_REGISTRY");
-  expect(getBalance).not.toHaveBeenCalled(); expect(executeLifiRoute).not.toHaveBeenCalled();
+it("the standalone registry endpoint still rejects an unregistered address", async () => {
+  const input = { ...intent(), fromTokenAddress: "0x2222222222222222222222222222222222222222" };
+  const response = await request({ mode: "quote", intent: input, quote: input });
+  expect((await response.json()).error).toBe("TOKEN_NOT_IN_REGISTRY");
 });

@@ -15,10 +15,10 @@ export type RangoTransaction = {
   approveTo: string | null; approveData: string | null;
 };
 export type RangoSwap = RangoQuote & { tx: RangoTransaction | null };
-export type RangoStatus = { status: "running" | "success" | "failed" | null; error: string | null;
+export type RangoStatus = { bridgeData?: unknown; explorerUrl?: Array<{ url: string; description?: string }> | string; diagnosisUrl?: string; status: "running" | "success" | "failed" | null; error: string | null;
   output: { type: string; amount: string; receivedToken: RangoToken } | null };
-export type RangoPending = { provider: "rango"; requestId: string; txHash?: `0x${string}`; chainId: number;
+export type RangoPending = { sourceOutcome?: "rejected" | "not_sent"; journalId?: string; provider: "rango"; requestId: string; txHash?: `0x${string}`; chainId: number;
   account: string; toToken: RangoToken; minimum: string;
   intent?: { version: 1; fromTokenAddress: string; amount: string; transaction: RangoTransaction; submittedAt: number } };
-export type RangoExecution = RangoPending & { status: "success" | "failed" | "pending"; message?: string };
+export type RangoExecution = RangoPending & { status: "success" | "failed" | "pending"; message?: string; outcome?: "destination_pending" | "alternative_output" | "refund_pending" | "intervention_required"; evidence?: RangoStatus };
 export type RangoProgress = { stage: "preparing" | "approval" | "signing" | "tracking" | "complete" | "failed"; txHash?: string; txLink?: string; pending?: RangoPending | null };

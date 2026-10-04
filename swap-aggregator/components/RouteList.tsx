@@ -3,10 +3,12 @@ import type { NormalizedRoute } from "@/lib/types/normalized-route";
 import { formatTokenAmount, formatDuration } from "@/lib/lifi";
 import { useI18n } from "@/lib/i18n";
 import { quoteAmount, quoteFiat } from "@/lib/presentation";
-import { routeFees, routeTokens } from "@/lib/routing/details";
+import { routeFees, routeFeesAreValid, routeTokens } from "@/lib/routing/details";
 import { CHAIN_LABELS } from "@/lib/chains";
 import { TokenIcon } from "./TokenIcon";
 import { ProviderBadge } from "./ProviderBadge";
+import { assertLifiExecutionCapability } from "@/lib/aggregators/lifi/policy";
+import { routeGasIsValid } from "@/lib/routing/quote";
 
 type Props = { routes: NormalizedRoute[]; selectedId: string | null; onSelect: (route: NormalizedRoute) => void; toDecimals: number; toSymbol: string; currency?: "USD" | "EUR"; eurRate?: number | null; priceUsd?: number | null; disabled?: boolean };
 export function RouteList({ routes, selectedId, onSelect, toDecimals, toSymbol, currency = "USD", eurRate = null, priceUsd = null, disabled = false }: Props) {
@@ -19,13 +21,17 @@ export function RouteList({ routes, selectedId, onSelect, toDecimals, toSymbol, 
       const value = priceUsd ? quoteFiat(Number(net.exact) * priceUsd, currency, eurRate, lang) : null;
       const gas = route.gasCostUSD != null ? quoteFiat(Number(route.gasCostUSD), currency, eurRate, lang) : null;
       const minimum = formatTokenAmount(route.toAmountMin, toDecimals, toDecimals);
-      const fees = routeFees(route);
-      const extraFees = fees.some(fee => !fee.included && BigInt(fee.amount) > BigInt(0));
+      const validFees = routeFeesAreValid(route);
+      const validGas = routeGasIsValid(route);
+      let capable = true;
+      if (route.provider === "lifi") { try { assertLifiExecutionCapability(route.raw); } catch { capable = false; } }
+      const fees = validFees ? routeFees(route) : [];
+      const extraFees = validFees && fees.some(fee => !fee.included && BigInt(fee.amount) > BigInt(0));
       const selected = selectedId === route.id;
       return <article key={route.id} className={`jumper-route-card${selected ? " jumper-route-selected" : ""}`}>
         <label className="jumper-route-choice">
           <input type="radio" name="swap-route" aria-label={`${route.provider === "lifi" ? "LI.FI" : route.provider === "oneclick" ? "1Click" : "Rango"} · ${net.exact} ${toSymbol} · ${route.toolLabel}`}
-              checked={selected} onChange={() => onSelect(route)} disabled={disabled} />
+              checked={selected} onChange={() => onSelect(route)} disabled={disabled || !validFees || !validGas || !capable} />
           <span className="jumper-route-provider-row"><ProviderBadge provider={route.provider} /><span className="jumper-route-tool" title={route.toolLabel}>· {route.toolLabel}</span></span>
           <span className="jumper-route-output" title={`${net.exact} ${toSymbol}`}>
             <strong>{net.rounded ? "≈ " : ""}{net.short}</strong><span>{toSymbol}</span>
@@ -37,6 +43,9 @@ export function RouteList({ routes, selectedId, onSelect, toDecimals, toSymbol, 
           <span className="jumper-route-minimum"><span>{translate("minimum_received")}</span><strong>{minimum} {toSymbol}</strong></span>
           {index === 0 && <span className="jumper-route-best">{translate("highest_output")}</span>}
           {extraFees && <span className="jumper-route-extra">{translate("route_extra_fees")}</span>}
+          {!validFees && <span className="jumper-route-extra">{translate("route_invalid_fees")}</span>}
+          {!validGas && <span className="jumper-route-extra">{translate("route_invalid_gas")}</span>}
+          {!capable && <span className="jumper-route-extra">{translate("route_unsupported")}</span>}
         </label>
         <details className="jumper-route-details">
           <summary title={translate("route_details")}><span className="jumper-sr-only">{translate("route_details")}</span><span aria-hidden="true">⌄</span></summary>

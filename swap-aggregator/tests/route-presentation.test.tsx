@@ -4,6 +4,8 @@ import { I18nProvider } from "../lib/i18n";
 import { quoteAmount, quoteFiat } from "../lib/presentation";
 import { RouteList } from "../components/RouteList";
 import { fromToken, quote } from "./fixtures";
+import { canExecuteQuote } from "../lib/routing/quote";
+import { params } from "./fixtures";
 
 it("keeps tiny token amounts non-zero and the exact large integer value available", () => {
   expect(quoteAmount("1", 18)).toEqual({ exact: "0.000000000000000001", short: "0.000000000000000001", rounded: false });
@@ -33,4 +35,39 @@ it("keeps decision amounts visible and expanding details does not select a route
   expect(onSelect).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole("radio"));
   expect(onSelect).toHaveBeenCalledWith(route);
+});
+
+it("keeps other routes visible when a remote fee is malformed and disables only that route", () => {
+  const broken = quote("lifi:broken");
+  broken.raw.steps[0].estimate.feeCosts = [{ name: "Invalid", amount: "oops", token: fromToken, included: false }] as typeof broken.raw.steps[0]["estimate"]["feeCosts"];
+  const good = quote("lifi:good");
+  const select = vi.fn();
+  render(<I18nProvider><RouteList routes={[broken, good]} selectedId={null} onSelect={select} toDecimals={18} toSymbol="ETH" /></I18nProvider>);
+  const radios = screen.getAllByRole<HTMLInputElement>("radio");
+  expect(radios[0].disabled).toBe(true);
+  expect(radios[1].disabled).toBe(false);
+  expect(screen.getByText("Fee details unavailable · route disabled")).toBeTruthy();
+  expect(canExecuteQuote(broken, params)).toBe(false);
+  fireEvent.click(radios[1]); expect(select).toHaveBeenCalledWith(good);
+});
+
+it("shows an incompatible LI.FI route but blocks selection before any wallet request", () => {
+  const unsupported = quote("lifi:two-wallet-steps");
+  unsupported.raw.steps.push(structuredClone(unsupported.raw.steps[0]));
+  render(<I18nProvider><RouteList routes={[unsupported]} selectedId={null} onSelect={vi.fn()} toDecimals={18} toSymbol="ETH" /></I18nProvider>);
+  expect(screen.getByRole<HTMLInputElement>("radio").disabled).toBe(true);
+  expect(screen.getByText("This route needs wallet actions this release does not support")).toBeTruthy();
+  expect(canExecuteQuote(unsupported, params)).toBe(false);
+});
+
+it("does not crash the route list when gas metadata is malformed", () => {
+  const broken = quote("lifi:broken-gas");
+  broken.raw.steps[0].estimate.gasCosts = [{ amount: "1", token: null }] as unknown as typeof broken.raw.steps[0]["estimate"]["gasCosts"];
+  const good = quote("lifi:good-gas");
+  render(<I18nProvider><RouteList routes={[broken, good]} selectedId={null} onSelect={vi.fn()} toDecimals={18} toSymbol="ETH" /></I18nProvider>);
+  const radios = screen.getAllByRole<HTMLInputElement>("radio");
+  expect(radios[0].disabled).toBe(true);
+  expect(radios[1].disabled).toBe(false);
+  expect(screen.getByText("Gas details unavailable · route disabled")).toBeTruthy();
+  expect(canExecuteQuote(broken, params)).toBe(false);
 });

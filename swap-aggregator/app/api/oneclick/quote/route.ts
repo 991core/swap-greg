@@ -1,3 +1,4 @@
+import { withApiGuard, serverCanPrepareExecution } from "@/lib/server/api";
 import { NextResponse } from "next/server";
 import { isAddress, zeroAddress } from "viem";
 import { findOneClickToken, getOneClickTokens, oneClickRequest, ONECLICK_CHAINS, readOneClickJson, runOneClickOperation, OneClickApiError, oneClickErrorResponse, ONECLICK_RESPONSE_HEADERS } from "@/lib/aggregators/oneclick/server";
@@ -6,6 +7,9 @@ import { SLIPPAGE, PLATFORM_FEE } from "@/lib/routing/config";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export async function POST(request: Request) {
+  return withApiGuard("oneclick.quote", request, () => handle(request));
+}
+async function handle(request: Request) {
   try {
     const body = await readOneClickJson(request);
     if (PLATFORM_FEE > 0) throw new OneClickApiError(503, "1Click platform fees are not configured.");
@@ -21,6 +25,7 @@ export async function POST(request: Request) {
         typeof fromTokenDecimals !== "number" || typeof toTokenDecimals !== "number" ||
         !Number.isInteger(fromTokenDecimals) || !Number.isInteger(toTokenDecimals) || fromTokenDecimals < 0 || toTokenDecimals < 0 || fromTokenDecimals > 255 || toTokenDecimals > 255 ||
         !isOneClickAmount(fromAmount)) throw new OneClickApiError(400, "Invalid 1Click quote parameters.");
+    if (!dry && !serverCanPrepareExecution()) throw new OneClickApiError(403, "New execution preparation is disabled.");
     const recipient = typeof wallet === "string" ? wallet : zeroAddress;
     const key = JSON.stringify([fromChainId, toChainId, fromTokenAddress.toLowerCase(), toTokenAddress.toLowerCase(), fromTokenDecimals, toTokenDecimals, fromAmount, recipient.toLowerCase(), dry]);
     const result = await runOneClickOperation("quote", key, async signal => {

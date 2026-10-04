@@ -13,7 +13,6 @@ import { ChainSelect } from "./ChainSelect";
 import { rememberTokenVerdicts, withObservedVerdict, isObservedTokenFlagged, subscribeTokenVerdicts, tokenVerdictsSnapshot, serverTokenVerdictsSnapshot } from "@/lib/tokens/verdicts";
 import { rankTokenResults } from "@/lib/tokens/ranking";
 import { popularTokensSnapshot, serverPopularTokensSnapshot, subscribePopularTokens } from "@/lib/tokens/popular";
-import { isRegistryToken, registrySnapshot, serverRegistrySnapshot, subscribeRegistry } from "@/lib/security/client";
 import { marketUniverseSnapshot, serverMarketUniverseSnapshot, subscribeMarketUniverse } from "@/lib/tokens/market-universe";
 
 type Props = { extraTokens?: Record<number, AppToken[]>; open: boolean; onClose: () => void; chains: ReadonlyArray<{ id: number; name: string }>; selectedChainId: number; selectedToken: AppToken | null; onSelect: (chainId: number, token: AppToken) => void; title: string };
@@ -22,7 +21,6 @@ export default function TokenSelectModal({ open, onClose, chains, selectedChainI
   const { translate, lang } = useI18n();
   useSyncExternalStore(subscribeTokenVerdicts, tokenVerdictsSnapshot, serverTokenVerdictsSnapshot);
   const popularByChain = useSyncExternalStore(subscribePopularTokens, popularTokensSnapshot, serverPopularTokensSnapshot);
-  const registry = useSyncExternalStore(subscribeRegistry, registrySnapshot, serverRegistrySnapshot);
   const marketUniverse = useSyncExternalStore(subscribeMarketUniverse, marketUniverseSnapshot, serverMarketUniverseSnapshot);
   const [query, setQuery] = useState("");
   const [chainId, setChainId] = useState(selectedChainId);
@@ -125,7 +123,6 @@ export default function TokenSelectModal({ open, onClose, chains, selectedChainI
           <p>{chainName}</p><code>{pendingToken.address}</code>
           {explorer && <a href={explorer + "/address/" + pendingToken.address} target="_blank" rel="noopener noreferrer">{translate("view_contract")} ↗</a>}
           <p className="jumper-warning">{translate("custom_token_warning")}</p>
-          {!isRegistryToken(registry, pendingToken) && <p className="jumper-warning">{translate("security_registry_required")}</p>}
           <label className="jumper-token-consent"><input ref={consent} type="checkbox" checked={acknowledged} onChange={(event) => setAcknowledged(event.target.checked)} />{translate("token_acknowledge")}</label>
           <div className="jumper-token-actions"><button type="button" className="jumper-refresh" onClick={resetConfirmation}>{translate("token_back")}</button>
             <button type="button" className="jumper-refresh" disabled={!acknowledged} onClick={() => { if (acknowledged) select({ ...pendingToken, riskAcknowledged: true }); }}>{translate("confirm_token", { symbol: pendingToken.symbol })}</button></div>
@@ -140,7 +137,6 @@ export default function TokenSelectModal({ open, onClose, chains, selectedChainI
               <span className="jumper-token-row-info"><strong>{token.symbol}</strong><span>{token.name}</span>
                 <code title={token.address}>{isKnownNativeToken(token) ? translate("native_asset") : token.address}</code>
                 <span className={"jumper-token-verification " + status}>{translate(status === "flagged" ? "token_flagged" : isKnownNativeToken(token) ? "native_asset" : isCatalogToken(token) ? "token_catalog" : status === "verified" ? "token_verified" : "token_unverified")}</span>
-                <span className="jumper-hint">{translate(isRegistryToken(registry, token) ? "security_registry_trusted" : "security_registry_preview")}</span>
               </span><span className="jumper-token-row-end"><span className="jumper-chain-badge">{chainName}</span>
                 {token.marketSource && typeof token.marketCapUSD === "number" && <span title={translate("market_cap_label") + " · " + token.marketSource}>{translate("market_cap_short")} {new Intl.NumberFormat(lang, { style: "currency", currency: "USD", notation: "compact", maximumFractionDigits: 1 }).format(token.marketCapUSD)}</span>}
                 <span aria-hidden="true">{selectedToken && tokenKey(selectedToken) === tokenKey(token) ? "✓" : "↗"}</span></span>

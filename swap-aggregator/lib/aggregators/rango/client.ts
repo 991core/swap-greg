@@ -9,7 +9,10 @@ export async function rangoRequest<T>(operation: "quote" | "swap" | "status", bo
   try {
     const response = await fetch(`/api/rango/${operation}`, { method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body), signal: controller.signal, cache: "no-store" });
-    if (!response.ok) throw Object.assign(new Error(response.status === 429 ? "Rango: rate limit reached. Please try again shortly." : "Rango is unavailable. Please try again."), { status: response.status });
+    if (!response.ok) throw Object.assign(new Error(response.status === 429 ? "Rango: rate limit reached. Please try again shortly." : "Rango is unavailable. Please try again."), {
+      status: response.status,
+      ...(response.headers.get("X-Hermes-Error-Code") === "provider_configuration" ? { failure: "configuration" } : {}),
+    });
     return await response.json() as T;
   } finally { clearTimeout(timer); signal?.removeEventListener("abort", abort); }
 }

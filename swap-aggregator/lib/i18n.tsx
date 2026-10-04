@@ -21,7 +21,7 @@ type TranslationKey =
   | "chain_search" | "chain_no_results" | "quote_without_wallet" | "oneclick_confirm" | "oneclick_minimum" | "oneclick_status" | "oneclick_explorer" | "oneclick_source_tx" | "oneclick_unavailable_route"
   | "routes_short" | "slippage_short" | "hermes_fee_short" | "auto_short" | "wallet_network"
   | "swap_title" | "source_network" | "destination_network" | "balance_label" | "route_details" | "route_duration" | "route_gas" | "route_minimum" | "route_extra_fees" | "route_waiting_others" | "route_sort_hint" | "route_recipient" | "route_amount_exact" | "route_estimates" | "fee_details" | "selected_route"
-  | "highest_output" | "compare_routes" | "routes_empty_description" | "choose_provider"
+  | "highest_output" | "compare_routes" | "routes_empty_description" | "choose_provider" | "route_invalid_fees" | "route_invalid_gas" | "route_unsupported" | "choose_route" | "quotes_only" | "route_search_failed" | "route_search_partial" | "route_rate_limited" | "route_configuration_failed" | "swap_pending_proof" | "journal_title" | "journal_blocked" | "journal_export" | "journal_hash" | "journal_reconcile" | "journal_reconcile_failed"
   | "rango_test_notice" | "rango_preparing" | "rango_approval" | "rango_signing" | "rango_tracking" | "rango_pending" | "rango_unknown" | "rango_resume" | "rango_complete" | "rango_failed" | "rango_submitted"
   | "hero_tagline"
   | "boot_loading"
@@ -204,6 +204,22 @@ const translations: Record<Lang, Record<TranslationKey, string>> = {
     quotes_waiting: "Auto-refresh will resume when connected",
     refresh_quotes: "Refresh quotes",
     quote_changed: "The wallet or swap details changed. Request a new quote.",
+    choose_route: "Select a route to confirm its current quote and minimum.",
+    quotes_only: "Quotes only. New swaps are disabled in this release mode.",
+    route_invalid_fees: "Fee details unavailable · route disabled",
+    route_invalid_gas: "Gas details unavailable · route disabled",
+    route_unsupported: "This route needs wallet actions this release does not support",
+    route_search_failed: "Quote providers are unavailable. Retrying automatically.",
+    route_search_partial: "Some providers are unavailable. Showing the routes returned so far.",
+    route_rate_limited: "Quote limit reached. Retrying automatically.",
+    route_configuration_failed: "A quote provider is not configured for this request.",
+    swap_pending_proof: "Source activity may have occurred. Expected destination delivery is not yet verified; retain the recovery record.",
+    journal_title: "Transfer records",
+    journal_blocked: "An earlier transfer needs reconciliation. Tracking and export remain available; no new wallet request will be made.",
+    journal_export: "Export records for private diagnosis",
+    journal_hash: "Source transaction hash",
+    journal_reconcile: "Check source transaction",
+    journal_reconcile_failed: "The source transaction could not be matched to the saved request. Keep the record and verify it manually.",
     same_token: "Choose a different destination token or network.",
     platform_fee: "Hermes fee (included in quote)",
     network_fee: "Estimated network fees (additional)",
@@ -365,6 +381,22 @@ const translations: Record<Lang, Record<TranslationKey, string>> = {
     quotes_waiting: "L’actualisation reprendra avec la connexion",
     refresh_quotes: "Actualiser les cotations",
     quote_changed: "Le wallet ou les paramètres ont changé. Demande une nouvelle cotation.",
+    choose_route: "Sélectionne une route pour confirmer son devis et son minimum actuels.",
+    quotes_only: "Cotations seules. Les nouveaux swaps sont désactivés dans ce mode.",
+    route_invalid_fees: "Détail des frais indisponible · route désactivée",
+    route_invalid_gas: "Détail du gas indisponible · route désactivée",
+    route_unsupported: "Cette route exige des actions wallet non prises en charge par cette version",
+    route_search_failed: "Les fournisseurs de cotation sont indisponibles. Nouvel essai automatique.",
+    route_search_partial: "Certains fournisseurs sont indisponibles. Les routes reçues restent affichées.",
+    route_rate_limited: "Limite de cotations atteinte. Nouvel essai automatique.",
+    route_configuration_failed: "Un fournisseur de cotation n’est pas configuré pour cette demande.",
+    swap_pending_proof: "Une émission source a pu avoir lieu. La livraison attendue n’est pas encore vérifiée ; conserve le dossier de reprise.",
+    journal_title: "Dossiers de transfert",
+    journal_blocked: "Un transfert précédent doit être réconcilié. Le suivi et l’export restent possibles ; aucune nouvelle demande wallet ne sera faite.",
+    journal_export: "Exporter les dossiers pour diagnostic privé",
+    journal_hash: "Hash de la transaction source",
+    journal_reconcile: "Vérifier la transaction source",
+    journal_reconcile_failed: "La transaction source ne correspond pas à la demande conservée. Garde le dossier et vérifie-le manuellement.",
     same_token: "Choisis un autre token ou réseau de destination.",
     platform_fee: "Frais Hermes (inclus dans le devis)",
     network_fee: "Frais réseau estimés (en supplément)",

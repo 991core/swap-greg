@@ -2,13 +2,6 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, expect, it, vi } from "vitest";
 import type { NormalizedRoute } from "../lib/types/normalized-route";
 const account = vi.hoisted(() => ({ isConnected: true, address: "0x1111111111111111111111111111111111111111" }));
-// This suite isolates quote lifetime/verdict revocation; security-api.test.ts exercises real authority.
-vi.mock("../lib/security/client", async original => {
-  const actual = await original<typeof import("../lib/security/client")>();
-  const seed = (await import("../security/trusted-tokens.v1.json")).default;
-  const state = { status: "ready" as const, registry: seed, executionConfigured: true };
-  return { ...actual, registrySnapshot: () => state, serverRegistrySnapshot: () => state, subscribeRegistry: () => () => {}, preloadTrustedRegistry: vi.fn(async () => state), authorizeSwapIntent: vi.fn(async () => {}), createTransactionAuthorizer: () => vi.fn(async () => {}) };
-});
 vi.mock("wagmi", () => ({
   useAccount: () => account,
   useBalance: () => ({ data: { value: BigInt("1000000000000000000") }, refetch: vi.fn() }),
@@ -40,6 +33,8 @@ it("automatically updates the quote and blocks Swap while refreshing without exe
   expect(searchTokens).not.toHaveBeenCalled();
   fireEvent.change(screen.getByLabelText("You send"), { target: { value: "0.001" } });
   await act(() => vi.advanceTimersByTimeAsync(500));
+  expect(screen.getByRole<HTMLButtonElement>("button", { name: "Swap" }).disabled).toBe(true);
+  fireEvent.click(screen.getByRole("radio"));
   expect(screen.getByRole<HTMLButtonElement>("button", { name: "Swap" }).disabled).toBe(false);
   await act(() => vi.advanceTimersByTimeAsync(30_000));
   expect(screen.getByRole<HTMLButtonElement>("button", { name: "Searching routes…" }).disabled).toBe(true);
@@ -48,6 +43,9 @@ it("automatically updates the quote and blocks Swap while refreshing without exe
   const refreshed = { ...quote("lifi:refreshed"), toAmount: "800000000000000", toAmountMin: "796000000000000",
     raw: { ...quote("lifi:refreshed").raw, toAmount: "800000000000000", toAmountMin: "796000000000000" } };
   await act(async () => finish([refreshed]));
+  expect(screen.getByLabelText<HTMLInputElement>("You receive").value).toBe("");
+  expect(screen.getByRole<HTMLButtonElement>("button", { name: "Swap" }).disabled).toBe(true);
+  fireEvent.click(screen.getByRole("radio"));
   expect(screen.getByLabelText<HTMLInputElement>("You receive").value).toBe("0.0008");
   expect(screen.getByRole<HTMLButtonElement>("button", { name: "Swap" }).disabled).toBe(false);
   expect(executeSwapQuote).not.toHaveBeenCalled();
@@ -63,6 +61,17 @@ it("shows both providers and switches the available routes after toggling", asyn
   expect(toggle.getAttribute("aria-pressed")).toBe("false"); expect(screen.queryAllByRole("radio")).toHaveLength(0);
   await act(() => vi.advanceTimersByTimeAsync(500)); expect(screen.getAllByRole("radio")).toHaveLength(1);
   expect(executeSwapQuote).not.toHaveBeenCalled();
+});
+it("does not call a partial empty search proof that no route exists", async () => {
+  vi.mocked(getRoutesForSelection).mockImplementation(async (_request, _signal, onWarning) => {
+    onWarning?.({ provider: "rango", message: "quota" });
+    return [];
+  });
+  render(<I18nProvider><SwapCard /></I18nProvider>);
+  fireEvent.change(screen.getByLabelText("You send"), { target: { value: "0.001" } });
+  await act(() => vi.advanceTimersByTimeAsync(500));
+  expect(screen.getByText("Quote limit reached. Retrying automatically.")).toBeTruthy();
+  expect(screen.queryByText(/No routes for this pair and amount/)).toBeNull();
 });
 it("restores a pending Rango transaction after reload and prevents sending it again", async () => {
   localStorage.setItem(PENDING_RANGO_KEY, JSON.stringify(pendingRango()));
@@ -110,12 +119,12 @@ it("quotes without a wallet and invalidates the preview when connecting", async 
   const view = render(<I18nProvider><SwapCard /></I18nProvider>);
   fireEvent.change(screen.getByLabelText("You send"), { target: { value: "0.001" } });
   await act(() => vi.advanceTimersByTimeAsync(500));
-  expect(getRoutesForSelection).toHaveBeenLastCalledWith(expect.objectContaining({ fromAddress: "" }), expect.anything(), undefined, expect.anything());
+  expect(getRoutesForSelection).toHaveBeenLastCalledWith(expect.objectContaining({ fromAddress: "" }), expect.anything(), expect.any(Function), expect.anything());
   expect(screen.getByRole("radio")).toBeTruthy();
   account.isConnected = true; view.rerender(<I18nProvider><SwapCard /></I18nProvider>);
   expect(screen.queryByRole("radio")).toBeNull();
   await act(() => vi.advanceTimersByTimeAsync(500));
-  expect(getRoutesForSelection).toHaveBeenLastCalledWith(expect.objectContaining({ fromAddress: account.address }), expect.anything(), undefined, expect.anything());
+  expect(getRoutesForSelection).toHaveBeenLastCalledWith(expect.objectContaining({ fromAddress: account.address }), expect.anything(), expect.any(Function), expect.anything());
   expect(executeSwapQuote).not.toHaveBeenCalled();
 });
 it("inverts the token and network pair without substituting the quoted output amount", async () => {
@@ -140,6 +149,7 @@ it("keeps quote failures in logs, retries silently, and still displays execution
   expect(warn).toHaveBeenCalledWith("[Hermes quotes]", expect.objectContaining({ event: "refresh_failed", reason: "all_providers_failed" }));
   await act(() => vi.advanceTimersByTimeAsync(15_000));
   expect(screen.getByRole("radio")).toBeTruthy();
+  fireEvent.click(screen.getByRole("radio"));
   vi.mocked(executeSwapQuote).mockRejectedValueOnce(new Error("Wallet rejected the transaction"));
   fireEvent.click(screen.getByRole("button", { name: "Swap" }));
   await act(() => vi.advanceTimersByTimeAsync(0));

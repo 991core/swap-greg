@@ -22,10 +22,10 @@ Le service `/api/tokens/universe` récupère un top 120 CoinGecko ou CoinMarketC
 et associe les capitalisations par réseau/adresse. LI.FI reste une source de
 disponibilité et de devis ; ses capitalisations ne déterminent plus le classement.
 Une source de marché indisponible est signalée sans empêcher la découverte.
-Le registre persistant et les journaux structurés sont décrits dans
-`TOKEN_SECURITY.md`. Tous les tokens signés doivent être approuvés localement ;
-les contrats et les ABI doivent également avoir une politique revue. Les listes
-vides par défaut bloquent les signatures, y compris celles issues du SDK LI.FI.
+Depuis le 4 octobre 2026, le registre et les listes de contrats/ABI ne bloquent
+plus les signatures. Les adapters utilisent les transactions des providers, avec
+les contrôles de devis, métadonnées, compte/réseau et soldes/gas. Les outils
+de registre décrits dans `TOKEN_SECURITY.md` restent indépendants du parcours de swap.
 La modale affiche 25 lignes au départ et permet d'en afficher davantage sans
 requête lorsqu'elles sont déjà chargées. Les métriques de marché sont des données
 de présentation ; elles ne confèrent aucune exemption de contrôle d'identité.
@@ -139,12 +139,19 @@ contrats, au-delà des tokens populaires.
 
 ## Cotations et exécution
 
+Le profil Docker public est construit avec `NEXT_PUBLIC_RELEASE_MODE=quotes` et
+frais Hermes zéro. Les trois providers restent cotables, mais aucune méthode
+wallet ni préparation de dépôt exécutable n'est accessible. Une image
+`enabled` est une capacité distincte, non encore qualifiée avec fonds. Le
+serveur expose `/api/release` pour arrêter les nouvelles demandes avant leur
+frontière wallet tout en conservant les statuts en lecture seule.
+
 Les cotations LI.FI passent par le SDK navigateur ; celles de Rango et 1Click
 passent par des routes Next.js avec identifiants serveur. Les fournisseurs activés
 dans le formulaire sont interrogés en parallèle, avec un délai client de 15 s.
 L'échec d'un fournisseur conserve les routes des autres. Les incidents de cotation
-sont journalisés dans la console technique, sans bannière d'indisponibilité ni
-message d'erreur technique dans le formulaire. Socket reste désactivé.
+sont journalisés sans adresse ni payload et signalés dans le formulaire comme
+panne, quota, configuration ou recherche partielle, sans message brut. Socket reste désactivé.
 
 Un devis ne nécessite pas de wallet. Les paramètres utilisent alors un compte vide ;
 LI.FI reçoit une demande sans adresses de wallet, Rango accepte uniquement les
@@ -173,6 +180,9 @@ L'actualisation automatique n'appelle jamais le wallet ni la fonction d'exécuti
 L'orchestrateur publie les résultats de chaque provider dès leur arrivée. Le hook
 affiche ces routes pendant que les autres recherches continuent, sans permettre
 l'exécution avant la fin du cycle. L'annulation bloque aussi les résultats partiels.
+Le choix de route est explicite et est effacé au renouvellement : un nouveau devis
+exige une nouvelle sélection. Les routes incompatibles avec l'EOA standard ou
+avec des frais/gas malformés restent visibles mais non sélectionnables.
 Les cartes mettent en avant montant reçu, durée, gas et minimum ; les frais
 additionnels sont signalés et le détail des montants/contrats reste dépliable.
 Les listes de réseaux avec logos sont accessibles au clavier. Le choix USD/EUR
@@ -244,8 +254,9 @@ inférieur au minimum sélectionné, vérifie les instructions et leur échéanc
 sollicite une confirmation. Il estime le gas et revérifie wallet, réseau, soldes et
 validité avant d'appeler `transfer` vers le dépôt. Aucun polling ne signe.
 
-Une intention complète est enregistrée sous `hermes:oneclick:latest`, liée au wallet,
-avant l'appel d'envoi au wallet. Une panne de stockage à ce stade bloque l'envoi.
+Une intention complète est enregistrée dans `hermes:intent:v2:*`, liée au wallet,
+avant l'appel d'envoi au wallet ; `hermes:oneclick:latest` est conservée pour
+la migration prudente des anciens dossiers. Une panne de stockage avant émission bloque l'envoi.
 Le hash reçu est conservé avant l'attente de la receipt source. Le suivi interroge
 le statut toutes les 8 s ; `SUCCESS` seul ne clôture jamais le dossier. La preuve
 doit correspondre au devis conservé, aux actifs, au montant source, au hash source
@@ -257,7 +268,8 @@ vérifiable reste actif et nécessite une réconciliation manuelle. Seuls un rej
 wallet explicite ou une receipt source revertée établissent un échec source.
 Un dépôt actif suspend les nouvelles cotations/exécutions, même après déconnexion ;
 une confirmation source ne signifie pas une livraison finale. Aucun suivi ne renvoie
-de fonds et le stockage n'est pas un journal de coordination entre onglets.
+de fonds. Le journal et Web Locks coordonnent les onglets d'un profil navigateur ;
+ils ne couvrent ni plusieurs appareils ni un stockage volontairement effacé.
 Le devis présente le minimum reçu ; le coût du gas reste inconnu dans la liste si
 1Click ne le fournit pas, puis est estimé avant signature. Les frais plateforme
 non nuls désactivent ce fournisseur tant que leur configuration n'est pas implémentée.
@@ -320,12 +332,15 @@ pas une entrée du catalogue local et ne bloque pas sa sélection.
 | --- | --- |
 | `LIFI_API_KEY` | Clé optionnelle privée du service tokens ; remplace l'ancienne variable publique. |
 | `TOKEN_SEARCH_REQUESTS_PER_MINUTE` | Budget local d'appels du service tokens. |
+| `LIFI_SERVER_REQUESTS_PER_MINUTE` | Budget upstream partagé recherche/marché par instance. |
+| `NEXT_PUBLIC_RELEASE_MODE` | `quotes` livré, `enabled` après qualification séparée, `incident` arrêt des nouvelles émissions. |
+| `HERMES_EXECUTION_DISABLED` | Interrupteur serveur réévalué au dernier contrôle wallet. |
 | `NEXT_PUBLIC_PLATFORM_FEE_PERCENT` | Frais Hermes 0–100. |
 | `RANGO_API_KEY` | Clé serveur privée facultative ; clé publique de test par défaut. |
 | `RANGO_REFERRER_ADDRESS` | Commission Rango non nulle (plafond 3 %). |
 | `NEAR_1CLICK_API_KEY` / `NEAR_1CLICK_JWT` | Identifiants 1Click privés, côté serveur. |
 | `lib/aggregators/oneclick/` | Registre, devis, dépôt ERC-20 et types de suivi 1Click. |
-| `lib/routing/diagnostics.ts` | Logs techniques de cotation, sans rendu dans l'interface ni données sensibles. |
+| `lib/routing/diagnostics.ts` | Logs techniques minimisés ; l'interface affiche une catégorie sûre d'erreur. |
 | `lib/token-continuity.ts` | Conservation des seules identités populaires épinglées lors d'un changement de réseau. |
 | `lib/aggregators/rango/` | Validation API, signature EVM et suivi séparés de LI.FI. |
 | `lib/tokens/client.ts` | HTTP navigateur et validation des réponses. |

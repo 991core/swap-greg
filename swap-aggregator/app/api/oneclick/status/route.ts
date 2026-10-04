@@ -1,3 +1,4 @@
+import { withApiGuard } from "@/lib/server/api";
 import { NextResponse } from "next/server";
 import { isAddress, zeroAddress } from "viem";
 import { oneClickRequest, runOneClickOperation, validateOneClickOrigin, OneClickApiError, oneClickErrorResponse, ONECLICK_RESPONSE_HEADERS } from "@/lib/aggregators/oneclick/server";
@@ -18,6 +19,9 @@ function hashes(value: unknown): Array<{ hash: string; explorerUrl?: string }> |
   return result;
 }
 export async function GET(request: Request) {
+  return withApiGuard("oneclick.status", request, () => handle(request));
+}
+async function handle(request: Request) {
   try {
     validateOneClickOrigin(request);
     const url = new URL(request.url);

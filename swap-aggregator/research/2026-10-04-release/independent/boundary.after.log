@@ -1,0 +1,11 @@
+npm notice run hermes@0.1.0 test
+npm notice run vitest run --config research/2026-10-04-release/independent/vitest.config.mts
+
+ RUN  v4.1.11 /home/pierre/Downloads/swap-aggregator/swap-aggregator
+
+
+ Test Files  1 passed (1)
+      Tests  10 passed (10)
+   Start at  15:12:31
+   Duration  636ms (transform 93ms, setup 264ms, import 59ms, tests 37ms, environment 204ms)
+

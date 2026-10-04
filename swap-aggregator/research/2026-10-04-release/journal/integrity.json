@@ -1,0 +1,20 @@
+{
+  "generatedAt": "2026-10-04T13:15:23.303667+00:00",
+  "head": "86159fb636d1b779c85818a261b07e05512cd9f0",
+  "scope": "Journal lane only; mocked wallets and RPC; no signing/funds/deployment",
+  "files": {
+    "lib/intent/journal.ts": "d8003f012ca52ce5dc48749dcafec0b9109db6b2ef945b32aa428609f78dd32f",
+    "lib/intent/tracking.ts": "07a826ae2f4f822fc68e3f8414649c2d4cf8e2db9fcb2836ef5fc454210a8004",
+    "lib/aggregators/rango/execute.ts": "a4518be7f9203ab8a4183425acc81154d7b927c378d0fa6149b3e7a86f560b14",
+    "lib/aggregators/rango/tracking.ts": "41629f6b32eb2828d978fd29a2af4f6db31bc6c44c6fd496b1ae77a2c19d8508",
+    "lib/aggregators/rango/types.ts": "d5288a17601cf32cca08b6587a318794499b35e5b820dd0b8ade97200950087f",
+    "lib/aggregators/oneclick/execute.ts": "f34a534b168d1515badf928ea608c07ad9c68ad7d2385937cb8521d283867792",
+    "lib/aggregators/oneclick/tracking.ts": "873480cdada759b4ed00eff1472da4c5bbd43cfb30e06d82b5b4df7888cc6acb",
+    "lib/aggregators/oneclick/types.ts": "96415cb8eb8cdcc38c975ce9bc3dcb765fc7cbee739d5dcf432a9f6aa4da7e3b",
+    "tests/intent-journal.test.ts": "2e5c67abd2bcc97cdc044bdfc75db57e3232945ccd2f7e0f751e3da9a6cab76e",
+    "tests/intent-tracking.test.ts": "ad92baeed7ac2257321ddf3582f347520e194c0323a742f2608c3cf2cebf7af6",
+    "tests/journal-provider-boundaries.test.ts": "180f8eac666f7f42886d4337b7303eedf1de6c17c8d9b2f306283ce5ff370ffc",
+    "tests/oneclick.test.ts": "470e76fbb78aab531366c60171d1f4983c1df8b34e879efd54344c8bfa176e5e",
+    "tests/rango-execution.test.ts": "bfaabe4c00cbc40f8281af9d9b973ccb91c7f3cce5df0b8fcf2e04bab271d406"
+  }
+}

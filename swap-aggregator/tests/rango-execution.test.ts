@@ -1,14 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { encodeFunctionData, erc20Abi } from "viem";
 vi.mock("../lib/wallet", () => ({ walletConfig: {} }));
-vi.mock("wagmi/actions", () => ({ getAccount: vi.fn(), getBalance: vi.fn(), readContract: vi.fn(), switchChain: vi.fn(), estimateGas: vi.fn(), estimateFeesPerGas: vi.fn(), sendTransaction: vi.fn(), writeContract: vi.fn(), waitForTransactionReceipt: vi.fn() }));
+vi.mock("wagmi/actions", () => ({ getAccount: vi.fn(), getTransactionCount: vi.fn(), getBytecode: vi.fn(), getBalance: vi.fn(), readContract: vi.fn(), switchChain: vi.fn(), estimateGas: vi.fn(), estimateFeesPerGas: vi.fn(), sendTransaction: vi.fn(), writeContract: vi.fn(), waitForTransactionReceipt: vi.fn() }));
 vi.mock("../lib/aggregators/rango/client", () => ({ rangoRequest: vi.fn() }));
 vi.mock("../lib/aggregators/lifi/execute", () => ({ executeLifiRoute: vi.fn() }));
 vi.mock("../lib/tokens/client", () => ({ getTokenDetails: vi.fn() }));
-// Existing provider behavior tests isolate wallet/API mocks; registry failure and
-// real RPC interception are covered in security-transaction/security-wallet.
-vi.mock("../lib/security/client", async (original) => ({ ...await original<typeof import("../lib/security/client")>(), authorizeSwapIntent: vi.fn(), createTransactionAuthorizer: () => async () => {} }));
-import { estimateGas, estimateFeesPerGas, getAccount, getBalance, readContract, sendTransaction, writeContract, waitForTransactionReceipt } from "wagmi/actions";
+import { estimateGas, estimateFeesPerGas, getAccount, getBalance, getBytecode, getTransactionCount, readContract, sendTransaction, writeContract, waitForTransactionReceipt } from "wagmi/actions";
 import { executeLifiRoute } from "../lib/aggregators/lifi/execute";
 import { getTokenDetails } from "../lib/tokens/client";
 import { rangoRequest } from "../lib/aggregators/rango/client";
@@ -22,6 +19,12 @@ import { hash, normalizedRango, pendingRango, pendingRangoIntent, rangoSwap, ran
 const successStatus = () => ({ status: "success", output: { type: "DESIRED_OUTPUT", amount: "950000000000000", receivedToken: rangoTo } });
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.mocked(getBytecode).mockResolvedValue(undefined);
+  vi.mocked(getTransactionCount).mockImplementation(async () => {
+    const { readIntentJournal } = await import("../lib/intent/journal");
+    const nonces = readIntentJournal().flatMap(record => record.actions.flatMap(action => action.hash && action.nonce !== undefined ? [action.nonce] : []));
+    return nonces.length ? Math.max(...nonces) + 1 : 17;
+  });
   vi.mocked(getAccount).mockReturnValue({ isConnected: true, address: wallet, chainId: 8453 } as never);
   vi.mocked(getBalance).mockResolvedValue({ value: BigInt("1000000000000000000"), decimals: 18, symbol: "ETH", formatted: "1" });
   vi.mocked(readContract).mockResolvedValue(BigInt("1000000000000000000"));

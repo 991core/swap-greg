@@ -1,0 +1,11 @@
+npm notice run hermes@0.1.0 test
+npm notice run vitest run
+
+ RUN  v4.1.11 /home/pierre/Downloads/swap-aggregator/swap-aggregator
+
+
+ Test Files  47 passed (47)
+      Tests  718 passed (718)
+   Start at  15:24:35
+   Duration  15.46s (transform 685ms, setup 10.50s, import 1.36s, tests 8.08s, environment 7.52s)
+

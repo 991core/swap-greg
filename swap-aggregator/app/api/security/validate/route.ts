@@ -34,6 +34,7 @@ async function body(request: Request): Promise<Record<string, unknown>> {
   return value as Record<string, unknown>;
 }
 export async function POST(request: Request) {
+  if (process.env.NODE_ENV === "production" || process.env.HERMES_ENABLE_DIAGNOSTIC_API !== "true") return NextResponse.json({ error: "diagnostic_api_disabled" }, { status: 410, headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" } });
   const origin = request.headers.get("origin");
   if (!origin || origin !== new URL(request.url).origin || request.headers.get("sec-fetch-site") === "cross-site") return NextResponse.json({ error: "INVALID_SECURITY_ORIGIN" }, { status: 403, headers });
   if (Date.now() - windowStart >= 60_000) { windowStart = Date.now(); used = 0; }

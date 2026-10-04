@@ -1,0 +1,18 @@
+{
+  "captured_at_utc": "2026-10-04T13:07:38.992486+00:00",
+  "note": "Intermediate independent review snapshot, changes are still being integrated",
+  "sha256": {
+    "components/SwapCard.tsx": "25899546e54b3ada62b7b00fcab6031759ee4b2c892a34eb334b81ca6ec633b7",
+    "lib/intent/journal.ts": "72985b66b8ae5c41921fdeefc16b3d03a1e1e3d4c00254c0e510a5ed7d3d97a2",
+    "lib/intent/tracking.ts": "07a826ae2f4f822fc68e3f8414649c2d4cf8e2db9fcb2836ef5fc454210a8004",
+    "lib/aggregators/lifi/policy.ts": "6ae9ee093ee4f63d1493bd590ef1b8c727fdd646048cbc5830c1aa9e5a28eb0a",
+    "lib/security/lifi-wallet.ts": "36dc490343442bc59da3b410ac55be0810b7ab4f49b6045ea0f6ebd5c36f7a16",
+    "lib/aggregators/rango/execute.ts": "29937e985e9c07efd3b90ff59383b42fddbbd075d177d168329f690dd508255d",
+    "lib/aggregators/oneclick/execute.ts": "61f56005b32bc21ec273546a017829b12cff4d334a64c5c6dbd58c7f7505fae5",
+    "lib/routing/quote.ts": "58dd59cd4a3c5e54b3d4194af146a9d0165910187811818428788bd76a3287ca",
+    "lib/routing/orchestrator.ts": "8b4c4eef41d80c5cbf946c85cdf63ce2ed690c4a65c1da95fd592eef9f25e5ac",
+    "lib/server/api.ts": "a260a273864b9245fb16c5327fc99c6cb4a5680ac70f375974f3d4104198dfe9",
+    "Dockerfile": "498c56ed201b0a6941a3a1c5466b96c5b62d61c0bcb14640747ff1bee2a02619",
+    "deploy/compose.portainer.yml": "d98b6c12cd683aa24f20ee1174a34e1a887704f15b7e1e24792f07ebc00ab1e2"
+  }
+}

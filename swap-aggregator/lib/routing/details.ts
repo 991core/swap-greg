@@ -12,3 +12,14 @@ export function routeFees(route: NormalizedRoute) {
       name: fee.name, amount: fee.amount, token: rangoToken(fee.token), included: fee.expenseType === "DECREASE_FROM_OUTPUT",
     }));
 }
+
+/** Presentation must never trust fee data from a remote route. */
+export function routeFeesAreValid(route: NormalizedRoute): boolean {
+  try {
+    return routeFees(route).every((fee) => typeof fee.name === "string" &&
+      typeof fee.amount === "string" && /^\d{1,78}$/.test(fee.amount) &&
+      Number.isInteger(fee.token.decimals) && fee.token.decimals >= 0 && fee.token.decimals <= 36 &&
+      typeof fee.token.symbol === "string" && fee.token.symbol.length <= 32 &&
+      typeof fee.included === "boolean");
+  } catch { return false; }
+}

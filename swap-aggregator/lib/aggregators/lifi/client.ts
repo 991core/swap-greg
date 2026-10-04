@@ -11,21 +11,21 @@ export const lifiClient = createClient({
   providers: [EthereumProvider({
     disableMessageSigning: true,
     getWalletClient: async () => {
-      throw new Error("A transaction authorizer is required before using the wallet.");
+      throw new Error("A quote check is required before using the wallet.");
     },
     switchChain: async (chainId) => {
       if (!isAppChainId(chainId)) throw new Error("Unsupported network.");
-      throw new Error("A transaction authorizer is required before switching the wallet.");
+      throw new Error("A quote check is required before switching the wallet.");
     },
   })],
 });
 
 export function getLifiSdkClient() { return lifiClient; }
 
-/** Quotes share a client; every execution gets its own immutable authorization scope. */
+/** Quotes share a client; every execution gets its own wallet and quote scope. */
 export function getLifiExecutionClient(security: LifiWalletSecurity) {
-  if (!security || typeof security.authorizeTransaction !== "function" || typeof security.check !== "function") {
-    throw new Error("A transaction authorizer is required before using the wallet.");
+  if (!security || typeof security.check !== "function") {
+    throw new Error("A quote check is required before using the wallet.");
   }
   const readGuardedWallet = async () => {
     security.check();

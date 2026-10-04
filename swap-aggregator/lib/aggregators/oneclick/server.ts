@@ -1,4 +1,5 @@
 import "server-only";
+import { ApiBoundaryError, readApiJson, readBoundedText, validateApiOrigin, observeApiCache, serverCanPrepareExecution } from "../../server/api";
 import { NextResponse } from "next/server";
 import { ONECLICK_CHAINS, isOneClickTokenEvidence, type OneClickTokenEvidence } from "./validation";
 export { ONECLICK_CHAINS } from "./validation";
@@ -17,42 +18,17 @@ export function oneClickErrorResponse(error: unknown) {
   } });
 }
 export function validateOneClickOrigin(request: Request) {
-  const origin = request.headers.get("origin");
-  if (!origin) return;
-  const target = new URL(request.url);
-  const host = request.headers.get("host") ?? target.host;
-  const protocol = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim() ?? target.protocol.slice(0, -1);
-  let source: URL;
-  try { source = new URL(origin); } catch { throw new OneClickApiError(403, "Invalid origin."); }
-  if (source.host.toLowerCase() !== host.toLowerCase() || source.protocol !== `${protocol}:` ||
-      !["http", "https"].includes(protocol) || source.username || source.password || source.pathname !== "/" || source.search || source.hash) {
-    throw new OneClickApiError(403, "Cross-origin request rejected.");
+  try { validateApiOrigin(request); } catch (error) {
+    if (error instanceof ApiBoundaryError) throw new OneClickApiError(error.status, error.code);
+    throw error;
   }
-}
-async function readBoundedBody(response: Request | Response, limit: number): Promise<string> {
-  const length = response.headers.get("content-length");
-  if (length && (!/^\d+$/.test(length) || Number(length) > limit)) throw new OneClickApiError(413, "Request too large.");
-  if (!response.body) return "";
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let size = 0;
-  let text = "";
-  try {
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      size += value.byteLength;
-      if (size > limit) { await reader.cancel(); throw new OneClickApiError(413, "Request too large."); }
-      text += decoder.decode(value, { stream: true });
-    }
-    return text + decoder.decode();
-  } finally { reader.releaseLock(); }
 }
 export async function readOneClickJson(request: Request): Promise<unknown> {
   validateOneClickOrigin(request);
-  if (!/^application\/json(?:\s*;|$)/i.test(request.headers.get("content-type") ?? "")) throw new OneClickApiError(415, "JSON required.");
-  const text = await readBoundedBody(request, 4096);
-  try { return JSON.parse(text); } catch { throw new OneClickApiError(400, "Invalid JSON."); }
+  try { return await readApiJson(request); } catch (error) {
+    if (error instanceof ApiBoundaryError) throw new OneClickApiError(error.status, error.code);
+    throw error;
+  }
 }
 export function oneClickHeaders(): HeadersInit {
   const apiKey = process.env.NEAR_1CLICK_API_KEY;
@@ -61,6 +37,12 @@ export function oneClickHeaders(): HeadersInit {
 }
 export async function oneClickRequest(path: string, init?: RequestInit): Promise<unknown> {
   if (path !== "/quote" && path !== "/tokens" && !/^\/status\?depositAddress=0x[0-9a-fA-F]{40}$/.test(path)) throw new OneClickApiError(400, "Invalid operation.");
+  if (path === "/quote") {
+    let body: unknown;
+    try { body = JSON.parse(typeof init?.body === "string" ? init.body : ""); } catch { throw new OneClickApiError(400, "Invalid quote body."); }
+    if (!body || typeof body !== "object" || !("dry" in body) || typeof body.dry !== "boolean") throw new OneClickApiError(400, "Invalid quote body.");
+    if (!body.dry && !serverCanPrepareExecution()) throw new OneClickApiError(403, "New execution preparation is disabled.");
+  }
   try {
     const response = await fetch(`${ONECLICK_API}${path}`, {
       ...init, headers: oneClickHeaders(), cache: "no-store", redirect: "error",
@@ -70,7 +52,7 @@ export async function oneClickRequest(path: string, init?: RequestInit): Promise
       await response.body?.cancel();
       throw new OneClickApiError(response.status === 429 ? 429 : 502, response.status === 429 ? "1Click rate limit reached." : "1Click is unavailable.");
     }
-    return JSON.parse(await readBoundedBody(response, RESPONSE_LIMIT));
+    return JSON.parse(await readBoundedText(response, RESPONSE_LIMIT, { timeoutMs: ONECLICK_TIMEOUT_MS, signal: init?.signal ?? undefined, upstream: true }));
   } catch (error) {
     if (error instanceof OneClickApiError && error.status === 429) throw error;
     throw new OneClickApiError(502, "1Click is unavailable.");
@@ -110,7 +92,8 @@ export async function runOneClickOperation<T>(operation: Operation, key: string,
 let tokenCache: { expires: number; tokens: OneClickToken[] } | undefined;
 let tokenPending: Promise<OneClickToken[]> | undefined;
 export async function getOneClickTokens(signal?: AbortSignal): Promise<OneClickToken[]> {
-  if (tokenCache && tokenCache.expires > Date.now()) return tokenCache.tokens;
+  if (tokenCache && tokenCache.expires > Date.now()) { observeApiCache("oneclick.tokens", true); return tokenCache.tokens; }
+  observeApiCache("oneclick.tokens", false);
   // Registry callers coalesce independently of quote/status calls.
   if (!tokenPending) tokenPending = (async () => {
     const data = await oneClickRequest("/tokens");

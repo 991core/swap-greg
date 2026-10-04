@@ -79,13 +79,13 @@ pas un audit des protocoles sous-jacents.
 
 ## Suivi et reprise
 
-Avant de demander l’envoi au wallet, une intention complète (transaction, montant, tokens, minimum et `requestId`) est sauvegardée dans le navigateur. Un échec de sauvegarde bloque l’envoi. Un timeout ou une réponse ambiguë conserve cette intention et bloque tout nouvel envoi, y compris après rechargement ; sans hash, une réconciliation manuelle avec le wallet est nécessaire. Seul un refus explicite du wallet permet de retirer une intention sans hash.
+Avant de demander l’envoi au wallet, une intention complète (transaction, montant, tokens, minimum et `requestId`) est sauvegardée dans un journal local versionné. Un échec de sauvegarde avant émission bloque l’envoi. Un timeout ou une réponse ambiguë conserve l'intention, bloque tout nouvel envoi pour ce wallet et reste exportable après rechargement. Un hash source fourni par l'utilisateur n'est accepté en réconciliation qu'après lecture RPC et comparaison de l'enveloppe **et du nonce conservé** ; les anciens dossiers sans nonce restent en intervention manuelle. Un refus wallet explicite ou un échec établi avant toute demande laisse un dossier non émis, sans autoriser de reprise automatique.
 
 Après envoi, le `requestId` de la préparation et le hash sont suivis par l'API
 Rango toutes les 8 secondes, jusqu'à 75 vérifications par session. Une receipt
 sur le réseau source n'est pas suffisante pour confirmer un bridge.
 Le succès exige le token, le réseau, les décimales et le montant minimal attendus.
-Les remboursements/tokens intermédiaires sont signalés, pas affichés comme succès.
+Les remboursements/tokens intermédiaires sont signalés et conservés dans le journal, pas affichés comme succès.
 
 Un timeout ou une réponse sans sortie vérifiable reste **en attente**. Le suivi
 ne renvoie jamais une transaction. L'UI conserve le lien, désactive le nouveau

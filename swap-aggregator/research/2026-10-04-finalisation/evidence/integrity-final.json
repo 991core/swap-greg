@@ -1,0 +1,9 @@
+{
+  "checked_at_utc": "2026-10-04T01:04:40.567215+00:00",
+  "head": "86159fb636d1b779c85818a261b07e05512cd9f0",
+  "tracked_files_checked": 449,
+  "changed_since_baseline": [],
+  "status": " M swap-aggregator/.env.example\n M swap-aggregator/AGENTS.md\n M swap-aggregator/ARCHITECTURE.md\n M swap-aggregator/README.md\n M swap-aggregator/TOKEN_SECURITY.md\n M swap-aggregator/components/SwapCard.tsx\n M swap-aggregator/components/TokenSelectModal.tsx\n M swap-aggregator/lib/aggregators/lifi/client.ts\n M swap-aggregator/lib/aggregators/lifi/execute.ts\n M swap-aggregator/lib/aggregators/oneclick/execute.ts\n M swap-aggregator/lib/aggregators/rango/execute.ts\n M swap-aggregator/lib/routing/execute.ts\n M swap-aggregator/lib/security/lifi-wallet.ts\n M swap-aggregator/tests/client.test.ts\n M swap-aggregator/tests/execution.test.ts\n M swap-aggregator/tests/oneclick.test.ts\n M swap-aggregator/tests/rango-execution.test.ts\n M swap-aggregator/tests/security-api.test.ts\n M swap-aggregator/tests/security-wallet.test.ts\n M swap-aggregator/tests/swap-refresh.test.tsx\n?? swap-aggregator/research/\n",
+  "application_changes_by_audit": false,
+  "transpiled_repro_modules": "Both exactly match TypeScript ES2022 transpilation of current tracked sources; only import paths adapted."
+}

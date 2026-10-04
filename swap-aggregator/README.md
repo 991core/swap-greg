@@ -1,7 +1,15 @@
 # Hermes (HMS Protocol) — MVP
 
 Agrégateur de swap/bridge cross-chain : sélection réseau + token, comparaison
-des routes LI.FI + Rango et choix utilisateur, avec frais transparents.
+des routes LI.FI + Rango + 1Click et choix utilisateur, avec frais transparents.
+
+**Profil public livré le 4 octobre 2026 : cotations seules, frais Hermes zéro.**
+`NEXT_PUBLIC_RELEASE_MODE=quotes` empêche les préparations exécutables et les
+demandes wallet. `enabled` ne doit être construit qu'après qualification et
+autorisation séparées. Le mode incident ferme les nouvelles émissions et garde
+le suivi. Voir [le dossier de correction](./research/2026-10-04-release/RELEASE_REPORT.md)
+et [le guide Docker/Portainer](./deploy/DEPLOYMENT.md). Aucun swap avec fonds,
+déploiement réel ou publication n'est qualifié par les tests locaux.
 
 La recherche couvre les tokens reconnus par LI.FI sur les réseaux EVM configurés,
 par **nom, symbole ou adresse de contrat**. La présence d'un token dans les
@@ -11,15 +19,15 @@ demandés.
 ## Variante d’interface `design/cow-jumper`
 
 Widget centré inspiré de CoW Swap, palette violette inspirée de Jumper, identité
-Hermes conservée. Les routes sont intégrées sous les champs, avec montant reçu,
+Hermes conservée. Les routes sont dans la colonne droite sur desktop et empilées
+sur mobile, avec montant reçu,
 minimum, frais et durée visibles ; leurs détails se déplient. La devise USD/EUR
 est dans l’en-tête, les frais Hermes et le slippage juste avant la confirmation.
 Le renouvellement automatique reste à 30 secondes, avec anneau et compte à rebours.
 Les fenêtres du wallet reprennent la même palette.
 
-Validation : 189 tests, TypeScript, lint et build réussis. Le rendu navigateur
-reste à contrôler : l’environnement de revue bloque les pages locales. Aucun
-swap réel n’a été signé pendant cette refonte.
+Les anciennes campagnes de tests de la refonte sont archivées ; les résultats
+de la version courante figurent dans le dossier de correction daté.
 
 ## Installation
 
@@ -45,6 +53,10 @@ Le formulaire et les réseaux configurés sont disponibles sans attendre LI.FI.
 | `NEXT_PUBLIC_PLATFORM_FEE_PERCENT` | Frais Hermes en pourcentage, de 0 à 100 ; défaut 0. |
 | `RANGO_API_KEY` | Facultative et serveur uniquement. Vide : clé publique de test Rango ; renseigner une clé privée avant production. |
 | `RANGO_REFERRER_ADDRESS` | Adresse EVM de réception si les frais Hermes sont non nuls ; Rango accepte au maximum 3 %. |
+| `NEXT_PUBLIC_RELEASE_MODE` | `quotes` par défaut ; `enabled` exige une image et une qualification distinctes ; `incident` ferme les nouvelles exécutions. |
+| `HERMES_EXECUTION_DISABLED` | Coupe la préparation serveur dans une image `enabled` après redémarrage ; le client relit `/api/release` avant chaque wallet. |
+| `HERMES_PUBLIC_ORIGIN` | Origine HTTPS canonique de déploiement derrière le proxy existant. |
+| `LIFI_SERVER_REQUESTS_PER_MINUTE` | Budget upstream partagé recherche/marché, par instance. |
 
 **Migration :** remplacer `NEXT_PUBLIC_LIFI_API_KEY` par
 `LIFI_API_KEY` dans l'environnement du serveur. L'ancienne variable
@@ -130,10 +142,10 @@ et les [limites du screening LI.FI](https://docs.li.fi/introduction/learn-more/h
 
 ## Parcours de swap
 
-1. Connecter le wallet et choisir les tokens.
+1. Choisir les tokens et comparer les cotations, même sans wallet connecté.
 2. Saisir un montant : conversion décimale en entier avec `BigInt`,
    virgule française acceptée sans perte de précision.
-3. Comparer et choisir une route LI.FI ou Rango. Les cotations sont annulées si les
+3. Comparer et choisir explicitement une route LI.FI, Rango ou 1Click. Les cotations sont annulées si les
    paramètres changent et se renouvellent automatiquement après 30 secondes.
    Un anneau animé affiche les secondes restantes, puis l'actualisation en cours.
    Les routes apparaissent dès la réponse de chaque provider ; le swap attend la
@@ -177,8 +189,9 @@ en anglais.
 La modale conserve la découverte LI.FI sur les neuf réseaux, avec 25 lignes par
 page. Le classement de marché vient de CoinGecko ou CoinMarketCap, avec un buffer
 de 120 actifs et une cible de 100, associés par contrat/réseau. Les données
-manquantes sont signalées. La sélection n'autorise aucun token à être signé :
-le registre local et une politique de contrats/ABI revue restent obligatoires.
+manquantes sont signalées. L'exécution utilise les transactions des providers, sans revue locale obligatoire
+des contrats/ABI ni inscription préalable dans un registre. Les contrôles de
+cotation, métadonnées, wallet, soldes et gas restent obligatoires.
 
 ```bash
 npm run typecheck
@@ -210,7 +223,7 @@ l'orchestration entièrement serveur des cotations restent à traiter.
 
 Set `NEAR_1CLICK_API_KEY` / `NEAR_1CLICK_JWT` on the server when required. 1Click supports EVM ERC-20 deposits; gas is additional and estimated before signing. Nonzero platform fees disable 1Click until its fee configuration exists. Source confirmation and destination tracking remain separate.
 
-Discovery is not restricted by continuity: popular catalog assets, remote name/symbol/address searches, pagination and 1Click EVM registry results are available. Every signed token must match the persistent local registry; noncatalog selection consent only permits quote previews.
+Discovery is not restricted by continuity: popular catalog assets, remote name/symbol/address searches, pagination and 1Click EVM registry results are available. Execution does not require local registry membership or reviewed router policies. Noncatalog tokens retain explicit consent and fresh LI.FI metadata checks.
 
 ## Corrections de l'audit du 2 octobre 2026
 
@@ -224,19 +237,22 @@ restent en attente de réconciliation, sans renvoi automatique.
 
 Les API 1Click ont des limites de taille, d'origine, de concurrence et des quotas
 séparés par processus, avec erreurs publiques nettoyées. La pile utilise désormais
-Next.js 15.5.27 et React 19.2.8. Les contrôles TypeScript, lint, build et les
-350 tests passent ; les wallets et livraisons réels restent une validation manuelle.
+Next.js 15.5.27 et React 19.2.8. Les résultats TypeScript, tests, lint et build
+de cette version sont consignés dans le dossier de correction. Les wallets et
+livraisons réels restent une validation manuelle séparément autorisée.
 
-L'audit npm ne rapporte plus de vulnérabilité haute ou critique. Il conserve une
-alerte modérée `decode-uri-component` signalée dans 16 paquets de la chaîne WalletConnect,
-dont le connecteur n'est pas activé dans ce MVP. Son remplacement nécessite une
-migration compatible de cette chaîne CommonJS/ESM ; un override incompatible
-n'est pas appliqué. Voir `ARCHITECTURE.md` pour les limites du suivi et des preuves.
-# Token security
+Les avis de dépendances et leur exposition doivent être revérifiés pour chaque
+image promue. Voir `ARCHITECTURE.md` pour les limites du suivi et des preuves.
+## Exécution sans registre obligatoire — 4 octobre 2026
 
-The local versioned Trusted Token Registry now gates all signing. Discovery and
-quote previews remain available; reviewed router, approval and deposit policies
-default to empty, so real execution is blocked until independently reviewed
-contracts and supported transaction semantics are configured. See
-[TOKEN_SECURITY.md](TOKEN_SECURITY.md) for the registry workflow, persistence,
-provider bindings and validation limitations.
+Les blocages par registre local et listes de contrats/ABI ont été retirés du
+parcours de swap. LI.FI prépare et exécute ses routes via son SDK EVM ; Rango et
+1Click utilisent leurs adapters distincts. Les contrats fournis par ces services
+ne sont pas audités automatiquement par Hermes.
+
+Les contrôles de devis, minimum, identité des tokens, consentement, verdicts
+négatifs, compte/réseau, soldes/gas et confirmation wallet restent actifs.
+Les outils de registre sont conservés pour diagnostic local ; leurs anciennes API
+publiques répondent 410 en production, sans appel
+depuis le parcours d'exécution ni blocage du bouton Swap. Voir
+[TOKEN_SECURITY.md](TOKEN_SECURITY.md) pour le statut du mécanisme retiré.

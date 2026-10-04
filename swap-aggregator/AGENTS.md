@@ -60,14 +60,12 @@ lets the user select a route. It does not silently force a “best” route.
 
 ## Required invariants
 
-- The token-security mandate supersedes the former non-catalog consent exemption
-  for execution. Discovery and selection consent only permit quote previews.
-  Every signed token must match the persistent local Trusted Token Registry.
-  External consensus never onboards or migrates identities automatically.
-  See `TOKEN_SECURITY.md` for explicit administration, audit and strict ABI policy.
-- Every actual signature must pass fresh server registry/quote/transaction checks.
-  Default router/spender/deposit policies are empty and block signing. Unknown
-  calldata, typed permits and signing methods fail closed; no SDK signer bypass.
+- Execution uses provider transactions without mandatory local token-registry,
+  router/spender/deposit allowlists or protocol-specific ABI review. The user
+  removed those gates on 2026-10-04; do not restore them implicitly.
+- Preserve quote/token identity, consent and flagged verdict checks, account/network,
+  balances/gas, explicit wallet confirmation and pending-transfer reconciliation.
+  The standalone registry tools are retained for diagnostics, not signing authority.
 - Market ranking comes from CoinGecko or CoinMarketCap with exact chain/address
   matching. LI.FI discovery capitalization is never the market-ranking authority.
 

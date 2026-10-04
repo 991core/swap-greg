@@ -1,0 +1,2 @@
+npm notice run hermes@0.1.0 npx
+npm notice run 'eslint' lib/intent lib/aggregators/rango/execute.ts lib/aggregators/rango/tracking.ts lib/aggregators/oneclick/execute.ts lib/aggregators/oneclick/tracking.ts

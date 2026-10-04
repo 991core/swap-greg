@@ -1,0 +1,41 @@
+npm notice run hermes@0.1.0 build
+npm notice run next build
+   ▲ Next.js 15.5.27
+   - Environments: .env.local
+   - Experiments (use with caution):
+     · optimizePackageImports
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 3.0s
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/4) ...
+   Generating static pages (1/4) 
+   Generating static pages (2/4) 
+   Generating static pages (3/4) 
+ ✓ Generating static pages (4/4)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                 Size  First Load JS
+┌ ○ /                                    81.3 kB         410 kB
+├ ○ /_not-found                             1 kB         105 kB
+├ ƒ /api/health                            156 B         104 kB
+├ ƒ /api/oneclick/quote                    156 B         104 kB
+├ ƒ /api/oneclick/status                   156 B         104 kB
+├ ƒ /api/oneclick/tokens                   156 B         104 kB
+├ ƒ /api/rango/[operation]                 156 B         104 kB
+├ ƒ /api/release                           156 B         104 kB
+├ ƒ /api/security/registry                 156 B         104 kB
+├ ƒ /api/security/validate                 156 B         104 kB
+├ ƒ /api/tokens/search                     156 B         104 kB
+└ ƒ /api/tokens/universe                   156 B         104 kB
++ First Load JS shared by all             104 kB
+  ├ chunks/1255-8dc91b756d944555.js      46.4 kB
+  ├ chunks/4bd1b696-100b9d70ed4e49c1.js  54.4 kB
+  └ other shared chunks (total)          3.12 kB
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

@@ -59,7 +59,7 @@ describe("provider isolation", () => {
     const log = vi.spyOn(console, "warn").mockImplementation(() => {});
     vi.mocked(rangoRequest).mockRejectedValue(Object.assign(new Error("429"), { status: 429 })); const warn = vi.fn();
     expect((await getRoutesForSelection(params, undefined, warn)).map(r=>r.provider)).toEqual(["lifi"]);
-    expect(warn).toHaveBeenCalledWith({ provider: "rango", message: "unavailable" });
+    expect(warn).toHaveBeenCalledWith({ provider: "rango", message: "quota" });
     expect(log).toHaveBeenCalledWith("[Hermes quotes]", expect.objectContaining({ event: "provider_failed", provider: "rango", status: 429 }));
   });
   it("keeps Rango when LI.FI fails", async () => { vi.mocked(fetchRoutes).mockRejectedValue(new Error("offline")); expect((await getRoutesForSelection(params)).map(r=>r.provider)).toEqual(["rango"]); });
@@ -72,7 +72,7 @@ describe("provider isolation", () => {
     vi.mocked(rangoRequest).mockResolvedValue({ resultType: "NO_ROUTE", error: null });
     expect(await getRoutesForSelection({ ...params, providers: { lifi: false, rango: true, socket: false } })).toEqual([]);
     vi.mocked(rangoRequest).mockRejectedValue(new Error("offline")); vi.mocked(fetchRoutes).mockRejectedValue(new Error("offline"));
-    await expect(getRoutesForSelection(params)).rejects.toThrow("No selected provider");
+    await expect(getRoutesForSelection(params)).rejects.toThrow("Quote providers unavailable");
   });
   it("discards all results and progress after cancellation", async () => {
     const log = vi.spyOn(console, "warn").mockImplementation(() => {});

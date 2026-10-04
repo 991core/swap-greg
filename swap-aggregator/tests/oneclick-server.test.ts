@@ -34,7 +34,7 @@ describe("1Click token registry", () => {
 });
 describe("1Click transport and budgets", () => {
   it("uses fixed hosts, credentials and no redirects or retries with a fourteen second bound", async () => {
-    const { oneClickRequest } = await import("../lib/aggregators/oneclick/server"); await oneClickRequest("/quote", { method: "POST", headers: { Authorization: "untrusted" } });
+    const { oneClickRequest } = await import("../lib/aggregators/oneclick/server"); await oneClickRequest("/quote", { method: "POST", body: JSON.stringify({ dry: true }), headers: { Authorization: "untrusted" } });
     expect(fetchMock).toHaveBeenCalledOnce(); expect(fetchMock.mock.calls[0][0]).toBe("https://1click.chaindefuser.com/v0/quote"); expect(fetchMock.mock.calls[0][1]).toMatchObject({ redirect: "error", cache: "no-store", signal: expect.any(AbortSignal) });
     expect(fetchMock.mock.calls[0][1].headers.Authorization).not.toBe("untrusted"); await expect(oneClickRequest("https://evil.example")).rejects.toThrow("Invalid operation"); expect(fetchMock).toHaveBeenCalledOnce();
   });

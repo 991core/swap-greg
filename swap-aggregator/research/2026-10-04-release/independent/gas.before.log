@@ -1,0 +1,11 @@
+npm notice run hermes@0.1.0 test
+npm notice run vitest run --config research/2026-10-04-release/independent/gas.before.config.mts
+
+ RUN  v4.1.11 /home/pierre/Downloads/swap-aggregator/swap-aggregator
+
+
+ Test Files  1 passed (1)
+      Tests  1 passed (1)
+   Start at  15:14:20
+   Duration  597ms (transform 75ms, setup 252ms, import 22ms, tests 37ms, environment 213ms)
+

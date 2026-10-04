@@ -3,9 +3,9 @@ import { getCatalogToken } from "../lib/tokens/catalog";
 import { fetchOneClickRoute, fetchOneClickTokens } from "../lib/aggregators/oneclick/client";
 import { canExecuteQuote } from "../lib/routing/quote";
 import { executeOneClickRoute } from "../lib/aggregators/oneclick/execute";
-import { estimateGas, estimateFeesPerGas, getAccount, getBalance, readContract, writeContract, waitForTransactionReceipt } from "wagmi/actions";
+import { estimateGas, estimateFeesPerGas, getAccount, getBalance, getBytecode, getTransactionCount, readContract, writeContract, waitForTransactionReceipt } from "wagmi/actions";
 vi.mock("../lib/wallet", () => ({ walletConfig: {} }));
-vi.mock("wagmi/actions", () => ({ estimateGas: vi.fn(), estimateFeesPerGas: vi.fn(), getAccount: vi.fn(), getBalance: vi.fn(), readContract: vi.fn(), writeContract: vi.fn(), waitForTransactionReceipt: vi.fn() }));
+vi.mock("wagmi/actions", () => ({ estimateGas: vi.fn(), estimateFeesPerGas: vi.fn(), getAccount: vi.fn(), getTransactionCount: vi.fn(), getBytecode: vi.fn(), getBalance: vi.fn(), readContract: vi.fn(), writeContract: vi.fn(), waitForTransactionReceipt: vi.fn() }));
 const fromToken = getCatalogToken(8453, "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913")!;
 const toToken = getCatalogToken(1, "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48")!;
 const params = { fromChainId: 8453, toChainId: 1, fromTokenAddress: fromToken.address, toTokenAddress: toToken.address,
@@ -28,12 +28,15 @@ const fetchMock = vi.fn();
 const authorize = vi.fn(async () => {});
 beforeEach(() => {
   vi.clearAllMocks(); vi.stubGlobal("fetch", fetchMock); fetchMock.mockImplementation(async (_url, init) => {
+    if (_url === "/api/release") return Response.json({ executionEnabled: true });
     const request = JSON.parse(init.body);
     return Response.json(quote(request.dry, request.wallet ?? "0x0000000000000000000000000000000000000000"));
   });
   vi.mocked(estimateGas).mockResolvedValue(BigInt(50000)); vi.mocked(estimateFeesPerGas).mockResolvedValue({ maxFeePerGas: BigInt(2) } as never);
   vi.mocked(getBalance).mockResolvedValue({ value: BigInt(1000000) } as never); vi.mocked(readContract).mockResolvedValue(BigInt(100000000));
   vi.mocked(writeContract).mockResolvedValue(hash as `0x${string}`); vi.mocked(waitForTransactionReceipt).mockResolvedValue({ status: "success" } as never);
+  vi.mocked(getBytecode).mockResolvedValue(undefined);
+  vi.mocked(getTransactionCount).mockResolvedValue(17);
   vi.mocked(getAccount).mockReturnValue({ isConnected: true, address: params.fromAddress, chainId: params.fromChainId } as never);
 });
 it("requests previews without a wallet and keeps minimum, identities and expiry", async () => {
@@ -54,9 +57,9 @@ it("rejects malformed minimums and cancelled requests", async () => {
   fetchMock.mockRejectedValueOnce(new DOMException("Aborted", "AbortError"));
   await expect(fetchOneClickRoute(params, new AbortController().signal)).rejects.toThrow("Aborted");
 });
-it("records the deposit only after confirmation and gas checks", async () => {
+it("executes without registry approval after confirmation and gas checks", async () => {
   const [route] = await fetchOneClickRoute(params); const confirm = vi.fn(() => true); const onPending = vi.fn(); const check = vi.fn();
-  const result = await executeOneClickRoute(route, params, check, { confirm, onPending }, authorize);
+  const result = await executeOneClickRoute(route, params, check, { confirm, onPending });
   expect(confirm).toHaveBeenCalledOnce(); expect(writeContract).toHaveBeenCalledOnce(); expect(check).toHaveBeenCalled();
   expect(writeContract).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ functionName: "transfer", args: [depositAddress, BigInt(100000000)] }));
   expect(onPending).toHaveBeenCalledWith(expect.objectContaining({ hash, status: "PENDING_DEPOSIT" })); expect(result?.provider).toBe("oneclick");
@@ -161,12 +164,42 @@ it("keeps the gas reserve margin and rechecks after asynchronous balance work", 
   expect(writeContract).not.toHaveBeenCalled();
 });
 
-it("does not release a deposit after receipt timeout or an unknown receipt status", async () => {
+it("does not release or resend a deposit after receipt timeout", async () => {
   const [route] = await fetchOneClickRoute(params); const onPending = vi.fn();
   vi.mocked(waitForTransactionReceipt).mockRejectedValueOnce(new Error("receipt timeout"));
   await expect(executeOneClickRoute(route, params, vi.fn(), { confirm: () => true, onPending }, authorize)).rejects.toThrow("receipt timeout");
   expect(onPending).toHaveBeenLastCalledWith(expect.objectContaining({ hash, status: "PENDING_DEPOSIT" }));
+  await expect(executeOneClickRoute(route, params, vi.fn(), { confirm: () => true, onPending }, authorize)).rejects.toThrow("reconciliation_required");
+  expect(writeContract).toHaveBeenCalledOnce();
+});
+it("retains a deposit after an unknown source receipt status", async () => {
+  const [route] = await fetchOneClickRoute(params); const onPending = vi.fn();
   vi.mocked(waitForTransactionReceipt).mockResolvedValueOnce({ status: "unknown" } as never);
   await expect(executeOneClickRoute(route, params, vi.fn(), { confirm: () => true, onPending }, authorize)).rejects.toThrow("Unknown source receipt");
   expect(onPending).toHaveBeenLastCalledWith(expect.objectContaining({ hash, status: "PENDING_DEPOSIT" }));
+});
+
+it("rechecks funds after the runtime execution policy await and does not send when native gas balance fell", async () => {
+  const [route] = await fetchOneClickRoute(params);
+  fetchMock.mockImplementation(async (_url, init) => {
+    if (_url === "/api/release") { vi.mocked(getBalance).mockResolvedValue({ value: BigInt(0) } as never); return Response.json({ executionEnabled: true }); }
+    const request = JSON.parse(init.body); return Response.json(quote(request.dry, request.wallet));
+  });
+  const onPending = vi.fn();
+  await expect(executeOneClickRoute(route, params, vi.fn(), { confirm: () => true, onPending })).rejects.toThrow("gas");
+  expect(onPending).toHaveBeenLastCalledWith(expect.objectContaining({ status: "FAILED", sourceOutcome: "not_sent" }));
+  expect(writeContract).not.toHaveBeenCalled();
+});
+
+it("rejects a contract or delegated source account before requesting the 1Click transfer", async () => {
+  const [route] = await fetchOneClickRoute(params); vi.mocked(getBytecode).mockResolvedValue("0xef0100abcd");
+  await expect(executeOneClickRoute(route, params, vi.fn(), { confirm: () => true, onPending: vi.fn() })).rejects.toThrow("Contract wallets");
+  expect(writeContract).not.toHaveBeenCalled();
+});
+
+it("does not publish an active no-hash deposit when the nonce RPC fails", async () => {
+  const [route] = await fetchOneClickRoute(params); const onPending = vi.fn();
+  vi.mocked(getTransactionCount).mockRejectedValueOnce(new Error("nonce unavailable"));
+  await expect(executeOneClickRoute(route, params, vi.fn(), { confirm: () => true, onPending })).rejects.toThrow("nonce unavailable");
+  expect(onPending).not.toHaveBeenCalled(); expect(writeContract).not.toHaveBeenCalled();
 });

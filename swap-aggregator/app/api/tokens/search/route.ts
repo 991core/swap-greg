@@ -1,3 +1,4 @@
+import { withApiGuard } from "@/lib/server/api";
 import { NextResponse } from "next/server";
 import { searchTokensOnServer } from "@/lib/tokens/search.server";
 import { parseTokenSearch } from "@/lib/tokens/validation";
@@ -7,6 +8,9 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
+  return withApiGuard("tokens.search", request, () => handle(request));
+}
+async function handle(request: Request) {
   const headers = { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" };
   try {
     const input = parseTokenSearch(new URL(request.url).searchParams);

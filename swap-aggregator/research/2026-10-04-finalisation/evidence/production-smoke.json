@@ -1,0 +1,66 @@
+[
+  {
+    "path": "/",
+    "status": 200,
+    "bytes": 14908,
+    "headers": {
+      "Vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch, Accept-Encoding",
+      "x-nextjs-cache": "HIT",
+      "x-nextjs-prerender": "1",
+      "x-nextjs-stale-time": "300",
+      "X-Powered-By": "Next.js",
+      "Cache-Control": "s-maxage=31536000",
+      "ETag": "\"ya4fnzyp5vbgz\"",
+      "Content-Type": "text/html; charset=utf-8",
+      "Content-Length": "14908",
+      "Date": "Sun, 04 Oct 2026 00:53:44 GMT",
+      "Connection": "close"
+    },
+    "containsHermes": true
+  },
+  {
+    "path": "/api/tokens/search?chainId=invalid",
+    "status": 400,
+    "bytes": 26,
+    "headers": {
+      "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+      "cache-control": "no-store",
+      "content-type": "application/json",
+      "x-content-type-options": "nosniff",
+      "Date": "Sun, 04 Oct 2026 00:53:44 GMT",
+      "Connection": "close",
+      "Transfer-Encoding": "chunked"
+    },
+    "containsHermes": false
+  },
+  {
+    "path": "/api/oneclick/quote",
+    "status": 403,
+    "bytes": 42,
+    "headers": {
+      "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+      "cache-control": "no-store",
+      "content-type": "application/json",
+      "x-content-type-options": "nosniff",
+      "Date": "Sun, 04 Oct 2026 00:53:44 GMT",
+      "Connection": "close",
+      "Transfer-Encoding": "chunked"
+    },
+    "containsHermes": false
+  },
+  {
+    "path": "/api/rango/quote",
+    "status": 403,
+    "bytes": 42,
+    "headers": {
+      "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+      "cache-control": "no-store",
+      "content-type": "application/json",
+      "x-content-type-options": "nosniff",
+      "Date": "Sun, 04 Oct 2026 00:53:44 GMT",
+      "Connection": "close",
+      "Transfer-Encoding": "chunked"
+    },
+    "containsHermes": false
+  }
+]

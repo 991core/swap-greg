@@ -6,14 +6,12 @@ import { createGuardedLifiWallet, type LifiWalletSecurity } from "../lib/securit
 import { getLifiExecutionClient, getLifiSdkClient } from "../lib/aggregators/lifi/client";
 import { executeLifiRoute } from "../lib/aggregators/lifi/execute";
 import { executeRangoRoute } from "../lib/aggregators/rango/execute";
-import { executeOneClickRoute } from "../lib/aggregators/oneclick/execute";
-import { rawRoute, params as nativeParams, wallet } from "./fixtures";
-import { normalizedRango, tokenSwap, hash, rangoTo } from "./rango-fixtures";
-import type { OneClickNormalizedRoute } from "../lib/types/normalized-route";
-import { getAccount, getBalance, readContract, estimateGas, estimateFeesPerGas, writeContract, sendTransaction, waitForTransactionReceipt, getWalletClient } from "wagmi/actions";
+import { rawRoute, wallet } from "./fixtures";
+import { tokenSwap, hash, rangoTo } from "./rango-fixtures";
+import { getAccount, getBalance, readContract, estimateGas, estimateFeesPerGas, getTransactionCount, writeContract, sendTransaction, waitForTransactionReceipt, getWalletClient } from "wagmi/actions";
 import { rangoRequest } from "../lib/aggregators/rango/client";
 vi.mock("../lib/wallet", () => ({ walletConfig: {} }));
-vi.mock("wagmi/actions", () => ({ getAccount: vi.fn(), getBalance: vi.fn(), readContract: vi.fn(), estimateGas: vi.fn(), estimateFeesPerGas: vi.fn(), writeContract: vi.fn(), sendTransaction: vi.fn(), waitForTransactionReceipt: vi.fn(), getWalletClient: vi.fn(), switchChain: vi.fn() }));
+vi.mock("wagmi/actions", () => ({ getAccount: vi.fn(), getBalance: vi.fn(), readContract: vi.fn(), estimateGas: vi.fn(), estimateFeesPerGas: vi.fn(), getTransactionCount: vi.fn(async () => 17), getBytecode: vi.fn(async () => "0x"), writeContract: vi.fn(), sendTransaction: vi.fn(), waitForTransactionReceipt: vi.fn(), getWalletClient: vi.fn(), switchChain: vi.fn() }));
 vi.mock("../lib/aggregators/rango/client", () => ({ rangoRequest: vi.fn() }));
 const source = "0x2222222222222222222222222222222222222222";
 const router = "0x3333333333333333333333333333333333333333";
@@ -24,6 +22,8 @@ function setup() {
   const upstream = vi.fn(async ({ method }: { method: string }) => {
     if (method === "eth_accounts") return [liveAccount];
     if (method === "eth_chainId") return liveChain;
+    if (method === "eth_getCode") return "0x";
+    if (method === "eth_getTransactionCount") return "0x11";
     if (method === "eth_getBalance") return `0x${nativeBalance.toString(16)}`;
     if (method === "eth_call") return `0x${tokenBalance.toString(16).padStart(64, "0")}`;
     if (method === "eth_estimateGas") return `0x${gas.toString(16)}`;
@@ -34,13 +34,16 @@ function setup() {
   });
   const original = createWalletClient({ account: wallet, chain: mainnet, transport: custom({ request: upstream }, { retryCount: 0 }) });
   const authorizeTransaction = vi.fn(async () => {}); const check = vi.fn();
-  const security = { account: wallet, chainId: 1, protocol: "uniswap_v2", fromTokenAddress: source, fromAmount: "100", quotedNativeGasReserve: "21000", authorizeTransaction, check } satisfies LifiWalletSecurity;
+  const journal = { beforeAction: vi.fn(async () => "action"), sent: vi.fn(), rejected: vi.fn(), ambiguous: vi.fn(), notSent: vi.fn() };
+  const security = { journal, account: wallet, chainId: 1, protocol: "uniswap_v2", fromTokenAddress: source, fromAmount: "100", quotedNativeGasReserve: "21000", authorizeTransaction, check } satisfies LifiWalletSecurity;
   return { upstream, security, original, guarded: createGuardedLifiWallet(original, security), setAccount: (value: string) => { liveAccount = value; }, setChain: (value: string) => { liveChain = value; },
     setNativeBalance: (value: bigint) => { nativeBalance = value; }, setTokenBalance: (value: bigint) => { tokenBalance = value; },
     setGas: (value: bigint) => { gas = value; }, setGasPrice: (value: bigint) => { gasPrice = value; } };
 }
 beforeEach(() => {
   vi.clearAllMocks();
+  let nonceReads = 0;
+  vi.mocked(getTransactionCount).mockImplementation(async () => 17 + Math.floor(nonceReads++ / 2));
   vi.mocked(getAccount).mockReturnValue({ isConnected: true, address: wallet, chainId: 8453 } as never);
   vi.mocked(getBalance).mockResolvedValue({ value: BigInt("1000000000000000000") } as never);
   vi.mocked(estimateGas).mockResolvedValue(BigInt(100000)); vi.mocked(estimateFeesPerGas).mockResolvedValue({ maxFeePerGas: BigInt(1) } as never);
@@ -109,9 +112,9 @@ describe("LI.FI final RPC barrier", () => {
     const fixture = setup(); await expect(fixture.guarded.request({ method, params: [] } as never)).rejects.toThrow("QUOTE_VALIDATION_FAILED");
     expect(fixture.upstream).not.toHaveBeenCalled();
   });
-  it("also guards signTransaction and rejects EIP7702/blob/unknown envelope fields", async () => {
+  it("blocks offline signTransaction and rejects EIP7702/blob/unknown envelope fields", async () => {
     const fixture = setup(); fixture.security.authorizeTransaction.mockRejectedValue(new Error("denied"));
-    await expect(fixture.guarded.request({ method: "eth_signTransaction", params: [{ from: wallet, to: source, data }] } as never)).rejects.toThrow("denied");
+    await expect(fixture.guarded.request({ method: "eth_signTransaction", params: [{ from: wallet, to: source, data }] } as never)).rejects.toThrow("QUOTE_VALIDATION_FAILED");
     expect(fixture.upstream).not.toHaveBeenCalled();
     for (const extra of [{ authorizationList: [] }, { blobVersionedHashes: [] }, { type: "0x4" }, { chainId: "0x2105" }]) {
       await expect(fixture.guarded.request({ method: "eth_sendTransaction", params: [{ from: wallet, to: source, data, ...extra }] } as never)).rejects.toThrow("QUOTE_VALIDATION_FAILED");
@@ -136,7 +139,7 @@ describe("LI.FI final RPC barrier", () => {
   });
   it("the SDK quote client cannot obtain an unguarded wallet and execution providers always wrap it", async () => {
     const quoteProvider = getLifiSdkClient().providers.find(provider => provider.type === "EVM")!;
-    await expect((quoteProvider as unknown as { getWalletClient: () => Promise<Client> }).getWalletClient()).rejects.toThrow("authorizer");
+    await expect((quoteProvider as unknown as { getWalletClient: () => Promise<Client> }).getWalletClient()).rejects.toThrow("quote check");
     const fixture = setup(); vi.mocked(getWalletClient).mockResolvedValue(fixture.original as never);
     const executionProvider = getLifiExecutionClient(fixture.security).providers.find(provider => provider.type === "EVM")!;
     const client = await (executionProvider as unknown as { getWalletClient: () => Promise<Client> }).getWalletClient();
@@ -146,11 +149,17 @@ describe("LI.FI final RPC barrier", () => {
   });
 });
 describe("direct provider executors", () => {
-  it("fail closed without an authorizer, including direct calls outside common preflight", async () => {
-    await expect(executeLifiRoute(rawRoute())).rejects.toThrow("authorizer");
-    await expect(executeRangoRoute(normalizedRango(), nativeParams, vi.fn())).rejects.toThrow("authorizer");
-    await expect(executeOneClickRoute({} as OneClickNormalizedRoute, nativeParams, vi.fn(), { confirm: () => true, onPending: vi.fn() })).rejects.toThrow("authorizer");
+  it("requires a quote check for direct LI.FI execution", async () => {
+    await expect(executeLifiRoute(rawRoute())).rejects.toThrow("quote check");
     expect(writeContract).not.toHaveBeenCalled(); expect(sendTransaction).not.toHaveBeenCalled();
+  });
+  it("allows provider calldata without local registry or router approval", async () => {
+    const fixture = setup();
+    const { authorizeTransaction: _retired, ...scope } = fixture.security;
+    const client = createGuardedLifiWallet(fixture.original, scope);
+    await client.request({ method: "eth_sendTransaction", params: [{ from: wallet, to: router, data: "0xdeadbeef" }] } as never);
+    expect(fixture.security.authorizeTransaction).not.toHaveBeenCalled();
+    expect(fixture.upstream.mock.calls.filter(call => call[0].method === "eth_sendTransaction")).toHaveLength(1);
   });
   it("authorizes every Rango reset, approval and final send independently", async () => {
     const { route, data: response, input } = tokenSwap(); let allowance = BigInt(1);

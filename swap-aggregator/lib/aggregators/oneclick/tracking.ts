@@ -81,7 +81,7 @@ export function readPendingOneClick(text: string | null): PendingOneClick | null
     if (value.version !== 1 || !Number.isInteger(value.toChainId) || !Number.isSafeInteger(value.submittedAt) || value.submittedAt < 0 ||
         !["UNKNOWN", "PENDING_DEPOSIT", "PROCESSING", "SUCCESS", "FAILED"].includes(value.status)) return null;
     validateStoredProof(value);
-    if (value.status === "FAILED" && !((value.sourceOutcome === "rejected" && !value.hash) || (value.sourceOutcome === "reverted" && value.hash))) return { ...value, status: "UNKNOWN", destinationUrl: undefined };
+    if (value.status === "FAILED" && !((["rejected", "not_sent"].includes(value.sourceOutcome ?? "") && !value.hash) || (value.sourceOutcome === "reverted" && value.hash))) return { ...value, status: "UNKNOWN", destinationUrl: undefined };
     if (value.status === "SUCCESS") {
       const delivery = verifiedDelivery(value, value.delivery);
       if (!delivery) return { ...value, status: "PROCESSING", destinationUrl: undefined };

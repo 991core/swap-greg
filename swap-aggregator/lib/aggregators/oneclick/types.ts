@@ -4,6 +4,7 @@ import type { OneClickQuoteResponse, OneClickTokenEvidence } from "./validation"
 
 export type OneClickPendingStatus = "UNKNOWN" | "PENDING_DEPOSIT" | "PROCESSING" | "SUCCESS" | "FAILED";
 type PendingBase = {
+  journalId?: string;
   wallet: Address;
   fromChainId: number;
   depositAddress: Address;
@@ -26,7 +27,7 @@ export type PendingOneClickV1 = PendingBase & {
   minimum: string;
   quoteResponse: OneClickQuoteResponse;
   submittedAt: number;
-  sourceOutcome?: "rejected" | "reverted";
+  sourceOutcome?: "rejected" | "reverted" | "not_sent";
   delivery?: unknown;
 };
 export type PendingOneClick = PendingOneClickV1 | LegacyPendingOneClick;

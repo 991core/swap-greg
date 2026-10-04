@@ -1,0 +1,11 @@
+npm notice run hermes@0.1.0 npx
+npm notice run 'vitest' run tests/api-boundary.test.ts tests/release-api.test.ts tests/token-transport-contract.test.ts tests/rango-transport.test.ts tests/universe-budget.test.ts tests/rango-api.test.ts tests/oneclick-api.test.ts tests/oneclick-server.test.ts tests/token-search-api.test.ts tests/security-api.test.ts tests/security-providers.test.ts tests/universe.test.ts tests/security-independent-review.test.ts
+
+ RUN  v4.1.11 /home/pierre/Downloads/swap-aggregator/swap-aggregator
+
+
+ Test Files  13 passed (13)
+      Tests  217 passed (217)
+   Start at  15:06:52
+   Duration  3.13s (transform 378ms, setup 3.26s, import 270ms, tests 1.11s, environment 626ms)
+

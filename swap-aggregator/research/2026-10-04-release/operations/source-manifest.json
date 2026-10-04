@@ -1,0 +1,512 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-10-04T13:06:53.712Z",
+  "head": "86159fb636d1b779c85818a261b07e05512cd9f0",
+  "treeSha256": "07ec059390ba653ff38250938790137120ba2ecf63b12b25e4a0ab6ae96fdcc0",
+  "files": [
+    {
+      "path": ".dockerignore",
+      "sha256": "97a52a4dbf56c0a4292a6703e1a2ee7d97026dd88144199eebee747a5f069b85"
+    },
+    {
+      "path": ".eslintrc.json",
+      "sha256": "af6756c82c09bcd2f26e493c607d47a1e760e7718e30b26c9f6ac43c985ae8fc"
+    },
+    {
+      "path": "app/api/health/route.ts",
+      "sha256": "18377e07dc720b08651bf425d76edb1117454951b39e408ffc0d3c8b1a4757f2"
+    },
+    {
+      "path": "app/api/oneclick/quote/route.ts",
+      "sha256": "e3764e18b197914011232f43d3f19570f63f86cb1a1d81398e36f87ca7313a80"
+    },
+    {
+      "path": "app/api/oneclick/status/route.ts",
+      "sha256": "c4eab01b3b212647d552df3708cadf899bbab00b16099f80eb39a95b3e85a424"
+    },
+    {
+      "path": "app/api/oneclick/tokens/route.ts",
+      "sha256": "8e5219a6080c3f523828bfdef3a1c7fd625066c00dfe7019fc4ad39079123dbe"
+    },
+    {
+      "path": "app/api/rango/[operation]/route.ts",
+      "sha256": "bc53e6e10292dfea6a4d4ba9d834e18465d7b0cdfa5cc431d79fbfa5c6b9fd6b"
+    },
+    {
+      "path": "app/api/release/route.ts",
+      "sha256": "7c33188e9d48d62f7ad75ea490ea6016b5e901cc9f00bb7e45cd9e8727d6d828"
+    },
+    {
+      "path": "app/api/security/registry/route.ts",
+      "sha256": "c4960ecb9ab43f83a200b40b36c976917e2c16de96e420c06f371efafc3768e0"
+    },
+    {
+      "path": "app/api/security/validate/route.ts",
+      "sha256": "fe9d80e2d5909043904e6fc5ff079e3f83c7c5480c0644a877ae227e9d904cca"
+    },
+    {
+      "path": "app/api/tokens/search/route.ts",
+      "sha256": "8e94f303c21dd121ee2ef42a719200cb364da191a046639dc91c704498de0a1f"
+    },
+    {
+      "path": "app/api/tokens/universe/route.ts",
+      "sha256": "6b82743894d31f8f4b664ffaa60c9aacb2ccbb8a3bc761c9c1d1bfac6700bf77"
+    },
+    {
+      "path": "app/globals.css",
+      "sha256": "e74dd2e9ea6d97eb5c43b98e38acc4d6333567718415324c1debae05531c166c"
+    },
+    {
+      "path": "app/layout.tsx",
+      "sha256": "0d3af35a2dd926dc5d885f56faaa93491e8bad31caddfba604452ad49cfaee36"
+    },
+    {
+      "path": "app/page.tsx",
+      "sha256": "e3a900fa9cc1c3198a41af9459a22074e805294c1ec3af64427611f8555c1948"
+    },
+    {
+      "path": "app/providers.tsx",
+      "sha256": "9412b3f5b3893abe7385e79391b2a875bd1a12e6d98941cbf0f004b15c5baa9e"
+    },
+    {
+      "path": "components/ChainIcon.tsx",
+      "sha256": "2de55f7e5e3193f5a031f7ddc4ee11040a600cdb2a8f8b49d86779e2f2d89e03"
+    },
+    {
+      "path": "components/ChainSelect.tsx",
+      "sha256": "563a3be33891327e5e5609116ac0128538a1d98c4a2cc4786834c9f791e7606b"
+    },
+    {
+      "path": "components/CurrencySwitch.tsx",
+      "sha256": "30d4202234095bc5a59d2d3202b89518a12b7268c31bd8f968a6cb6fb9ecc395"
+    },
+    {
+      "path": "components/ProviderBadge.tsx",
+      "sha256": "aff1d85d94a797bc887b74ce799363ada786cabad9578f9e86b4f54d7bf9db29"
+    },
+    {
+      "path": "components/QuoteCountdown.tsx",
+      "sha256": "22eeafc10cb510c85a6957379dd5c5552ad0a3c2019a63eaab8e7e06deb7b880"
+    },
+    {
+      "path": "components/RouteList.tsx",
+      "sha256": "957d5ca90bb9be63b346fa620f9bd532ab6f7bdfbfcf5eb59b928b17e3223c50"
+    },
+    {
+      "path": "components/SidebarNav.tsx",
+      "sha256": "5149f54722fae664025eefb05c048261577d47148268b9399b83ba5f2aeff0c0"
+    },
+    {
+      "path": "components/SwapCard.tsx",
+      "sha256": "0c91ff17248960ab291fedf201628f65f24d4b4674b68d4b11151b0f86f2d9ee"
+    },
+    {
+      "path": "components/TokenIcon.tsx",
+      "sha256": "201f72db6c8e6794caa03647ab0485653c667195c047bf6dcd825c8d3886f21e"
+    },
+    {
+      "path": "components/TokenSelectModal.tsx",
+      "sha256": "86549a2c80ede4a796a957b7f1b56f54a03863de84cb11caa950b956bdb9d534"
+    },
+    {
+      "path": "Dockerfile",
+      "sha256": "498c56ed201b0a6941a3a1c5466b96c5b62d61c0bcb14640747ff1bee2a02619"
+    },
+    {
+      "path": "lib/aggregators/lifi/client.ts",
+      "sha256": "f03c91e505ae565abdde28adc922859ecf87c55b9e08b774b432ebda4ffc7e77"
+    },
+    {
+      "path": "lib/aggregators/lifi/execute.ts",
+      "sha256": "ebf6a843e6df5f3d60c68611605071f199aec6dc0fc4a7862ce975e22b987a1d"
+    },
+    {
+      "path": "lib/aggregators/lifi/policy.ts",
+      "sha256": "6ae9ee093ee4f63d1493bd590ef1b8c727fdd646048cbc5830c1aa9e5a28eb0a"
+    },
+    {
+      "path": "lib/aggregators/lifi/routes.ts",
+      "sha256": "4b689aabef9fef35db35964ced1a3695f2956424b285a65b5436f23251c735a8"
+    },
+    {
+      "path": "lib/aggregators/lifi/tracking.ts",
+      "sha256": "3e8cc88c7b3c8ef48741c41d525231d3f95842857c5afbda20085ee61357ff26"
+    },
+    {
+      "path": "lib/aggregators/oneclick/client.ts",
+      "sha256": "d069c1dd88cfd5802f10d8f7f44e112f45940efdf964da664cba6e0868a278d5"
+    },
+    {
+      "path": "lib/aggregators/oneclick/execute.ts",
+      "sha256": "837965f022cc7ebc2fc7a2dc31de2cd965b73c9029055236180621e952312630"
+    },
+    {
+      "path": "lib/aggregators/oneclick/server.ts",
+      "sha256": "42558c1ed71fae45618897284de080f99de768638b95862fdacdf025acb59d32"
+    },
+    {
+      "path": "lib/aggregators/oneclick/tracking.ts",
+      "sha256": "a0885cf07ab950a634b62374d0e3a559cb2473263e2c8cab18f4675755815018"
+    },
+    {
+      "path": "lib/aggregators/oneclick/types.ts",
+      "sha256": "f63c378ddaaeded0465e6ff230dc0835910d5e523ddc20437141460055f4cea9"
+    },
+    {
+      "path": "lib/aggregators/oneclick/validation.ts",
+      "sha256": "6188bb618d14e0504cc063961a2ba1796ce2df08d5adac531a92dea761bab957"
+    },
+    {
+      "path": "lib/aggregators/rango/client.ts",
+      "sha256": "f28c09309b3b9c61a6b12fee32146469267f42a769fd00cf4c3e130e69682c4f"
+    },
+    {
+      "path": "lib/aggregators/rango/execute.ts",
+      "sha256": "7f605b7b96f09918813b4dd196a938aef112213ef7cfa9ce3a8e564a24205d96"
+    },
+    {
+      "path": "lib/aggregators/rango/explorer.ts",
+      "sha256": "42a97ce18708cd89594755c660aefb309fbe97bc1c5bba7af4a8340adefeea3c"
+    },
+    {
+      "path": "lib/aggregators/rango/routes.ts",
+      "sha256": "72cac07c663ed10f35a461c982e73b5a9a496e3a588a36ebc9cb3b13163604c0"
+    },
+    {
+      "path": "lib/aggregators/rango/server.ts",
+      "sha256": "3e4638ed5a2867f76d954e9537630fe69bd2a5ac2b38db044724045a61dce58d"
+    },
+    {
+      "path": "lib/aggregators/rango/tracking.ts",
+      "sha256": "41629f6b32eb2828d978fd29a2af4f6db31bc6c44c6fd496b1ae77a2c19d8508"
+    },
+    {
+      "path": "lib/aggregators/rango/types.ts",
+      "sha256": "88bdc1fb700897849d4192887ddabedd43d4d3a917f0d35109b259cd299348f7"
+    },
+    {
+      "path": "lib/aggregators/rango/validation.ts",
+      "sha256": "6d330b290e298c3b32b784f462744b9c109dd8a1e255852b87170904b97b1c07"
+    },
+    {
+      "path": "lib/aggregators/socket/client.ts",
+      "sha256": "5bb7adea4b32284b2bf1572840a380ed662e3e9923ab7ffd68422434377a756a"
+    },
+    {
+      "path": "lib/aggregators/socket/execute.ts",
+      "sha256": "24668159480feab6d1e5816e08a57c01a4bb3c91e8bfda6cc602d55a201823d4"
+    },
+    {
+      "path": "lib/aggregators/socket/routes.ts",
+      "sha256": "baa85f6e65dac5d73845b131b2417ad884bf97193e31d4ad32155bad2c656844"
+    },
+    {
+      "path": "lib/amounts.ts",
+      "sha256": "0404efc8397268342d09b20c9d3e96762d7be8f123257b12aee3097ad981c2f5"
+    },
+    {
+      "path": "lib/chains.ts",
+      "sha256": "1452d1fd96fc1f07a7936e8c1defaef8a438d2a1d7ee1815714b3f09576d21f9"
+    },
+    {
+      "path": "lib/contractTokenResolver.ts",
+      "sha256": "ed7faf0cf7693594927939a1bcde5400b3208166d00266f9fae3d1e2fc357363"
+    },
+    {
+      "path": "lib/i18n.tsx",
+      "sha256": "18dd6a610c19d6b440d2bfb921a529bd899ccb7220b65f489d369306ccdc02f3"
+    },
+    {
+      "path": "lib/intent/journal.ts",
+      "sha256": "d2dc256b3d3b420eb2825f94e1b99bd425f558023a84505c6cc70ae054b77bda"
+    },
+    {
+      "path": "lib/intent/tracking.ts",
+      "sha256": "07a826ae2f4f822fc68e3f8414649c2d4cf8e2db9fcb2836ef5fc454210a8004"
+    },
+    {
+      "path": "lib/lifi.ts",
+      "sha256": "9edbb0d7259af215338e0c914726322274592e586b682854c021d4aee970d5d2"
+    },
+    {
+      "path": "lib/presentation.ts",
+      "sha256": "2bf71cb88ac14ff3ea528f1aa4e9e416502d9876e1eb4e788fe18ed78d4efbcb"
+    },
+    {
+      "path": "lib/pricing.ts",
+      "sha256": "872e808478d42a607b06bd7cf1cf1c64e06c3b90f36745d99e56bc77d7466665"
+    },
+    {
+      "path": "lib/release-mode.ts",
+      "sha256": "4112cbf807b6bfd96789c16d389403e5d8bff6dea5cf33e4c94e0609bdc277c9"
+    },
+    {
+      "path": "lib/routing/config.ts",
+      "sha256": "a670c0bc7c50f9973a76e3d245387e7d40668ac99258503e685b35ab884b0f6e"
+    },
+    {
+      "path": "lib/routing/deduplicate.ts",
+      "sha256": "4ab09d04a849cf5d5b80d745d62cf9e67c6964796a9c31daa9725cd957655cb8"
+    },
+    {
+      "path": "lib/routing/details.ts",
+      "sha256": "ef85dd3e69dab2d8f5836da0f126e89b7efbc5c60acf15a6cda6791d4790f7a5"
+    },
+    {
+      "path": "lib/routing/diagnostics.ts",
+      "sha256": "67a1876bde2969a7ec1eca91c073a541dc834e7eac63eab1948fbb18d564ee1b"
+    },
+    {
+      "path": "lib/routing/execute.ts",
+      "sha256": "c6e873317f2f1db29655596dd342820a096db49899fcfccadb2ab316559ca8fd"
+    },
+    {
+      "path": "lib/routing/normalize.ts",
+      "sha256": "52cae2129b0df3d5ff0c3c3fe6b8e174cc8c8b5f3370198b549c096c1d4fe4e2"
+    },
+    {
+      "path": "lib/routing/orchestrator.ts",
+      "sha256": "8b4c4eef41d80c5cbf946c85cdf63ce2ed690c4a65c1da95fd592eef9f25e5ac"
+    },
+    {
+      "path": "lib/routing/quote.ts",
+      "sha256": "58dd59cd4a3c5e54b3d4194af146a9d0165910187811818428788bd76a3287ca"
+    },
+    {
+      "path": "lib/routing/sort.ts",
+      "sha256": "4444ad04962785ff264374c524d73946d87a33e4d5527b181469fd9f1c099a15"
+    },
+    {
+      "path": "lib/routing/useSwapQuotes.ts",
+      "sha256": "cf047a632d89c3e6b529908df2c1db7f626dd0e7c0687ee6ab559fca159b6ac7"
+    },
+    {
+      "path": "lib/security/client.ts",
+      "sha256": "0d1ebe445daa2b3f65a9261ca90d8fdf97e44f1a50af98216cbb0f93a5590144"
+    },
+    {
+      "path": "lib/security/config.server.ts",
+      "sha256": "823ae7f8ba4853ce7f22e17bdfa8233afe33bba1d7239949e4d8849e85855ec8"
+    },
+    {
+      "path": "lib/security/consensus.ts",
+      "sha256": "339909c5c98c3296d9ece437538c86d8ee5de4fbf845c6099622ab42d6df4d4f"
+    },
+    {
+      "path": "lib/security/events.server.ts",
+      "sha256": "89c86a99ef382690f2ef9280d831a70f1396d6ae46def0452b6322c0a8a50bc5"
+    },
+    {
+      "path": "lib/security/identity.ts",
+      "sha256": "449df36d7e81ef0e7fc6eeb709b098d31c1666044cef90d3899ca4e85b87a372"
+    },
+    {
+      "path": "lib/security/lifi-wallet.ts",
+      "sha256": "36dc490343442bc59da3b410ac55be0810b7ab4f49b6045ea0f6ebd5c36f7a16"
+    },
+    {
+      "path": "lib/security/providers/coingecko.server.ts",
+      "sha256": "625cd237fa2905011ebe03fd068b56ed6743654fb97c770e730e814be19cfb59"
+    },
+    {
+      "path": "lib/security/providers/coinmarketcap.server.ts",
+      "sha256": "02df23243528d1e032e8d1855cf5ebcb5fb6e9a20db5a3bb70ff102b6eda5c29"
+    },
+    {
+      "path": "lib/security/providers/lifi.server.ts",
+      "sha256": "629d5429d23ed6faeef16f13b39ff562b6c0c8897404b3b715aa7d9a4416ccaa"
+    },
+    {
+      "path": "lib/security/providers/transport.server.ts",
+      "sha256": "ed1f86e090fd499cb402c1545b96af56328b15412e12ca3d6baa19e88980b0ba"
+    },
+    {
+      "path": "lib/security/providers/types.ts",
+      "sha256": "27cd0e21af1c5f7fbdb7f115c76cc942d0daf992c3ca58453e31ebc629396618"
+    },
+    {
+      "path": "lib/security/quote-validator.ts",
+      "sha256": "ddaa2b18d73c15f091c3825913f5342e7bf07356fabb91fad8fc6dfadf7bc9b4"
+    },
+    {
+      "path": "lib/security/registry.server.ts",
+      "sha256": "2ac5d6c160b9859c1c60173dbe5a371cbafe9612092488f2400b0fd7132706a1"
+    },
+    {
+      "path": "lib/security/resolver.server.ts",
+      "sha256": "ebd45b57a0998212caf7f233145b4dc0a7c257d24d8704c58a38fa8852c16a23"
+    },
+    {
+      "path": "lib/security/transaction-validator.ts",
+      "sha256": "3b458abd1ee6c76fa31f8429a90825cded15ce646ea2c55e8895a459aa199412"
+    },
+    {
+      "path": "lib/security/types.ts",
+      "sha256": "c8d5a8a907b293f47b2ba009c18e249620220fe79b2c91be324ec65854ef386b"
+    },
+    {
+      "path": "lib/security/universe.server.ts",
+      "sha256": "815b49de1423e668b99f3b8bc370553fb76c3ecf8db31b76880a8c334c9bf4b9"
+    },
+    {
+      "path": "lib/server/api.ts",
+      "sha256": "a260a273864b9245fb16c5327fc99c6cb4a5680ac70f375974f3d4104198dfe9"
+    },
+    {
+      "path": "lib/token-continuity.ts",
+      "sha256": "14a04cdff76d3cfc6804511a74774a692eeb5b5c9f922c7a03b571c38adadfe7"
+    },
+    {
+      "path": "lib/token-icons.ts",
+      "sha256": "fd371bb828a5d98cdaa13d928905edadb298c5227ce5b1637f9966c263e655c1"
+    },
+    {
+      "path": "lib/tokens/catalog.ts",
+      "sha256": "f36da606e9df451ede0a9fdfda509669e71d1494ce9f7bb4750e25fdf5e7b061"
+    },
+    {
+      "path": "lib/tokens/client.ts",
+      "sha256": "2a2613927f3fe657a8b490c30c826df0667557738e3a8479efcb9eb13be2bd23"
+    },
+    {
+      "path": "lib/tokens/market-universe.ts",
+      "sha256": "556ca1c68f7137c124a0c95486ed456260e543c7f84356eccbfedf90edf6eed3"
+    },
+    {
+      "path": "lib/tokens/popular.ts",
+      "sha256": "8997ea919dc15d928c3df7527c8e61b17c79d0802ba31a704175b8e51e39f1a7"
+    },
+    {
+      "path": "lib/tokens/ranking.ts",
+      "sha256": "4b1dae96d2b42b3c4b4fdf7c06e97dd89d1ca62fe5363a677f017c05d4ac68ec"
+    },
+    {
+      "path": "lib/tokens/search.server.ts",
+      "sha256": "66ceeba647ee040c8e2c73d934a3acd6f78b533a72a646ead84e9cfaf6d39ce8"
+    },
+    {
+      "path": "lib/tokens/types.ts",
+      "sha256": "2c80a3e1d62f8f184aa65d728c89a215cca475b158edee02833f620a3a7f3677"
+    },
+    {
+      "path": "lib/tokens/validation.ts",
+      "sha256": "827427b8822cbbf8a6809ab7c29d5f201ff8324fca0a1dcbe59ee40c50316010"
+    },
+    {
+      "path": "lib/tokens/verdicts.ts",
+      "sha256": "af445d8a19e49a0ab34d9144c1dad1690c01fdfcb4c12d906ffe3bfe110b179a"
+    },
+    {
+      "path": "lib/types/normalized-route.ts",
+      "sha256": "69c5bb30834c51ee8fdf5fcce91acf6971464fb423b97949f364adef9b353fd3"
+    },
+    {
+      "path": "lib/wallet-theme.ts",
+      "sha256": "540bb625cbcb8776b16c10c62948090abd24542af7ae2690fe72c036d0dbb778"
+    },
+    {
+      "path": "lib/wallet.ts",
+      "sha256": "31c4e0521701806610a9f60eb6ec5a4d875af722a4fbd1d7e109374e0d22cd60"
+    },
+    {
+      "path": "next-env.d.ts",
+      "sha256": "85ae5aee75f011967cf2d25cbc342f62d69314e9d925f7f4aa3456fc2cffcca6"
+    },
+    {
+      "path": "next.config.js",
+      "sha256": "828f702b5aa6a3a8e76c59c4a308f41f1227a0dd8f15e30753b4c6e2b659604c"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "06614e89e666cdfb9f75dd1c4fd90430c6a0dec8798130f23fbcd9edb5d2bb92"
+    },
+    {
+      "path": "package.json",
+      "sha256": "a5d1241cd20225c6fe5f10ce6c7d05dac987377eae8bd80022b9af87beebc9ad"
+    },
+    {
+      "path": "public/tokens/avax.svg",
+      "sha256": "5bc9f3f16751219d58db9c53e4b8cc4a3bc723855b8814e263fd0080d47c96a4"
+    },
+    {
+      "path": "public/tokens/bnb.svg",
+      "sha256": "4ee63a8654d9e32f6f98eaa95e1448a9732be6fc5a0558863eb2ed2054c32a2c"
+    },
+    {
+      "path": "public/tokens/btc.svg",
+      "sha256": "9b0ee2c062f5a20e0c01d3889c3ef8cf8406207a3448cba6707721807cf275f0"
+    },
+    {
+      "path": "public/tokens/chain-arbitrum.svg",
+      "sha256": "961fe410c73963992077a038cd36f81425b29554373ad9efe1555e43bdd437c4"
+    },
+    {
+      "path": "public/tokens/chain-avax_cchain.svg",
+      "sha256": "f3e227618b2313d91a60383d7ef8db1a60410dd682943291b64b2a93f54c1cb9"
+    },
+    {
+      "path": "public/tokens/chain-base.svg",
+      "sha256": "56b024b8f607fb904cc22e247675eae5f98c582cdc3348bd9c27ee3007ba4918"
+    },
+    {
+      "path": "public/tokens/chain-bsc.svg",
+      "sha256": "9f16bd99c0c0f752f69be1962ca05b430ec0e3a07022e15af97be6595b732535"
+    },
+    {
+      "path": "public/tokens/chain-eth.svg",
+      "sha256": "39c255a543b18964f73cd0b5d8b13c64075de7e7c97b7305d7d1e36a001995e6"
+    },
+    {
+      "path": "public/tokens/chain-gnosis.svg",
+      "sha256": "31241bb017a4bc5749dbd25c4437997aae1d6b0f441ec9ffce767793ba5d67f1"
+    },
+    {
+      "path": "public/tokens/chain-metis.svg",
+      "sha256": "ff2d2baa8418eb8693a9c6fe2d0aadc70100e34337c72de7e1608ab2eaa71df4"
+    },
+    {
+      "path": "public/tokens/chain-optimism.svg",
+      "sha256": "fc23986fc245d74ef615c058ac8773e6f60b8b3b43f14ab8911debb52af83200"
+    },
+    {
+      "path": "public/tokens/chain-polygon.svg",
+      "sha256": "f6f7095bdbc3d4194188febcd150e82eb6a11079b470b540089cb277e7eddc83"
+    },
+    {
+      "path": "public/tokens/dai.svg",
+      "sha256": "90c71d89c89003f5be6854ad0deb0b4af62719836d7ef1fa83e3132fcdbda47b"
+    },
+    {
+      "path": "public/tokens/eth.svg",
+      "sha256": "c4af1de291ba2684da1b46a028c90ef47ed59968e3fbfb76c814285c68ad1509"
+    },
+    {
+      "path": "public/tokens/link.svg",
+      "sha256": "9e11573f354d20e14c416cb43ac94398e1bd1123228c0b51f5baf33fe92618f7"
+    },
+    {
+      "path": "public/tokens/rango.svg",
+      "sha256": "271aba0d9e932831fdc091df82667423b54d317f80bda9e504faebd3240e6f7d"
+    },
+    {
+      "path": "public/tokens/usdc.svg",
+      "sha256": "612dc36242ca05de6b7e9cea4ae7037f47c5eeb6106863a6be9dd8f422c56958"
+    },
+    {
+      "path": "public/tokens/usdt.svg",
+      "sha256": "849705dd5e7527ab36d853a0c55ee28696a6365705c5a3c5cd06e040b75f36d1"
+    },
+    {
+      "path": "public/tokens/wbtc.svg",
+      "sha256": "41d6430482b5ed3f9be64284fe37ae22f847ffd629fbf0694d160e0c5fcf85fe"
+    },
+    {
+      "path": "security/trusted-tokens.v1.json",
+      "sha256": "bc96bae71017e7084be74f5a4781e60d8e7e6c07a99b7e09c4237d0286bdd273"
+    },
+    {
+      "path": "tsconfig.json",
+      "sha256": "9cdb5b089e2027e2ba6c129748d8f6ab0873177078548d463fdfa5728088c688"
+    }
+  ]
+}
